@@ -6,8 +6,10 @@ import {
 	gap,
 	gateDefinition,
 	isBriefError,
+	manifest,
 	outcome,
 	proof,
+	reference,
 	task,
 } from '@src/core'
 import { createInterpret } from '@orkestrel/interpret'
@@ -293,6 +295,32 @@ describe('BriefCompiler fail-closed paths', () => {
 		// The MEASURED refusal, named from findUnmetRules — the rules that actually decided, without
 		// the derived conjunction they roll up into.
 		expect(briefing.failures[0]?.message).toBe('Gate refused: proven')
+		compiler.destroy()
+	})
+
+	it('refuses a brief whose authority its own manifest forbids', () => {
+		// The cross-section check the merged `Reference` makes possible: `authority` and every
+		// manifest partition hold one record type, so the two are comparable by path. Driven
+		// through `compile` rather than the leaf, because the gate is where it has to bite.
+		const compiler = createBriefCompiler()
+		const briefing = compiler.compile({
+			task: buildTask(),
+			authority: [reference('AGENTS.md', 'project law')],
+			manifest: manifest({ forbidden: [reference('AGENTS.md', 'out of scope')] }),
+			outcomes: [outcome(1, 'x')],
+			proofs: [proof('x', 'npm test')],
+		})
+		expect(briefing.brief).toBeUndefined()
+		expect(briefing.failures[0]?.message).toBe('Gate refused: granted')
+		// The control: the same brief with the authority moved out of `forbidden` compiles.
+		const allowed = compiler.compile({
+			task: buildTask(),
+			authority: [reference('AGENTS.md', 'project law')],
+			manifest: manifest({ locked: [reference('AGENTS.md', 'read, never written')] }),
+			outcomes: [outcome(1, 'x')],
+			proofs: [proof('x', 'npm test')],
+		})
+		expect(allowed.brief).toBeDefined()
 		compiler.destroy()
 	})
 

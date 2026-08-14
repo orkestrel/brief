@@ -1,12 +1,10 @@
 import {
-	authorityShape,
 	briefShape,
 	citationShape,
 	createBriefContract,
 	exampleShape,
 	gapShape,
 	givenShape,
-	isAuthority,
 	isBrief,
 	isCitation,
 	isExample,
@@ -42,18 +40,11 @@ const PAIRS = [
 		refused: { operation: 'improve', domain: 'code', statement: 'Refactor useForm.' },
 	},
 	{
-		name: 'authority',
-		shape: authorityShape,
-		guard: isAuthority,
-		accepted: { path: 'AGENTS.md', role: 'rules', note: 'project law' },
-		refused: { path: 'AGENTS.md', role: 'law', note: 'project law' },
-	},
-	{
 		name: 'reference',
 		shape: referenceShape,
 		guard: isReference,
-		accepted: { path: 'src/core/types.ts', role: 'contract' },
-		refused: { path: '', role: 'contract' },
+		accepted: { path: 'src/core/types.ts', note: 'the published contract' },
+		refused: { path: '', note: 'the published contract' },
 	},
 	{
 		name: 'manifest',
@@ -130,18 +121,51 @@ const TERMINATORS: readonly string[] = ['\n', '\r', '\u2028', '\u2029']
 // two of them let a field silently drop from `isLine` to `isNonEmptyString`.
 const MULTILINE: Readonly<Record<string, readonly string[]>> = { example: ['input', 'output'] }
 
+// Every single-line field the sweep below must reach, in `PAIRS` order. `manifest` contributes
+// none: its four members are arrays of references, and the reference row drives those fields.
+//
+// COVERAGE, stated because a conclusion inherits its instrument's scope and an unstated one
+// reads as complete: the sweep walks the TOP-LEVEL string members of each row's `accepted`
+// value. It therefore does not reach an optional member absent from `accepted`
+// (`example.note`), a string inside a nested array (`gap.candidates`, `output.sections`),
+// or a brief-level string list (`rules`, `invariants`, `assumptions`). Weakening only
+// `gapShape.candidates` to a multiline string leaves this sweep green. Those fields are
+// proved by their own row's guard tests, not here.
+const SINGLE_LINE_FIELDS: readonly string[] = [
+	'task.operation',
+	'task.domain',
+	'task.statement',
+	'reference.path',
+	'reference.note',
+	'outcome.text',
+	'given.category',
+	'given.name',
+	'given.value',
+	'citation.name',
+	'citation.role',
+	'citation.url',
+	'gap.field',
+	'gap.question',
+	'risk.severity',
+	'risk.text',
+	'risk.mitigation',
+	'output.format',
+	'proof.text',
+	'proof.command',
+]
+
 describe('line terminators across both mechanisms', () => {
 	for (const terminator of TERMINATORS) {
 		const label = `U+${terminator.codePointAt(0)?.toString(16).padStart(4, '0')}`
 		it(`refuses ${label} in every single-line field, on both mechanisms`, () => {
-			let driven = 0
+			const driven: string[] = []
 			for (const pair of PAIRS) {
 				const compiled = createContract(pair.shape)
 				const exempt = MULTILINE[pair.name] ?? []
 				for (const [key, value] of Object.entries(pair.accepted)) {
 					if (typeof value !== 'string' || exempt.includes(key)) continue
 					const forged = { ...pair.accepted, [key]: `${value}${terminator}forged` }
-					driven += 1
+					driven.push(`${pair.name}.${key}`)
 					expect({ field: `${pair.name}.${key}`, guard: pair.guard(forged) }).toStrictEqual({
 						field: `${pair.name}.${key}`,
 						guard: false,
@@ -152,8 +176,10 @@ describe('line terminators across both mechanisms', () => {
 					})
 				}
 			}
-			// Membership, not a total: a glob that matched nothing would pass a count check.
-			expect(driven).toBeGreaterThan(20)
+			// Membership, not a total. A count passes for any population that reaches it, so a
+			// field dropping out of the sweep — a section losing a member, a row losing its
+			// accepted value — would go unreported while the number still cleared its floor.
+			expect(driven).toStrictEqual(SINGLE_LINE_FIELDS)
 		})
 
 		it(`accepts ${label} in an exemplar's two code sides, on both mechanisms`, () => {
@@ -165,7 +191,7 @@ describe('line terminators across both mechanisms', () => {
 
 	it('accepts the same values on both sides once the terminator is gone', () => {
 		// The control: the refusals above must come from the terminator, not from the shape.
-		const clean = { path: 'a b', role: 'impl' }
+		const clean = { path: 'a b', note: 'the file under repair' }
 		expect(isReference(clean)).toBe(true)
 		expect(createContract(referenceShape).is(clean)).toBe(true)
 	})
@@ -184,7 +210,6 @@ describe('shape and guard lockstep', () => {
 	it('pairs every section shape with its guard', () => {
 		expect(PAIRS.map((pair) => pair.name)).toStrictEqual([
 			'task',
-			'authority',
 			'reference',
 			'manifest',
 			'outcome',

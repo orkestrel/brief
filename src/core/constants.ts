@@ -1,5 +1,4 @@
 import type {
-	AuthorityRole,
 	CitationRole,
 	OutputFormat,
 	RiskSeverity,
@@ -33,17 +32,6 @@ export const TASK_DOMAINS: readonly TaskDomain[] = Object.freeze([
 	'data',
 	'ops',
 	'other',
-])
-
-/** The seven `AuthorityRole` values, frozen. */
-export const AUTHORITY_ROLES: readonly AuthorityRole[] = Object.freeze([
-	'rules',
-	'roadmap',
-	'guide',
-	'contract',
-	'source',
-	'test',
-	'config',
 ])
 
 /** The four `CitationRole` values, frozen. */

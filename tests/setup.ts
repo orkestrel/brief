@@ -13,9 +13,9 @@ export function buildTask(): Task {
 /** A manifest whose four partitions are populated and disjoint. */
 export function buildManifest(): Manifest {
 	return manifest({
-		read: [reference('AGENTS.md', 'rules', 'project law')],
-		edit: [reference('src/browser/composables/useForm.ts', 'implementation')],
-		locked: [reference('src/browser/types.ts', 'contract')],
+		read: [reference('AGENTS.md', 'project law')],
+		edit: [reference('src/browser/composables/useForm.ts', 'the composable being refactored')],
+		locked: [reference('src/browser/types.ts', 'the published contract')],
 		forbidden: [reference('app/**', 'out of scope')],
 	})
 }

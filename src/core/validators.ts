@@ -11,7 +11,6 @@ import {
 	recordOf,
 } from '@orkestrel/contract'
 import {
-	AUTHORITY_ROLES,
 	CITATION_ROLES,
 	LINE_BREAK_PATTERN,
 	OUTPUT_FORMATS,
@@ -20,8 +19,6 @@ import {
 	TASK_OPERATIONS,
 } from './constants.js'
 import type {
-	Authority,
-	AuthorityRole,
 	Brief,
 	Citation,
 	CitationRole,
@@ -61,9 +58,6 @@ export const isTaskOperation: Guard<TaskOperation> = literalOf(TASK_OPERATIONS)
 /** `true` when the value is one of the eight `TaskDomain` literals. */
 export const isTaskDomain: Guard<TaskDomain> = literalOf(TASK_DOMAINS)
 
-/** `true` when the value is one of the seven `AuthorityRole` literals. */
-export const isAuthorityRole: Guard<AuthorityRole> = literalOf(AUTHORITY_ROLES)
-
 /** `true` when the value is one of the four `CitationRole` literals. */
 export const isCitationRole: Guard<CitationRole> = literalOf(CITATION_ROLES)
 
@@ -80,22 +74,11 @@ export const isTask: Guard<Task> = recordOf({
 	statement: isLine,
 })
 
-/** `true` when the value is a well-formed `Authority` — `role` on the closed vocabulary. */
-export const isAuthority: Guard<Authority> = recordOf({
+/** `true` when the value is a well-formed `Reference` — both members required, both single-line. */
+export const isReference: Guard<Reference> = recordOf({
 	path: isLine,
-	role: isAuthorityRole,
 	note: isLine,
 })
-
-/** `true` when the value is a well-formed `Reference` — `role` is any single-line string. */
-export const isReference: Guard<Reference> = recordOf(
-	{
-		path: isLine,
-		role: isLine,
-		note: isLine,
-	},
-	['note'],
-)
 
 /**
  * `true` when the value is a well-formed `Manifest`.
@@ -192,7 +175,7 @@ export const isProof: Guard<Proof> = recordOf({
 export const isBrief: Guard<Brief> = recordOf(
 	{
 		task: isTask,
-		authority: arrayOf(isAuthority),
+		authority: arrayOf(isReference),
 		manifest: isManifest,
 		outcomes: arrayOf(isOutcome),
 		rules: arrayOf(isLine),

@@ -15,7 +15,7 @@
 > brief with blocking gaps yields a visible INCOMPLETE `Briefing` carrying the questions,
 > because a half-specified brief is worse than a question. Every discriminant names its
 > axis, never `kind` or `type`: `stage` splits the four pipeline phases, `role` splits what
-> a reference is to the task, `severity` splits risks, `code` splits coded errors.
+> an external source is to the task, `severity` splits risks, `code` splits coded errors.
 > Source: [`src/core`](../src/core). Surfaced through the `@src/core` barrel.
 
 You cannot make a model's sampling deterministic from a prompt, but you can make the TASK
@@ -47,11 +47,12 @@ const compiler = createBriefCompiler()
 
 const briefing = compiler.compile({
 	task: task('refactor', 'code', 'Refactor useForm to native browser form APIs.'),
+	authority: [{ path: 'AGENTS.md', note: 'project law; wins every conflict' }],
 	manifest: {
-		read: [{ path: 'AGENTS.md', role: 'rules', note: 'project law' }],
-		edit: [{ path: 'src/browser/composables/useForm.ts', role: 'implementation' }],
-		locked: [{ path: 'src/browser/types.ts', role: 'contract' }],
-		forbidden: [{ path: 'app/**', role: 'out of scope' }],
+		read: [{ path: 'guides/browser.md', note: 'the composable contract' }],
+		edit: [{ path: 'src/browser/composables/useForm.ts', note: 'the composable being refactored' }],
+		locked: [{ path: 'src/browser/types.ts', note: 'the published contract' }],
+		forbidden: [{ path: 'app/**', note: 'out of scope' }],
 	},
 	outcomes: [outcome(1, 'useForm uses native FormData with no behavior change')],
 	proofs: [proof('type-check and lint pass', 'npm run check')],
@@ -80,15 +81,13 @@ pipeline at all.
 | ------------------------ | --------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
 | `TaskOperation`          | type      | `'create' \| 'refactor' \| 'debug' \| 'extract' \| 'migrate' \| 'explain' \| 'review' \| 'optimize' \| 'audit' \| 'test' \| 'document' \| 'plan'` — the closed operation vocabulary.                               |
 | `TaskDomain`             | type      | `'code' \| 'writing' \| 'research' \| 'analysis' \| 'design' \| 'data' \| 'ops' \| 'other'` — the closed domain vocabulary.                                                                                        |
-| `AuthorityRole`          | type      | `'rules' \| 'roadmap' \| 'guide' \| 'contract' \| 'source' \| 'test' \| 'config'` — what a ranked authority IS to the task.                                                                                        |
 | `CitationRole`           | type      | `'docs' \| 'spec' \| 'api' \| 'standard'` — what an external citation IS to the task.                                                                                                                              |
 | `OutputFormat`           | type      | `'markdown' \| 'json' \| 'code' \| 'diff' \| 'prose'` — the closed deliverable-format vocabulary.                                                                                                                  |
 | `RiskSeverity`           | type      | `'low' \| 'medium' \| 'high'` — the closed severity vocabulary.                                                                                                                                                    |
 | `BriefStage`             | type      | `'interpret' \| 'draft' \| 'gate' \| 'pin'` — the four fixed pipeline phases, in order.                                                                                                                            |
 | `BriefErrorCode`         | type      | `'INTERPRET_FAILED' \| 'DRAFT_FAILED' \| 'GATE_FAILED' \| 'PIN_FAILED' \| 'BLOCKED' \| 'INVALID' \| 'DESTROYED'` — coded `BriefError` reasons.                                                                     |
 | `Task`                   | interface | `{ operation, domain, statement }` — ONE imperative sentence naming the object; a compound statement is two briefs.                                                                                                |
-| `Authority`              | interface | `{ path, role, note }` — one ranked authority; list ORDER is the ranking, index 0 wins.                                                                                                                            |
-| `Reference`              | interface | `{ path, role, note? }` — one manifest entry; `role` here is a free descriptive string, not the closed `AuthorityRole`.                                                                                            |
+| `Reference`              | interface | `{ path, note }` — one referenced path and why it is listed; the ONE path record, carrying no classifier because its container supplies the meaning.                                                               |
 | `Manifest`               | interface | `{ read, edit, locked, forbidden }` — the four DISJOINT file partitions, each `readonly Reference[]`; `read` order is the reading order.                                                                           |
 | `Outcome`                | interface | `{ rank, text, required }` — one ranked outcome, not a step; `required: true` gates "done".                                                                                                                        |
 | `Given`                  | interface | `{ category, name, value }` — one context fact handed to the executor.                                                                                                                                             |
@@ -129,7 +128,6 @@ check, met or missed, narrated by the reasoner.
 | --------------------- | ----- | ----------------------------------------------------------------------------------------------------- |
 | `TASK_OPERATIONS`     | const | The twelve `TaskOperation` values, frozen — compose with `literalOf(…)` / `parseEnum(…)`.             |
 | `TASK_DOMAINS`        | const | The eight `TaskDomain` values, frozen.                                                                |
-| `AUTHORITY_ROLES`     | const | The seven `AuthorityRole` values, frozen.                                                             |
 | `CITATION_ROLES`      | const | The four `CitationRole` values, frozen.                                                               |
 | `OUTPUT_FORMATS`      | const | The five `OutputFormat` values, frozen.                                                               |
 | `RISK_SEVERITIES`     | const | The three `RiskSeverity` values, frozen.                                                              |
@@ -140,7 +138,6 @@ check, met or missed, narrated by the reasoner.
 
 ```ts
 import {
-	AUTHORITY_ROLES,
 	CITATION_ROLES,
 	DEFAULT_BRIEF_TURNS,
 	GATE_ID,
@@ -152,7 +149,6 @@ import {
 
 TASK_OPERATIONS.length // 12
 TASK_DOMAINS // ['code', 'writing', 'research', 'analysis', 'design', 'data', 'ops', 'other']
-AUTHORITY_ROLES // ['rules', 'roadmap', 'guide', 'contract', 'source', 'test', 'config']
 CITATION_ROLES // ['docs', 'spec', 'api', 'standard']
 OUTPUT_FORMATS // ['markdown', 'json', 'code', 'diff', 'prose']
 RISK_SEVERITIES // ['low', 'medium', 'high']
@@ -206,13 +202,11 @@ PRESENT but holds `undefined` also fails, matching this workspace's
 | `isLine`          | const | A NON-EMPTY string carrying no line terminator — the shape of nearly every field. |
 | `isTaskOperation` | const | `TaskOperation`.                                                                  |
 | `isTaskDomain`    | const | `TaskDomain`.                                                                     |
-| `isAuthorityRole` | const | `AuthorityRole`.                                                                  |
 | `isCitationRole`  | const | `CitationRole`.                                                                   |
 | `isOutputFormat`  | const | `OutputFormat`.                                                                   |
 | `isRiskSeverity`  | const | `RiskSeverity`.                                                                   |
 | `isTask`          | const | `Task` — `operation` and `domain` on-vocabulary, `statement` non-empty.           |
-| `isAuthority`     | const | `Authority` — `role` must be an `AuthorityRole`.                                  |
-| `isReference`     | const | `Reference` — `role` is any non-empty string.                                     |
+| `isReference`     | const | `Reference` — both `path` and `note` present and single-line.                     |
 | `isManifest`      | const | `Manifest` — the four partitions present (disjointness is `validateBrief`'s job). |
 | `isOutcome`       | const | `Outcome` — `rank` a positive integer.                                            |
 | `isGiven`         | const | `Given`.                                                                          |
@@ -232,8 +226,6 @@ import {
 	isTask,
 	isTaskDomain,
 	isTaskOperation,
-	isAuthority,
-	isAuthorityRole,
 	isCitation,
 	isCitationRole,
 	isExample,
@@ -251,9 +243,8 @@ isTask({ operation: 'refactor', domain: 'code', statement: 'Refactor useForm.' }
 isTask({ operation: 'improve', domain: 'code', statement: 'x' }) // false — off-vocabulary
 isTaskOperation('refactor') // true
 isTaskDomain('frontend') // false
-isAuthority({ path: 'AGENTS.md', role: 'rules', note: 'project law' }) // true
-isAuthorityRole('rules') // true
-isReference({ path: 'src/core/types.ts', role: 'contract' }) // true
+isReference({ path: 'AGENTS.md', note: 'project law' }) // true
+isReference({ path: 'AGENTS.md' }) // false — `note` is required
 isManifest({ read: [], edit: [], locked: [], forbidden: [] }) // true
 isOutcome({ rank: 1, text: 'the tests pass', required: true }) // true
 isGiven({ category: 'convention', name: 'indentation', value: 'tabs' }) // true
@@ -288,7 +279,6 @@ is exactly `Brief`.
 | `textShape`      | const | a single-line string of any length — the shape mirror of `isText`.                                 |
 | `lineShape`      | const | a NON-EMPTY single-line string — the shape mirror of `isLine`.                                     |
 | `taskShape`      | const | the `Task` object shape — `literalShape(TASK_OPERATIONS)`, `literalShape(TASK_DOMAINS)`, `min: 1`. |
-| `authorityShape` | const | the `Authority` object shape.                                                                      |
 | `referenceShape` | const | the `Reference` object shape.                                                                      |
 | `manifestShape`  | const | the `Manifest` object shape — four `arrayShape(referenceShape)` partitions.                        |
 | `outcomeShape`   | const | the `Outcome` object shape — `rank` an `integerShape({ min: 1 })`.                                 |
@@ -303,7 +293,6 @@ is exactly `Brief`.
 
 ```ts
 import {
-	authorityShape,
 	briefShape,
 	citationShape,
 	createBriefContract,
@@ -327,7 +316,6 @@ schemaToParameters(contract.schema) // the open tool-parameters record, no `as` 
 
 createContract(taskShape).is({ operation: 'plan', domain: 'ops', statement: 'Plan it.' }) // true
 briefShape.type // 'object'
-authorityShape.type // 'object'
 referenceShape.type // 'object'
 manifestShape.type // 'object'
 outcomeShape.type // 'object'
@@ -346,26 +334,24 @@ Lowercase value builders following the reasons idiom — every builder returns a
 and OMITS absent optional keys entirely, so its output round-trips the exact-record
 validators above.
 
-| API              | Kind     | Builds…                                                                                                                                                           |
-| ---------------- | -------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `task`           | function | a `Task` from operation / domain / statement.                                                                                                                     |
-| `authority`      | function | an `Authority` from path / role / note.                                                                                                                           |
-| `reference`      | function | a `Reference` from path / role; `note` is omitted when absent.                                                                                                    |
-| `manifest`       | function | a `Manifest` — every absent partition defaults to `[]`, so a partial literal is enough.                                                                           |
-| `outcome`        | function | an `Outcome` from rank / text; `required` defaults to `true` — an outcome gates "done" unless demoted.                                                            |
-| `given`          | function | a `Given` from category / name / value.                                                                                                                           |
-| `example`        | function | an `Example` from input / output; `note` is omitted when absent.                                                                                                  |
-| `citation`       | function | a `Citation` from name / role / url.                                                                                                                              |
-| `gap`            | function | a `Gap` from field / question; `blocking` defaults to `false` and `candidates` is omitted when absent.                                                            |
-| `risk`           | function | a `Risk` from severity / text / mitigation.                                                                                                                       |
-| `output`         | function | an `Output` from format; `sections` / `include` / `exclude` are omitted when absent.                                                                              |
-| `proof`          | function | a `Proof` from text / command.                                                                                                                                    |
-| `brief`          | function | a `Brief` from a `Task` plus overrides — every absent collection defaults to `[]`, `output` defaults to `output('markdown')`, and `trace` / `hash` stay omitted.  |
-| `gateDefinition` | function | the fail-closed readiness gate as a reasons `LogicalDefinition` with id `GATE_ID` — five readiness rules plus the `ready` conjunction, fixed and unparameterised. |
+| API              | Kind     | Builds…                                                                                                                                                          |
+| ---------------- | -------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `task`           | function | a `Task` from operation / domain / statement.                                                                                                                    |
+| `reference`      | function | a `Reference` from path / note — the one builder for an authority entry and a manifest entry alike.                                                              |
+| `manifest`       | function | a `Manifest` — every absent partition defaults to `[]`, so a partial literal is enough.                                                                          |
+| `outcome`        | function | an `Outcome` from rank / text; `required` defaults to `true` — an outcome gates "done" unless demoted.                                                           |
+| `given`          | function | a `Given` from category / name / value.                                                                                                                          |
+| `example`        | function | an `Example` from input / output; `note` is omitted when absent.                                                                                                 |
+| `citation`       | function | a `Citation` from name / role / url.                                                                                                                             |
+| `gap`            | function | a `Gap` from field / question; `blocking` defaults to `false` and `candidates` is omitted when absent.                                                           |
+| `risk`           | function | a `Risk` from severity / text / mitigation.                                                                                                                      |
+| `output`         | function | an `Output` from format; `sections` / `include` / `exclude` are omitted when absent.                                                                             |
+| `proof`          | function | a `Proof` from text / command.                                                                                                                                   |
+| `brief`          | function | a `Brief` from a `Task` plus overrides — every absent collection defaults to `[]`, `output` defaults to `output('markdown')`, and `trace` / `hash` stay omitted. |
+| `gateDefinition` | function | the fail-closed readiness gate as a reasons `LogicalDefinition` with id `GATE_ID` — six readiness rules plus the `ready` conjunction, fixed and unparameterised. |
 
 ```ts
 import {
-	authority,
 	brief,
 	citation,
 	example,
@@ -382,11 +368,11 @@ import {
 } from '@orkestrel/brief'
 
 const draft = brief(task('refactor', 'code', 'Refactor useForm to native browser form APIs.'), {
-	authority: [authority('AGENTS.md', 'rules', 'project law')],
+	authority: [reference('AGENTS.md', 'project law; wins every conflict')],
 	manifest: manifest({
-		read: [reference('AGENTS.md', 'rules', 'project law')],
-		edit: [reference('src/browser/composables/useForm.ts', 'implementation')],
-		locked: [reference('src/browser/types.ts', 'contract')],
+		read: [reference('guides/browser.md', 'the composable contract')],
+		edit: [reference('src/browser/composables/useForm.ts', 'the composable being refactored')],
+		locked: [reference('src/browser/types.ts', 'the published contract')],
 		forbidden: [reference('app/**', 'out of scope')],
 	}),
 	outcomes: [
@@ -406,7 +392,7 @@ const draft = brief(task('refactor', 'code', 'Refactor useForm to native browser
 })
 draft.output.format // 'diff'
 draft.trace // undefined — the pin fills it, never the author
-gateDefinition().rules.length // 6 — five readiness rules plus the conjunction
+gateDefinition().rules.length // 7 — six readiness rules plus the conjunction
 ```
 
 ### Helpers
@@ -432,6 +418,7 @@ consumes a WHOLE and returns a derived view of it.
 | `countSentences`       | function | The sentence count of a statement — `validateBrief` errors when it is not exactly one.                                                          |
 | `findBlockingGaps`     | function | The gaps with `blocking: true`; non-empty means the gate MUST fail closed.                                                                      |
 | `findManifestOverlaps` | function | The paths appearing in more than one manifest partition, once each.                                                                             |
+| `findDeniedAuthority`  | function | The authority paths `manifest.forbidden` bans — the executor cannot obey a file it may not open; `locked` is read-only and never a denial.      |
 | `findUnpairedGaps`     | function | The open gaps past the assumption count — the discipline is exactly one recorded assumption per open gap.                                       |
 | `deriveStatement`      | function | Derive one imperative statement from free text — whitespace collapsed, first letter raised, terminator appended.                                |
 | `deriveTask`           | function | Derive a `Task` from an interprets `Intent` through CALLER action and domain vocabularies; `undefined` when either side is unmapped.            |
@@ -453,6 +440,7 @@ import {
 	deriveTask,
 	errorToMessage,
 	findBlockingGaps,
+	findDeniedAuthority,
 	findManifestOverlaps,
 	findUnpairedGaps,
 	pinBrief,
@@ -473,6 +461,7 @@ briefToSubject(pinned) // { operation: 'refactor', blocking: 0, outcomes: 2, pro
 countSentences('Refactor useForm. Then update the tests.') // 2
 findBlockingGaps(pinned) // [] — safe to emit
 findManifestOverlaps(pinned) // [] — the four partitions are disjoint
+findDeniedAuthority(pinned) // [] — no ranked authority sits in `forbidden`
 findUnpairedGaps(pinned) // [] — the one open gap has its assumption
 validateBrief(pinned) // { valid: true, errors: [], warnings: [] }
 
@@ -489,11 +478,17 @@ errorToMessage(new Error('boom')) // 'boom'
 ```
 
 `validateBrief` ERRORS on the structural violations no assumption can paper over — a
-manifest overlap (`Path "<path>" appears in more than one manifest partition`), an empty
-`proofs` list, and a `task.statement` that is not one sentence
+manifest overlap (`Path "<path>" appears in more than one manifest partition`), an authority
+the manifest forbids (`Authority "<path>" is forbidden — the executor cannot obey what it
+cannot read`), an empty `proofs` list, and a `task.statement` that is not one sentence
 (`Statement holds <n> sentences — a compound statement is two briefs`). It WARNS on the
 runnable-but-suspicious: duplicate outcome ranks, an open gap without its paired assumption,
 and an optional outcome ranked above every required one.
+
+Both path checks compare EXACT strings and never expand a glob. `forbidden: 'app/**'` does
+not deny `authority: 'app/AGENTS.md'`, and it does not overlap `edit: 'app/file.ts'`.
+Disjointness and denial are properties of the written paths, so state a lock or a ban as the
+same literal path the section it contradicts carries.
 
 ### Parsers
 
@@ -668,7 +663,7 @@ These invariants hold across `src/core` and this guide:
 
 3. **Fail closed at the gate, and the gate is not delegable.** Readiness is decided by
    `findUnmetRules` — in code, from the brief's own measures — BEFORE any verdict is consulted.
-   `gateDefinition()` states the same five rules as data so a reasoner can narrate them, and
+   `gateDefinition()` states the same six rules as data so a reasoner can narrate them, and
    a narration is not a decision: `BriefCompilerOptions.reason` lets a caller supply the engine,
    and a supplied engine can add detail to a refusal but can never turn one into a pass. The
    two are held together by a test that drives both over one value set.
@@ -734,8 +729,16 @@ Deliberately absent: a relation or graph layer over briefs (a brief's links are 
 list and four DISJOINT partitions — order and set membership, fully served by the guards,
 `findManifestOverlaps`, and the gate), asynchronous compilation, brief persistence
 (`JSON.stringify` out, `parseBrief` back in), a turn cap on `BriefCompilerOptions` (nothing in the
-pipeline renders a goal, so the cap is `briefToGoal`'s argument), and any LLM invocation —
-the authoring judgment is the caller's.
+pipeline renders a goal, so the cap is `briefToGoal`'s argument), glob expansion (both path
+checks compare exact strings, and a glob engine is a dependency this package will not take),
+and any LLM invocation — the authoring judgment is the caller's.
+
+`Dispatch` carries no `authority` array, and that is a decision rather than an omission. Its
+four arrays are `Manifest` flattened 1:1 and answer one question — may I touch this file.
+Ranked authority answers a different one and already travels in `prompt`, which
+`briefToMarkdown` renders `## Authority (ranked)` into. A fifth array would also stop the
+four being a partition: an authority path normally sits in `read` or `locked` too, so a
+consumer unioning the arrays to compute "files I may open" would double-count it.
 
 ## Patterns
 
@@ -782,10 +785,10 @@ const migrations = createBriefCompiler({
 const migration = migrations.compile({
 	text: 'migrate the 3 legacy stores to the new driver seam',
 	manifest: {
-		read: [{ path: 'AGENTS.md', role: 'rules', note: 'project law' }],
-		edit: [{ path: 'src/core/stores/**', role: 'implementation' }],
+		read: [{ path: 'guides/stores.md', note: 'the driver seam contract' }],
+		edit: [{ path: 'src/core/stores/**', note: 'the three legacy stores' }],
 		locked: [],
-		forbidden: [{ path: 'app/**', role: 'out of scope' }],
+		forbidden: [{ path: 'app/**', note: 'out of scope' }],
 	},
 	outcomes: [outcome(1, 'all three stores implement the driver seam')],
 	output: output('diff'),
@@ -839,7 +842,8 @@ blocked.destroy()
 ```
 
 A gate that refuses for a reason OTHER than a blocking gap — no proofs, a compound
-statement, an overlapping manifest — reports the unmet rule ids instead, and the briefing is
+statement, an overlapping manifest, an authority the manifest forbids — reports the unmet
+rule ids instead, and the briefing is
 incomplete the same way. A brief with no proofs and a two-sentence statement reports
 `Gate refused: proven, single`.
 
@@ -897,7 +901,7 @@ derives it leaves `fit` conjoining something nothing proved, and a base-ready br
 `false`.
 
 **`compile` does not decide readiness with this definition.** `findUnmetRules(brief)` measures
-the same five rules in code and refuses before any verdict is read; the definition above is
+the same six rules in code and refuses before any verdict is read; the definition above is
 what a reasoner narrates, so `Briefing.verdict` carries the trace and the rule-level detail.
 The two are conjoined in the refusing direction, so a borrowed engine can withhold a pass and
 can never grant one. A test drives both over one value set, which is what keeps the data and
@@ -929,7 +933,7 @@ briefToMarkdown(pinned)
 //  refactor · code
 //
 //  ## Authority (ranked)
-//  1. AGENTS.md — rules (project law)
+//  1. AGENTS.md — project law; wins every conflict
 //  …paths referenced, contents never inlined — the executor retrieves.'
 
 briefToGoal(pinned, 12)
@@ -1020,6 +1024,10 @@ store.destroy()
 - **Reference, never duplicate.** `authority` and `manifest` point at paths; pasting file
   contents into `givens` buries the signal and duplicates what the executor can retrieve. The
   one exception is `examples`: an input-to-output exemplar removes more ambiguity than prose.
+- **Let the container say what a path is.** Both sections hold the same `Reference`, so a path
+  gets its meaning from where it sits: rank in `authority`, permission in a manifest partition.
+  Write `note` for why the path is listed, not for what kind of file it is. Never list a path in
+  `authority` and in `forbidden` — `findDeniedAuthority` refuses that at the gate.
 - **Pin the outcome, not a plan.** Specify `output` and `proofs` and leave the route free; a
   brittle step list in `rules` makes runs diverge. A rule belongs in `rules` only when the
   METHOD is the requirement.
@@ -1047,7 +1055,7 @@ store.destroy()
 - [`tests/guides.test.ts`](../tests/guides.test.ts) — the `## Surface` to `src/core` bijection (value and type exports), the `## Methods` to interface-method bijection, link integrity, fence languages, example presence, and fence-import reality.
 - [`tests/src/core/BriefCompiler.test.ts`](../tests/src/core/BriefCompiler.test.ts) — the four-stage pipeline, stage order and records, the interpret-skip path, caller-over-derived merging, fail-closed blocking (questions, the `BLOCKED` failure, the absent brief), `gate` verdict tracing, event sequences (`compile` versus `block`), owned-versus-borrowed engine teardown, idempotent `destroy`, and `DESTROYED` throws.
 - [`tests/src/core/BriefManager.test.ts`](../tests/src/core/BriefManager.test.ts) — content-hash id minting, version bump only on content change, the three `remove` forms, per-event emissions, and destroy semantics.
-- [`tests/src/core/helpers.test.ts`](../tests/src/core/helpers.test.ts) — every builder's output shape, every projection, the derivations and their off-vocabulary `undefined`, `pinBrief` determinism and idempotence, `validateBrief` errors and warnings, and the three `find*` leaves.
+- [`tests/src/core/helpers.test.ts`](../tests/src/core/helpers.test.ts) — every builder's output shape, every projection, the derivations and their off-vocabulary `undefined`, `pinBrief` determinism and idempotence, `gateDefinition`'s rule list against `findUnmetRules` over one value set, `validateBrief` errors and warnings, and the four `find*` leaves.
 - [`tests/src/core/validators.test.ts`](../tests/src/core/validators.test.ts) — each guard accepts valid and rejects invalid plus adversarial junk, exact-record semantics, and off-vocabulary rejection.
 - [`tests/src/core/shapers.test.ts`](../tests/src/core/shapers.test.ts) — the shape family against the guard family over one value set, JSON Schema essentials, and seeded generate round-trips.
 - [`tests/src/core/parsers.test.ts`](../tests/src/core/parsers.test.ts) — `parseBrief` guard soundness in both directions and its JSON round-trip.

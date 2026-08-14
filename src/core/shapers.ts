@@ -9,7 +9,6 @@ import {
 	stringShape,
 } from '@orkestrel/contract'
 import {
-	AUTHORITY_ROLES,
 	CITATION_ROLES,
 	OUTPUT_FORMATS,
 	RISK_SEVERITIES,
@@ -34,24 +33,13 @@ export const taskShape = objectShape(
 	{ description: 'What the brief asks for, in one imperative sentence.' },
 )
 
-/** The `Authority` shape — a path, a closed role, and the note that justifies its rank. */
-export const authorityShape = objectShape(
-	{
-		path: lineShape,
-		role: literalShape(AUTHORITY_ROLES),
-		note: lineShape,
-	},
-	{ description: 'One ranked authority; list order is the ranking.' },
-)
-
-/** The `Reference` shape — a manifest entry whose `role` is free descriptive text. */
+/** The `Reference` shape — a path and the note that justifies listing it. */
 export const referenceShape = objectShape(
 	{
 		path: lineShape,
-		role: lineShape,
-		note: optionalShape(lineShape),
+		note: lineShape,
 	},
-	{ description: 'One manifest entry — a path and what it is to the task.' },
+	{ description: 'One referenced path and why it is listed.' },
 )
 
 /** The `Manifest` shape — four disjoint reference partitions. */
@@ -156,7 +144,7 @@ export const proofShape = objectShape(
 export const briefShape = objectShape(
 	{
 		task: taskShape,
-		authority: arrayShape(authorityShape),
+		authority: arrayShape(referenceShape),
 		manifest: manifestShape,
 		outcomes: arrayShape(outcomeShape),
 		rules: arrayShape(lineShape),

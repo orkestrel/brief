@@ -6,8 +6,6 @@ import { snapshotBrief } from './cloners.js'
 import { BriefError } from './errors.js'
 import { DEFAULT_BRIEF_TURNS, GATE_ID, LINE_BREAK_PATTERN } from './constants.js'
 import type {
-	Authority,
-	AuthorityRole,
 	Brief,
 	Citation,
 	CitationRole,
@@ -49,41 +47,21 @@ export function task(operation: TaskOperation, domain: TaskDomain, statement: st
 }
 
 /**
- * Build an `Authority`.
- *
- * @param path - The authority's workspace path.
- * @param role - What the authority IS to the task.
- * @param note - Why it ranks where it does.
- * @returns A fresh `Authority`.
- *
- * @example
- * ```ts
- * import { authority } from '@orkestrel/brief'
- *
- * authority('AGENTS.md', 'rules', 'project law')
- * ```
- */
-export function authority(path: string, role: AuthorityRole, note: string): Authority {
-	return { path, role, note }
-}
-
-/**
  * Build a `Reference`.
  *
  * @param path - The referenced path or glob.
- * @param role - Free descriptive text for what the path is to the task.
- * @param note - Optional detail; the key is OMITTED when absent.
+ * @param note - Why the path is listed.
  * @returns A fresh `Reference`.
  *
  * @example
  * ```ts
  * import { reference } from '@orkestrel/brief'
  *
- * reference('src/core/types.ts', 'contract') // { path: 'src/core/types.ts', role: 'contract' }
+ * reference('AGENTS.md', 'project law') // { path: 'AGENTS.md', note: 'project law' }
  * ```
  */
-export function reference(path: string, role: string, note?: string): Reference {
-	return note === undefined ? { path, role } : { path, role, note }
+export function reference(path: string, note: string): Reference {
+	return { path, note }
 }
 
 /**
@@ -318,8 +296,8 @@ export function brief(subject: Task, overrides?: Partial<Omit<Brief, 'task'>>): 
  * Build the fail-closed readiness gate as a reasons `LogicalDefinition`.
  *
  * @remarks
- * Five readiness rules each derive one named fact from `briefToSubject`'s measures, and a
- * final `ready` rule conjoins all five. Forward chaining reports the LAST rule's
+ * Six readiness rules each derive one named fact from `briefToSubject`'s measures, and a
+ * final `ready` rule conjoins all six. Forward chaining reports the LAST rule's
  * conclusion, so `LogicalResult.conclusion` is exactly `ready`.
  *
  * The gate takes NO parameters, and that is deliberate rather than unfinished. The
@@ -352,6 +330,7 @@ export function gateDefinition(): LogicalDefinition {
 		),
 		rule('proven', [atom('proofs', 'above', 0)], atom('proven', 'equals', true)),
 		rule('disjoint', [atom('overlaps', 'equals', 0)], atom('disjoint', 'equals', true)),
+		rule('granted', [atom('denied', 'equals', 0)], atom('granted', 'equals', true)),
 		rule('single', [atom('sentences', 'equals', 1)], atom('single', 'equals', true)),
 	]
 	return logicalDefinition(GATE_ID, 'Brief readiness', [
@@ -373,7 +352,7 @@ export function gateDefinition(): LogicalDefinition {
  * The readiness rules a brief fails, computed directly from its own measures.
  *
  * @remarks
- * The gate's decision, in code. `gateDefinition()` states the same five rules as data for a
+ * The gate's decision, in code. `gateDefinition()` states the same six rules as data for a
  * reasoner to narrate, and a narration is not a decision: `BriefCompilerOptions.reason` lets a
  * caller supply the engine, and an engine that answers "met" to everything would otherwise
  * emit a brief with no proofs. `compile` refuses on THIS and keeps the verdict for its
@@ -408,6 +387,7 @@ export function findUnmetRules(source: Brief): readonly string[] {
 		unready.push('aimed')
 	if (source.proofs.length === 0) unready.push('proven')
 	if (findManifestOverlaps(source).length !== 0) unready.push('disjoint')
+	if (findDeniedAuthority(source).length !== 0) unready.push('granted')
 	if (countSentences(source.task.statement) !== 1) unready.push('single')
 	return unready
 }
@@ -461,11 +441,50 @@ export function findBlockingGaps(source: Brief): readonly Gap[] {
 }
 
 /**
+ * The authority paths the manifest forbids.
+ *
+ * @remarks
+ * A brief that ranks a path as authority and then forbids touching it tells the executor
+ * to obey a file it may not open. `locked` is not a denial — read-only is exactly what an
+ * authority needs — so only `forbidden` counts.
+ *
+ * Paths are compared as EXACT strings, matching `findManifestOverlaps`. A glob is never
+ * expanded, so `forbidden: 'app/**'` does not deny `authority: 'app/AGENTS.md'`. State a
+ * denied authority as the same literal path the authority carries.
+ *
+ * @param source - The brief to inspect.
+ * @returns Each denied authority path once, in authority order; empty when none is denied.
+ *
+ * @example
+ * ```ts
+ * import { brief, findDeniedAuthority, manifest, reference, task } from '@orkestrel/brief'
+ *
+ * const draft = brief(task('debug', 'code', 'Fix the leak.'), {
+ * 	authority: [reference('AGENTS.md', 'project law')],
+ * 	manifest: manifest({ forbidden: [reference('AGENTS.md', 'out of scope')] }),
+ * })
+ * findDeniedAuthority(draft) // ['AGENTS.md']
+ * ```
+ */
+export function findDeniedAuthority(source: Brief): readonly string[] {
+	const banned = new Set(source.manifest.forbidden.map((entry) => entry.path))
+	const denied: string[] = []
+	for (const path of new Set(source.authority.map((entry) => entry.path))) {
+		if (banned.has(path)) denied.push(path)
+	}
+	return denied
+}
+
+/**
  * The paths appearing in more than one manifest partition.
  *
  * @remarks
  * Duplicates WITHIN one partition are not an overlap; the four partitions must be
  * mutually disjoint, which is what `validateBrief` errors on.
+ *
+ * Paths are compared as EXACT strings. A glob is never expanded, so `edit: 'app/file.ts'`
+ * and `forbidden: 'app/**'` are not reported as an overlap even though a walker would place
+ * one inside the other. Disjointness here is a property of the written paths.
  *
  * @param source - The brief to inspect.
  * @returns Each overlapping path once, in first-seen partition order.
@@ -476,8 +495,8 @@ export function findBlockingGaps(source: Brief): readonly Gap[] {
  *
  * const draft = brief(task('debug', 'code', 'Fix the leak.'), {
  * 	manifest: manifest({
- * 		edit: [reference('src/core/BriefCompiler.ts', 'implementation')],
- * 		locked: [reference('src/core/BriefCompiler.ts', 'contract')],
+ * 		edit: [reference('src/core/BriefCompiler.ts', 'the leaking pipeline')],
+ * 		locked: [reference('src/core/BriefCompiler.ts', 'the published contract')],
  * 	}),
  * })
  * findManifestOverlaps(draft) // ['src/core/BriefCompiler.ts']
@@ -560,6 +579,7 @@ export function briefToSubject(source: Brief): Subject {
 		locks: source.manifest.locked.length,
 		bans: source.manifest.forbidden.length,
 		overlaps: findManifestOverlaps(source).length,
+		denied: findDeniedAuthority(source).length,
 		risks: source.risks.length,
 		examples: source.examples.length,
 	}
@@ -570,7 +590,8 @@ export function briefToSubject(source: Brief): Subject {
  *
  * @remarks
  * ERRORS are the structural violations no assumption can paper over: a manifest
- * overlap, an empty `proofs` list, and a statement that is not exactly one sentence.
+ * overlap, an authority the manifest forbids, an empty `proofs` list, and a statement
+ * that is not exactly one sentence.
  * WARNINGS are runnable but suspicious: duplicate outcome ranks, an unpaired open gap,
  * and an optional outcome ranked above a required one. Never throws.
  *
@@ -593,6 +614,9 @@ export function validateBrief(source: Brief): ReasonValidationResult {
 
 	for (const path of findManifestOverlaps(source)) {
 		errors.push(`Path "${path}" appears in more than one manifest partition`)
+	}
+	for (const path of findDeniedAuthority(source)) {
+		errors.push(`Authority "${path}" is forbidden — the executor cannot obey what it cannot read`)
 	}
 	if (source.proofs.length === 0) {
 		errors.push('Brief records no proof — nothing can settle "done"')
@@ -841,7 +865,7 @@ export function briefToMarkdown(input: Brief): string {
 		lines.push('## Authority (ranked)', '')
 		lines.push(
 			...source.authority.map(
-				(entry, index) => `${String(index + 1)}. ${entry.path} — ${entry.role} (${entry.note})`,
+				(entry, index) => `${String(index + 1)}. ${entry.path} — ${entry.note}`,
 			),
 		)
 		lines.push('')
@@ -858,13 +882,7 @@ export function briefToMarkdown(input: Brief): string {
 		for (const [heading, entries] of partitions) {
 			if (entries.length === 0) continue
 			lines.push(`### ${heading}`, '')
-			lines.push(
-				...entries.map((entry) =>
-					entry.note === undefined
-						? `- ${entry.path} — ${entry.role}`
-						: `- ${entry.path} — ${entry.role} (${entry.note})`,
-				),
-			)
+			lines.push(...entries.map((entry) => `- ${entry.path} — ${entry.note}`))
 			lines.push('')
 		}
 	}

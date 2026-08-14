@@ -34,16 +34,6 @@ export type TaskDomain =
 	| 'ops'
 	| 'other'
 
-/** What a ranked authority IS to the task. */
-export type AuthorityRole =
-	| 'rules'
-	| 'roadmap'
-	| 'guide'
-	| 'contract'
-	| 'source'
-	| 'test'
-	| 'config'
-
 /** What an external citation IS to the task. */
 export type CitationRole = 'docs' | 'spec' | 'api' | 'standard'
 
@@ -89,27 +79,22 @@ export interface Task {
 }
 
 /**
- * One ranked authority the executor obeys.
+ * One referenced path and why it is listed.
  *
  * @remarks
- * List ORDER is the ranking: index 0 wins every conflict.
- */
-export interface Authority {
-	readonly path: string
-	readonly role: AuthorityRole
-	readonly note: string
-}
-
-/**
- * One manifest entry — a path plus what it is to the task.
+ * The ONE path record. A reference means different things in different containers, and the
+ * container is what says which: `Brief.authority` ranks its entries so index 0 wins every
+ * conflict, and each `Manifest` partition states a permission. The record itself carries no
+ * classifier, because a second label on the row would restate what the container already
+ * fixed — and the label this package used to carry was one repository's document taxonomy
+ * rather than a domain.
  *
- * @remarks
- * `role` here is a free descriptive string, not the closed {@link AuthorityRole}.
+ * `note` is required. A path with no rationale is interpretation left to do, which is the
+ * one thing a brief exists to remove.
  */
 export interface Reference {
 	readonly path: string
-	readonly role: string
-	readonly note?: string
+	readonly note: string
 }
 
 /**
@@ -217,7 +202,7 @@ export interface Proof {
  */
 export interface Brief {
 	readonly task: Task
-	readonly authority: readonly Authority[]
+	readonly authority: readonly Reference[]
 	readonly manifest: Manifest
 	readonly outcomes: readonly Outcome[]
 	readonly rules: readonly string[]
@@ -245,7 +230,7 @@ export interface BriefInput {
 	readonly text?: string
 	readonly interpretation?: Interpretation
 	readonly task?: Task
-	readonly authority?: readonly Authority[]
+	readonly authority?: readonly Reference[]
 	readonly manifest?: Manifest
 	readonly outcomes?: readonly Outcome[]
 	readonly rules?: readonly string[]

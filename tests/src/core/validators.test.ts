@@ -1,6 +1,4 @@
 import {
-	isAuthority,
-	isAuthorityRole,
 	isBrief,
 	isCitation,
 	isCitationRole,
@@ -25,7 +23,6 @@ import { buildAdversarialValues, buildBrief } from '../../setup.js'
 const VOCABULARY_GUARDS = [
 	{ name: 'isTaskOperation', guard: isTaskOperation, valid: 'refactor', invalid: 'improve' },
 	{ name: 'isTaskDomain', guard: isTaskDomain, valid: 'code', invalid: 'frontend' },
-	{ name: 'isAuthorityRole', guard: isAuthorityRole, valid: 'rules', invalid: 'law' },
 	{ name: 'isCitationRole', guard: isCitationRole, valid: 'docs', invalid: 'blog' },
 	{ name: 'isOutputFormat', guard: isOutputFormat, valid: 'diff', invalid: 'patch' },
 	{ name: 'isRiskSeverity', guard: isRiskSeverity, valid: 'high', invalid: 'critical' },
@@ -39,16 +36,10 @@ const RECORD_GUARDS = [
 		offContract: { operation: 'improve', domain: 'code', statement: 'Refactor useForm.' },
 	},
 	{
-		name: 'isAuthority',
-		guard: isAuthority,
-		valid: { path: 'AGENTS.md', role: 'rules', note: 'project law' },
-		offContract: { path: 'AGENTS.md', role: 'law', note: 'project law' },
-	},
-	{
 		name: 'isReference',
 		guard: isReference,
-		valid: { path: 'src/core/types.ts', role: 'contract' },
-		offContract: { path: 'src/core/types.ts', role: '' },
+		valid: { path: 'src/core/types.ts', note: 'the published contract' },
+		offContract: { path: 'src/core/types.ts' },
 	},
 	{
 		name: 'isManifest',
@@ -108,12 +99,6 @@ const RECORD_GUARDS = [
 
 const OPTIONAL_MEMBERS = [
 	{
-		name: 'isReference',
-		guard: isReference,
-		key: 'note',
-		valid: { path: 'src/core/types.ts', role: 'contract' },
-	},
-	{
 		name: 'isExample',
 		guard: isExample,
 		key: 'note',
@@ -137,7 +122,6 @@ describe('vocabulary guards', () => {
 		expect(VOCABULARY_GUARDS.map((entry) => entry.name)).toStrictEqual([
 			'isTaskOperation',
 			'isTaskDomain',
-			'isAuthorityRole',
 			'isCitationRole',
 			'isOutputFormat',
 			'isRiskSeverity',
@@ -157,7 +141,6 @@ describe('record guards', () => {
 	it('covers every documented record type', () => {
 		expect(RECORD_GUARDS.map((entry) => entry.name)).toStrictEqual([
 			'isTask',
-			'isAuthority',
 			'isReference',
 			'isManifest',
 			'isOutcome',
@@ -193,7 +176,6 @@ describe('record guards', () => {
 describe('optional record members', () => {
 	it('covers every guard carrying an optional key', () => {
 		expect(OPTIONAL_MEMBERS.map((entry) => `${entry.name}.${entry.key}`)).toStrictEqual([
-			'isReference.note',
 			'isExample.note',
 			'isGap.candidates',
 			'isOutput.sections',
