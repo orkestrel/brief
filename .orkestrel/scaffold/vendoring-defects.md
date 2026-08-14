@@ -13,9 +13,8 @@ Every claim below was checked against `node_modules/@orkestrel/scaffold/dist/hos
 "allow": ["Bash(codex --version)", "Bash(codex login *)"]
 ```
 
-`defaultMode` and `allow` are per-machine, per-operator choices. `defaultMode` in particular
-decides whether a session runs with bypassed permissions, which is the operator's decision and
-cannot be a fleet default.
+That default is too narrow to run a campaign under, so every target diverges from it — and
+because the file is vendored byte-for-byte, every divergence is reverted without warning.
 
 Observed: the `brief` operator set `"defaultMode": "bypassPermissions"` and accumulated ~70
 allow entries over one campaign. `npx scaffold audit` then reported
@@ -28,10 +27,25 @@ allow entries over one campaign. `npx scaffold audit` then reported
 and the next `repair` would revert all of it without warning. The campaign hit this only
 because it happened to run an audit; nothing warns at `repair` time.
 
-**Proposal.** Vendor `.claude/settings.json` for EXISTENCE rather than bytes, or vendor only
-the keys that are genuinely fleet-uniform (`$schema`, `enableAllProjectMcpServers`, `deny`) and
-leave `defaultMode` and `allow` to the target. The audit already supports an existence-only
-comparison — it reports "compared bytes at 99, existence at 4, and nothing at 6".
+**Two ways to fix it, and the fleet owner took the second.**
+
+_Rejected:_ vendor `.claude/settings.json` for existence rather than bytes, or vendor only the
+fleet-uniform keys and leave `defaultMode` and `allow` to the target. This preserves the vendored
+default and lets targets diverge.
+
+_Taken:_ make the vendored default good enough that no target needs to diverge. The settings that
+had accumulated in `brief` and `reason` — `bypassPermissions` plus a ~90-entry allow list covering
+the whole gate chain, the bench probes, and the read-only IDE queries — are now the canonical
+vendored copy, byte-for-byte, and `repair` overwrites a target with them deliberately.
+
+That inverts the defect: a target diverging from the vendored settings is now the anomaly rather
+than the norm, and the drift this file was raised about disappears once each target re-pins.
+
+**The consequence, stated because it is a posture change, not a convenience.** `defaultMode` is a
+FLEET default now, so every workspace scaffold generates or repairs runs with permission checks
+bypassed. That is right for a fleet whose repositories are all operator-owned. It is not right for
+a repository an untrusted contributor clones and opens in an agent harness, and any such
+repository must override `defaultMode` in its own `.claude/settings.local.json`.
 
 ## 2. `.gitignore` is vendored and does not ignore `.claude/settings.local.json`
 
@@ -84,26 +98,17 @@ to be fixed in the `scaffold` repository's host inventory.
 
 ## Status
 
-Defects 2, 3 and 4 are **LANDED** in `scaffold` at `ad2136a`: the deny rule no longer seals
-`.claude/settings.local.json`, the vendored `.gitignore` ignores it, and `orkestrel-falsify` has
-its `agents/openai.yaml`. `.agents/orchestration.md` now names `settings.local.json` as the
-destination for a target's own permissions.
+**All four LANDED** in `scaffold`: defects 2, 3 and 4 at `ad2136a`, defect 1 at `91632b3`.
 
-Defect 1 is **open by decision.** `.claude/settings.json` is still vendored byte-for-byte;
-narrowing it to existence-only, or to the fleet-uniform keys, changes what every target inherits
-and belongs to the fleet owner rather than to this debrief.
+Defect 3's fix is kept alongside defect 1's: the vendored copy carries the full allow list AND
+omits the three `settings.local.json` deny lines, so an agent can still write that file where a
+target genuinely needs to override the fleet default.
 
 All four reach this checkout only on the next `@orkestrel/scaffold` release plus `repair`.
 
 ## The drift standing in this checkout
 
-`.claude/settings.json` here still carries `bypassPermissions` and ~70 allow entries, so
-`npx scaffold audit` reports 1 of 109 drifted. That is deliberate: reverting it before the
-operator's permissions have somewhere else to live would silently strip grants they set.
-
-The migration, once this checkout re-pins a `scaffold` release carrying `ad2136a`: create
-`.claude/settings.local.json` with a `permissions` object holding the `defaultMode` and `allow`
-list currently in `.claude/settings.json`, then restore `.claude/settings.json` from
-`node_modules/@orkestrel/scaffold/dist/host/claude/settings.json`. Claude Code reads
-`settings.local.json` as a settings source, `repair` does not touch it, and the vendored
-`.gitignore` now keeps it out of the tree.
+`npx scaffold audit` still reports `.claude/settings.json` drifted here, and no hand migration is
+needed any more: this checkout's copy is now what scaffold vendors, minus the three deny lines
+scaffold dropped and the allow entries scaffold added. Re-pinning a release carrying those commits
+and running `repair` closes the drift by overwriting this file with the canonical one.
