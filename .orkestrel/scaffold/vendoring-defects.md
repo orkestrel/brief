@@ -78,24 +78,32 @@ hardest.
 
 ## Why this file is here
 
-All three defects live in files `scaffold` vendors. Editing them in a target propagates nothing
-— `repair` reverts the edit and `audit` reports it as drift, which is defect 1 recurring. They
-have to be fixed in the `scaffold` repository's host inventory, staged, gated, and pushed.
+All four defects live in files `scaffold` vendors. Editing them in a target propagates nothing —
+`repair` reverts the edit and `audit` reports it as drift, which is defect 1 recurring. They have
+to be fixed in the `scaffold` repository's host inventory.
 
-The `scaffold` checkout was not present on the machine that ran this campaign
-(`C:\Users\mikes\WebstormProjects` held `brief`, `reason`, `supervisor`, `terrain`), so none of
-this could be landed from here.
+## Status
 
-## Status in this checkout
+Defects 2, 3 and 4 are **LANDED** in `scaffold` at `ad2136a`: the deny rule no longer seals
+`.claude/settings.local.json`, the vendored `.gitignore` ignores it, and `orkestrel-falsify` has
+its `agents/openai.yaml`. `.agents/orchestration.md` now names `settings.local.json` as the
+destination for a target's own permissions.
 
-**All four are open.** Defect 1 could not be resolved locally, because defect 3 seals the only
-correct destination: an agent cannot create `.claude/settings.local.json`. Reverting
-`.claude/settings.json` to the vendored bytes without that file in place would silently strip the
-operator's `bypassPermissions` setting, so the drift is left standing deliberately and
-`npx scaffold audit` reports 1 of 109 drifted until the operator migrates by hand.
+Defect 1 is **open by decision.** `.claude/settings.json` is still vendored byte-for-byte;
+narrowing it to existence-only, or to the fleet-uniform keys, changes what every target inherits
+and belongs to the fleet owner rather than to this debrief.
 
-The migration, for whoever does it: create `.claude/settings.local.json` containing a
-`permissions` object with `defaultMode` and the `allow` list currently in `.claude/settings.json`,
-then restore `.claude/settings.json` from `node_modules/@orkestrel/scaffold/dist/host/claude/settings.json`.
-Claude Code reads `.claude/settings.local.json` as a settings source and `repair` does not touch
-it. Until defect 2 lands it will show as an untracked file.
+All four reach this checkout only on the next `@orkestrel/scaffold` release plus `repair`.
+
+## The drift standing in this checkout
+
+`.claude/settings.json` here still carries `bypassPermissions` and ~70 allow entries, so
+`npx scaffold audit` reports 1 of 109 drifted. That is deliberate: reverting it before the
+operator's permissions have somewhere else to live would silently strip grants they set.
+
+The migration, once this checkout re-pins a `scaffold` release carrying `ad2136a`: create
+`.claude/settings.local.json` with a `permissions` object holding the `defaultMode` and `allow`
+list currently in `.claude/settings.json`, then restore `.claude/settings.json` from
+`node_modules/@orkestrel/scaffold/dist/host/claude/settings.json`. Claude Code reads
+`settings.local.json` as a settings source, `repair` does not touch it, and the vendored
+`.gitignore` now keeps it out of the tree.

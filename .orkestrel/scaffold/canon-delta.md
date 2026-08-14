@@ -4,8 +4,15 @@ Fifteen refinements to the vendored instruction set, reconciled from two blind a
 (Opus 5 subjective, GPT-5.6 Sol objective) run on one identical brief. Convergent findings are
 marked; divergences carry the ruling and its reason.
 
-Every target file below is vendored by `scaffold`, so none of this can land in a consumer
-checkout. Apply in `scaffold`'s host inventory, then propagate.
+**Status: LANDED** in `scaffold` at `ad2136a`. Every refinement below is applied in that
+repository's host inventory and reaches `dist/host`. It arrives here on the next
+`@orkestrel/scaffold` release plus `repair`; until then this checkout still runs the old canon.
+
+One item was recorded rather than taken — see `vendoring-defects.md` defect 1, which is a design
+decision about what `settings.json` should vendor.
+
+Every target file below is vendored by `scaffold`, so none of it could land in a consumer
+checkout directly.
 
 Campaign record: `brief` commits `1abfc6d`..`8d2739b`. Three adversarial rounds, 62 findings
 reported, 41 confirmed after independent refutation.
