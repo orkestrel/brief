@@ -139,7 +139,7 @@ when the role file already pins it.
 | Creative design and alternatives         | `planner`                       | `planner`                     | Opus 5 (native / bridge)      |
 | Design-fit review and audit              | `reviewer`                      | `reviewer`                    | Opus 5 (native / bridge)      |
 | Objective analysis and correctness audit | `analyst`                       | `analyst`                     | GPT-5.6 Sol (bridge / native) |
-| Nontrivial implementation (objective)    | `codex` route `implementer`     | `implementer`                 | GPT-5.6 Sol (bridge / native) |
+| Nontrivial implementation (objective)    | `sol`                           | `implementer`                 | GPT-5.6 Sol (bridge / native) |
 | Nontrivial implementation (subjective)   | `implementer`                   | `implementer` route `opus`    | Opus 5 (native / bridge)      |
 | Bounded primary-source research          | `researcher`                    | `researcher`                  | Grok → Luna → Sonnet          |
 | Repository reconnaissance                | `scout`                         | `scout`                       | Grok → Luna → Sonnet          |
@@ -160,9 +160,8 @@ when the role file already pins it.
   has stepped past Grok. Record which step you are on.
 - `orkestrel` stays native because it carries the package catalog in its own role file. Sending its
   job to a bench means shipping that catalog across, which costs more than the bench saves.
-- One gap is open and recorded rather than improvised: the Sol implementer is still `codex` route
-  `implementer` while its Codex mirror has a named `opus` bridge. Closing it means deciding where
-  the shared Sol transport contract lives once two bridges follow it.
+- `codex` is the shared Sol transport contract, not a route. `analyst` and `sol` are the named
+  bridges; both bind that contract by reference and pin only their route and sandbox.
 - Opus and Sol roles use high effort. Native cheap-tier roles use low or medium. Bridge drivers use
   the cheapest tier that can run a CLI.
 - Never route orchestration or acceptance across a bridge.
@@ -202,6 +201,10 @@ Every role honours this floor. No dispatch may widen it.
   same class of defect through a new door, the search is following the frame rather than the
   defect. Bound the scope, then fan out independent lenses over disjoint slices in one pass.
   Parallelism is worth more here for the framing it breaks than for the wall-clock it saves.
+- Two lanes is the adversarial pass's FLOOR, not its shape. Where a subject has more seams than
+  two lanes can attack, fan out one lens per seam over disjoint slices, keep every lens blind and
+  clean-contexted, and number every slice's claims in one shared sequence. Change the lenses in a
+  successor round rather than repeating them.
 - Decompose by required context and independently verifiable acceptance criteria, not by task type.
 - Send instructions down fully specified. Return findings smaller than the context consumed.
 - Parallelize independent work. Serialize dependencies and shared-file contention.
@@ -366,10 +369,11 @@ The harness bridge names the concrete mechanism for each of these.
 - Send a decision taken mid-campaign to every unit already in flight whose brief it invalidates. An
   executor cannot see a change made after it was dispatched, so it writes the state its brief
   described and the defect surfaces as its own.
-- Treat brief and report files as unit evidence, not deliverables. Never commit them, and sweep
-  them when the campaign that produced them is accepted.
+- Treat the `tmp/` brief and report pair as ephemeral launch copies. **Bench laws** rule 4 owns
+  what is kept and what is swept; follow it there rather than deciding here.
 - Promote anything that must outlive the campaign into a durable artifact before the sweep — a
-  commit message, a guide, a rule, a retrospective. What is only in a swept file did not survive.
+  commit message, a guide, a rule, a retrospective. What is only in a swept file did not survive,
+  and a debrief that must quote the record verbatim has nothing to quote.
 
 ### Where campaign artifacts live
 
@@ -491,11 +495,17 @@ command that outlives the turn that started it. Every law here binds all of them
 - Write a multi-step chain to a script file and run the file. A chain composed inside one shell
   argument cannot be read back, corrected, or re-run, and the record of what actually ran is the
   argument text in a transcript rather than a file on disk.
+- On a Windows host this binds every program-carrying command, not only long ones. Heredocs,
+  `node -e`, `node -p`, `&&` chaining, and any argument carrying `${...}` trip the Git Bash
+  approval classifier and turn an unattended run into a manual approval prompt. Write the program
+  to a file, invoke the file, and keep each shell call one plain command.
 - Detach anything that must survive its launching shell with `setsid`. A backgrounded flow the
   harness reaps mid-step leaves the work half done and the exit status missing, and the reap looks
   identical to the step failing.
-- Size the cap from the observed high mark of comparable commands, plus an independently budgeted
-  gate allowance, plus explicit slack. Never size it from the estimate alone.
+- Size the cap yourself, from the observed high mark of comparable commands, plus an
+  independently budgeted gate allowance, plus explicit slack. Never size it from the estimate
+  alone. Never delegate it: a bridge starts with a clean context, holds no record of prior runs,
+  and can only guess. A cap-killed exec is indistinguishable from a real failure.
 - Run the first use of any CLI flag, subcommand, quoting form, or stdin combination in a throwaway
   probe. Never inside a dispatched unit or a publish chain.
 - A launch is not a launch until its record grows past its header. Confirm the log advanced beyond
@@ -575,9 +585,11 @@ transport.
 4. **Ephemeral streams, durable records.** A journal proves a bench is alive and recovers an
    interrupted session. Keep journals under `tmp/`, never commit them, and sweep them at acceptance
    after the final gate evidence is recorded. The **brief**, the returned **distillate**, the
-   **audit verdict**, and the **acceptance evidence** are not streams. Commit each one as its unit
-   is dispatched and as it returns, because each encodes knowledge that costs real money to
-   re-derive and none of it is reproducible from the diff.
+   **audit verdict**, and the **acceptance evidence** are not streams. Copy each into
+   `.orkestrel/<package>/` and commit it as its unit is dispatched and as it returns, then sweep
+   only the `tmp/` copy. None of it is reproducible from the diff, and a debrief has no primary
+   source without it. This rule owns retention for the whole contract; **Dispatch anatomy**
+   points here rather than answering it.
 
 ### Recovering a dark bench
 
@@ -641,6 +653,10 @@ and propagates as files rather than as a cascade.
   prove that target's gates still green. `repair` restores `tests/setupPolicy.ts` and
   `tests/policy.test.ts`, so a vendored-only release can turn a green target red. A target bumps
   only when its own published surface moved.
+- Keep a target's own Claude permissions in `.claude/settings.local.json`, never in the vendored
+  `.claude/settings.json`. `repair` restores the vendored copy, so a `defaultMode` or an `allow`
+  entry added there is reverted without warning and the operator loses grants they set
+  deliberately. Change the vendored file only here, in the host inventory.
 - Never edit a vendored file inside a target. `repair` restores it, so the edit is reverted and
   reports as drift in `scaffold audit`. In this repository those same files are the published
   `dist/host` surface, so editing one forces a bump, a publish, and a re-propagation across every

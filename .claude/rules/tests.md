@@ -35,6 +35,7 @@ paths:
 - Measure an elapsed interval with `performance.now()`, never `Date.now()`. `Date.now()` returns whole milliseconds, so an interval built from two of its readings truncates at both ends and can under-report by a millisecond — enough to fail a boundary assertion against a timer that behaved correctly. `performance.now()` is monotonic and sub-millisecond, and it does not move when the wall clock does.
 - Give a conditional skip the mechanism that makes it inapplicable, cited, not the platform name alone. A test skipped on a platform is a test nobody re-examines; a test skipped because a named API rejects a named case is one anybody can re-check.
 - A regression test records the exact command and its failing count before the fix, and the same command's passing count after.
+- The revert that proves a repair reddens exactly the test that names the defect. Keep the import and collection graph valid while reverting, and confirm the named test was collected. A revert that reddens anything beyond that test broke the harness, and its count is not evidence.
 - Use `it.todo()` only for explicitly out-of-scope roadmap work, never to complete the current request. Every `.skip` or conditional skip has a narrow verifiable applicability reason.
 - Do not create test files solely for `constants.ts`, barrels, error definitions, or `types.ts`.
 - Run the narrowest relevant Vitest project during development; do not run the entire suite casually.
@@ -44,20 +45,24 @@ paths:
 A proof that covers the workspace instead of one module has a fixed location, so no package invents
 its own:
 
-| Path                         | Proves                                                                                                |
-| ---------------------------- | ----------------------------------------------------------------------------------------------------- |
-| `tests/policy.test.ts`       | Every source file obeys the syntactic coding and placement law                                        |
-| `tests/config.test.ts`       | Root configuration resolves its aliases, projects, and outputs, and the `configs/` leaves behind them |
-| `tests/guides.test.ts`       | Every documented API exists and every public API is documented                                        |
-| `tests/conformance.test.ts`  | Where this package drifts from the official tooling it tracks                                         |
-| `tests/distribution.test.ts` | The packed package installs and resolves through its public exports                                   |
-| `tests/integration.test.ts`  | The package's features work together end to end across environments                                   |
-| `tests/service/**/*.test.ts` | The live external services this package drives, driven for real                                       |
+| Path                         | Proves                                                                                                                         |
+| ---------------------------- | ------------------------------------------------------------------------------------------------------------------------------ |
+| `tests/policy.test.ts`       | Every source file obeys the syntactic coding and placement law                                                                 |
+| `tests/config.test.ts`       | Root configuration resolves its aliases, projects, and outputs, and the `configs/` leaves behind them                          |
+| `tests/guides.test.ts`       | Every documented API exists, every public API is documented, and every executable fence returns what the guide says it returns |
+| `tests/conformance.test.ts`  | Where this package drifts from the official tooling it tracks                                                                  |
+| `tests/distribution.test.ts` | The packed package installs and resolves through its public exports                                                            |
+| `tests/integration.test.ts`  | The package's features work together end to end across environments                                                            |
+| `tests/service/**/*.test.ts` | The live external services this package drives, driven for real                                                                |
 
 - `.claude/rules/workspace.md` names the Vitest project each location belongs to.
-- The `guides` project runs in Node with the browser disabled. Its subject is
-  documented-name-to-real-export. A proof that renders a component and compares it against a
-  definition is a composition and belongs in an `integration.test.ts` scoped to its directory.
+- The `guides` project runs in Node with the browser disabled. Its subject is what the guide
+  claims: that every documented name resolves, and that every fence asserting a value returns
+  that value. A proof that renders a component and compares it against a definition is a
+  composition and belongs in an `integration.test.ts` scoped to its directory.
+- Transcribe each flagship fence and assert the values its comments claim. Name resolution is
+  not a behavioural proof, so a fence documenting a value the code contradicts passes every
+  parity assertion. Change a fence, change the transcription beside it.
 - `integration.test.ts` is a reserved filename at any level. It names a scope rather than a module,
   so the mirror rule does not reach it; its scope is the directory it sits in.
 - An integration test is an end-to-end test: it composes the package's own features and drives them

@@ -11,7 +11,7 @@ cursor-grok-4.5-high; re-read `agent models` if it fails and never guess or
 substitute. Invoke Cursor in ask mode only for a short bounded ask:
 agent -p --trust --mode=ask --model "$CURSOR_GROK_MODEL" "<brief>"
 For longer work do not launch anything: return the brief path, the exact resolved
-command, the journal path, and a cap recommendation for the Orchestrator to launch.
+command, and the journal path for the Orchestrator to launch under a cap it owns.
 The brief requires read-only work, concise evidence with file:line pointers, and no
 raw dumps, design, decisions, or edits. Never use --force, expose CURSOR_API_KEY,
 read secrets, or edit. Compare git status before and after. Return only the question,

@@ -16,7 +16,8 @@ Read the current files in this order:
    before auditing the agent/rule/skill/process layer;
    [field-testing.md](references/field-testing.md) before running or judging a live field
    pass of an agent-facing surface.
-4. `guides/README.md`, the governing guides for what the campaign built, and `ROADMAP.md`.
+4. `guides/README.md`, the governing guides for what the campaign built, and `ROADMAP.md` when
+   the repository keeps one.
 
 The user's current instruction wins. The debrief judges the artifact and the process that
 produced it; neither is exempt. Capture successes as deliberately as mistakes, and codify

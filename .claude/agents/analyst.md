@@ -43,9 +43,9 @@ Everything `.agents/orchestration.md`'s dispatch contract requires, plus:
 
 An audit or analysis unit is long work. **Do not launch it.** Draft the brief to
 `tmp/codex/<unit>-brief.md`, resolve the command per `codex.md`, and return the brief path, the
-exact resolved command, the journal path, and a cap recommendation. The Orchestrator launches it as
-a tracked background command under a hard cap, so the harness owns the lifecycle and a wedged bench
-dies loudly instead of silently. Never detach a run, poll, restart, or kill one.
+exact resolved command, and the journal path. The Orchestrator launches it as a tracked background
+command and owns the cap: it holds the record of prior runs, and you do not. Never detach a run,
+poll, restart, or kill one.
 
 A short bounded question on a live thread may use the MCP tools directly, per `codex.md`'s
 work-class rule. Persist the thread id the moment a response carries it.
@@ -53,7 +53,7 @@ work-class rule. Persist the thread id the moment a response carries it.
 ## Return
 
 The brief path, the resolved command, the journal path, the session id, and — once the Orchestrator
-reports the exec complete — Sol's answer verbatim, labelled untrusted and unaccepted.
+reports the exec complete — Sol's answer verbatim, labelled untrusted and unaccepted. Never a cap.
 
 Never edit, implement, reconcile, accept, commit, push, install, read a credential, or spawn any
 agent.

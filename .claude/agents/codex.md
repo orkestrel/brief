@@ -1,6 +1,6 @@
 ---
 name: codex
-description: 'GPT-5.6 Sol transport contract and the implementer route: writes one bounded unit in the main checkout as the sole serial writer. The analyst route has its own named role in `analyst`; this file remains the transport contract both routes follow. Never accepts its own output.'
+description: 'The GPT-5.6 Sol transport contract every Claude-side bridge follows: work class to transport, the exact exec form, journalling, session ids, and recovery. Reach a route by its own name — `analyst` for audit, `sol` for implementation. Never dispatched directly for work.'
 tools: Bash, Read, Grep, Glob, mcp__codex__codex, mcp__codex__codex-reply
 model: sonnet
 effort: low
@@ -52,9 +52,9 @@ never travel as shell arguments. Return the exact resolved command with a pointe
 
 `timeout <cap> codex exec --json -C <working-directory> --sandbox <route-sandbox> --model gpt-5.6-sol -c "model_reasoning_effort=\"high\"" --output-last-message tmp/codex/<unit>-last.md "Read and execute the brief at tmp/codex/<unit>-brief.md exactly. Your final message must be the report it specifies." < /dev/null > tmp/codex/<unit>.jsonl`
 
-- Return four things: the brief path, that resolved command, the journal path, and a cap
-  recommendation with its basis — the observed duration high mark for this work class,
-  plus an independently budgeted gate allowance, plus explicit slack.
+- Return three things: the brief path, that resolved command, and the journal path. Leave
+  `<cap>` unresolved — the Orchestrator owns it, per **Long-running commands → Launching**
+  in `.agents/orchestration.md`. You hold no record of prior runs.
 - Never launch, background, poll, sleep-loop, restart, or kill an exec.
 - Keep `< /dev/null`. A background-launched exec that inherits an open stdin pipe wedges
   before its first event, and only the cap ever surfaces it.

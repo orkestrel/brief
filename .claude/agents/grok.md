@@ -54,10 +54,10 @@ Write that chain to `tmp/cursor/run.sh` and run the file, so the resolution, the
 journalling are one artifact the next run reuses.
 
 Run that yourself only for a short bounded ask finishing in about two minutes. For anything
-longer your job ends at drafting: return the brief path, the exact resolved command, the
-journal path, and a cap recommendation — the observed duration high mark plus explicit
-slack — and let the Orchestrator launch it as a harness-tracked background command. Never
-detach a run and end your turn; an unowned run has no completion signal and no death notice.
+longer your job ends at drafting: return the brief path, the exact resolved command, and the
+journal path, and let the Orchestrator launch it as a harness-tracked background command under
+a cap it owns. Never recommend a cap — you hold no record of prior runs. Never detach a run and
+end your turn; an unowned run has no completion signal and no death notice.
 
 ## Brief and containment
 

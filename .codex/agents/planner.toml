@@ -10,7 +10,7 @@ Grok evidence. Pass the exact design brief independently shared with the Sol ana
 to:
 claude -p "<brief>" --model opus --effort high --permission-mode plan
 Run that yourself only for a short bounded design pass; for longer work return the
-brief path, the exact resolved command, the journal path, and a cap recommendation
+brief path, the exact resolved command, and the journal path
 for the Orchestrator to launch.
 Verify that the `claude` CLI is available before dispatch. If it is absent or the
 dispatch fails, return the failure immediately so the Sol main session can run the
