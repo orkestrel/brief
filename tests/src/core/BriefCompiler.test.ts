@@ -21,7 +21,11 @@ import {
 	buildInterpret,
 	buildPermissiveEvaluator,
 	buildReadyInput,
+	buildCountingReason,
 	buildFailingInterpret,
+	buildForeignInterpret,
+	buildSilentReason,
+	buildStableReason,
 	buildTask,
 	readErrorCode,
 } from '../../setup.js'
@@ -460,10 +464,105 @@ describe('BriefCompiler fail-closed paths', () => {
 		compiler.destroy()
 	})
 
-	it('contains an interpret failure and still compiles from the caller-authored task', () => {
-		// The one contained stage code with no coverage. `@orkestrel/interpret` contains its own
-		// stage failures, so this needs a foreign engine — which is exactly what
-		// `BriefCompilerOptions.interpret` publishes as a seam.
+	it('reads a borrowed verdict exactly once, whatever the engine answers on a second read', () => {
+		// The property, not the symptom. A foreign object's read COUNT is this package's
+		// decision, so a briefing must not depend on it: `gate` owns the verdict at arrival and
+		// validates the owned copy, so every later read is of this compiler's own frozen value.
+		//
+		// Driven with an engine whose every verdict member is a counting getter, and compared
+		// against a static engine returning each member's FIRST answer. Equal briefings mean one
+		// reading — and it covers every member at once, including ones added later.
+		const counted = createBriefCompiler({ reason: buildCountingReason() })
+		const first = counted.compile(buildReadyInput())
+		counted.destroy()
+
+		const stable = createBriefCompiler({ reason: buildStableReason() })
+		const second = stable.compile(buildReadyInput())
+		stable.destroy()
+
+		expect(first.verdict).toStrictEqual(second.verdict)
+		expect(first.brief !== undefined).toBe(second.brief !== undefined)
+		expect(first.failures).toStrictEqual(second.failures)
+	})
+
+	it('names the cause when a borrowed reasoner refuses without naming a rule', () => {
+		// The one case where the supplied engine is the sole decider rendered as
+		// `Gate refused: ` — a refusal with its cause cut off.
+		const compiler = createBriefCompiler({ reason: buildSilentReason() })
+		const briefing = compiler.compile(buildReadyInput())
+		expect(briefing.brief).toBeUndefined()
+		expect(briefing.failures[0]?.message).toBe(
+			'Gate refused: the supplied reasoner named no failing rule',
+		)
+		compiler.destroy()
+	})
+
+	it('digests a refused outcome by its draft, so two different refusals differ', () => {
+		// `digest` is documented as identifying the outcome and offered as a cache key. Digesting
+		// only questions and failures gave EVERY ordinary refusal one value — two entirely
+		// different requests refused for "no proofs" were indistinguishable.
+		const compiler = createBriefCompiler()
+		const shared = { outcomes: [outcome(1, 'x')] }
+		const one = compiler.compile({ ...shared, task: buildTask() })
+		const two = compiler.compile({
+			...shared,
+			task: task('plan', 'ops', 'Plan the release.'),
+		})
+		expect(one.brief).toBeUndefined()
+		expect(two.brief).toBeUndefined()
+		expect(one.failures).toStrictEqual(two.failures)
+		expect(one.digest).not.toBe(two.digest)
+		// The control: the same request refused twice keeps one digest.
+		expect(compiler.compile({ ...shared, task: buildTask() }).digest).toBe(one.digest)
+		compiler.destroy()
+	})
+
+	it('owns a foreign value without narrowing it, so a non-JSON entity cannot slip the gate', () => {
+		// The fail-open this boundary exists to prevent. `Entity.value` is declared `unknown`, so
+		// a function is a CONFORMING value — but the ownership boundary cloned unconditionally,
+		// the clone threw, the interpret stage was contained as failed, and with the
+		// interpretation went the ambiguities it had derived. `findBlockingGaps` was empty, the
+		// gate passed, and a brief was emitted for a request the same code refused a moment
+		// earlier with a JSON-expressible value in the same field.
+		//
+		// The two runs below must be INDISTINGUISHABLE. That is the property; the refusal is
+		// only how it shows.
+		const readings = [' a string ', () => 'anything'].map((value) => {
+			const compiler = createBriefCompiler({
+				interpret: buildForeignInterpret(value),
+				actions: { migrate: 'migrate' },
+				domains: { code: 'code' },
+			})
+			const briefing = compiler.compile({
+				text: 'migrate the stores',
+				task: buildTask(),
+				outcomes: [outcome(1, 'x')],
+				proofs: [proof('x', 'npm test')],
+			})
+			compiler.destroy()
+			return {
+				emitted: briefing.brief !== undefined,
+				questions: briefing.questions.length,
+				read: briefing.interpretation !== undefined,
+				codes: briefing.failures.map((entry) => entry.code),
+			}
+		})
+		expect(readings[0]).toStrictEqual({
+			emitted: false,
+			questions: 1,
+			read: true,
+			codes: ['BLOCKED'],
+		})
+		expect(readings[1]).toStrictEqual(readings[0])
+	})
+
+	it('contains an interpret failure and REFUSES, because the request went unread', () => {
+		// `@orkestrel/interpret` contains its own stage failures, so this needs a foreign engine —
+		// which `BriefCompilerOptions.interpret` publishes as a seam.
+		//
+		// Containing the failure is right; letting it through the gate is not. The stage would
+		// have produced the request's ambiguities, so a failure DELETES evidence — and a failure
+		// that removes evidence must never read as evidence of readiness.
 		const compiler = createBriefCompiler({
 			interpret: buildFailingInterpret(),
 			actions: { migrate: 'migrate' },
@@ -477,15 +576,27 @@ describe('BriefCompiler fail-closed paths', () => {
 		})
 		expect(briefing.failures[0]?.stage).toBe('interpret')
 		expect(briefing.failures[0]?.code).toBe('INTERPRET_FAILED')
-		// Contained, not thrown: the caller-authored task carries the compile to completion.
-		expect(briefing.brief).toBeDefined()
-		// Structural, not identical: the emitted brief is an owned null-prototype record, so
-		// `toStrictEqual` would fail on the prototype alone.
-		expect(briefing.brief?.task).toEqual(buildTask())
 		const record = briefing.stages.find((entry) => entry.stage === 'interpret')
 		expect(record?.stage === 'interpret' ? record.error : undefined).toBe(
 			'the interpret engine failed',
 		)
+		// Contained, not thrown — and refused, with the unknown visible as a question the caller
+		// can answer rather than as silence.
+		expect(briefing.brief).toBeUndefined()
+		expect(briefing.questions.map((entry) => entry.field)).toStrictEqual(['gaps'])
+		expect(briefing.questions[0]?.blocking).toBe(true)
+
+		// The control: the SAME failing engine with the caller supplying their own
+		// interpretation. Nothing was lost, so nothing is added, and the compile completes.
+		const carried = compiler.compile({
+			text: 'migrate the stores',
+			interpretation: buildInterpret('migrate', 'code', true).interpret('migrate the stores'),
+			task: buildTask(),
+			outcomes: [outcome(1, 'x')],
+			proofs: [proof('x', 'npm test')],
+		})
+		expect(carried.brief).toBeDefined()
+		expect(carried.brief?.task).toEqual(buildTask())
 		compiler.destroy()
 	})
 

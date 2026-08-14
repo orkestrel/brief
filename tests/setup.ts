@@ -2,8 +2,22 @@ import type { Brief, BriefErrorCode, BriefInput, Manifest, Task } from '@src/cor
 import { brief, isBriefError, manifest, outcome, proof, reference, task } from '@src/core'
 import type { InterpretInterface } from '@orkestrel/interpret'
 import { createInterpret } from '@orkestrel/interpret'
-import type { Check, EvaluatorInterface, ReasonResult } from '@orkestrel/reason'
-import { quantitativeDefinition } from '@orkestrel/reason'
+import type {
+	Check,
+	EvaluatorInterface,
+	ReasonInterface,
+	ReasonResult,
+	RuleResult,
+} from '@orkestrel/reason'
+import { createReason, quantitativeDefinition } from '@orkestrel/reason'
+
+/** The single rule result the counting and stable engines agree on for a first read. */
+export const FIRST_RULE: RuleResult = Object.freeze({
+	id: 'ready',
+	applied: true,
+	premises: Object.freeze([true]),
+	conclusion: true,
+})
 
 /** The canonical valid task every fixture builds on. */
 export function buildTask(): Task {
@@ -114,6 +128,54 @@ export function buildFailingInterpret(): InterpretInterface {
 }
 
 /**
+ * An interpret engine whose entity carries whatever value the caller names.
+ *
+ * @remarks
+ * A boundary stub: every member delegates to a REAL `createInterpret`, and only the returned
+ * `Interpretation` is decorated. `Entity.value` is declared `unknown` by
+ * `@orkestrel/interpret`, so a function or a class instance is a CONFORMING value — which is
+ * the point. It also always raises one required ambiguity, so a brief built from it is
+ * genuinely under-specified and the gate must refuse it.
+ *
+ * @param value - The entity value to carry; pass a non-JSON value to drive the ownership
+ *   boundary's clone fallback.
+ */
+export function buildForeignInterpret(value: unknown): InterpretInterface {
+	const real = createInterpret({
+		extractor: {
+			extract: () => ({
+				intent: { action: 'migrate', domain: 'code', confidence: 1 },
+				numbers: [],
+				complete: false,
+			}),
+		},
+	})
+	return {
+		get emitter() {
+			return real.emitter
+		},
+		interpret: (text: string) => ({
+			...real.interpret(text),
+			entities: [{ name: 'callback', value, provenance: { category: 'computed' }, confidence: 1 }],
+			ambiguities: [
+				{ field: 'output', question: 'Diff or files?', candidates: [], required: true },
+			],
+		}),
+		register: (template) => {
+			real.register(template)
+		},
+		unregister: (id) => real.unregister(id),
+		template: (id) => real.template(id),
+		templates: () => real.templates(),
+		describe: (definition) => real.describe(definition),
+		narrate: (result) => real.narrate(result),
+		destroy: () => {
+			real.destroy()
+		},
+	}
+}
+
+/**
  * Values a total guard must refuse without throwing.
  *
  * @remarks
@@ -173,6 +235,107 @@ export function buildPermissiveEvaluator(): EvaluatorInterface {
 		batch: (checks: readonly Check[]) =>
 			checks.map((check) => ({ field: check.field, met: true, actual: true })),
 	}
+}
+
+/**
+ * A reasons engine whose verdict answers differently on every read after the first.
+ *
+ * @remarks
+ * Registered through `createReason`'s published `reasoners` seam, so the REAL engine runs and
+ * only the verdict it yields is scripted. Every member except `reasoning` is a counting
+ * getter — `reasoning` cannot vary without lying about its literal type, and the other six
+ * carry the property.
+ *
+ * Pair with `buildStableReason`, which returns each member's FIRST answer as static data. Two
+ * briefings that compare equal prove `BriefCompiler` read the foreign verdict exactly once.
+ */
+export function buildCountingReason(): ReasonInterface {
+	// One counter PER MEMBER. A single shared counter would only ever give the first member
+	// read its first answer, which measures read ORDER rather than read count.
+	const reads = { conclusion: 0, rules: 0, count: 0, success: 0, trace: 0, errors: 0 }
+	return createReason({
+		reasoners: [
+			{
+				id: 'counting',
+				reasoning: 'logical',
+				supports: () => true,
+				validate: () => ({ valid: true, errors: [], warnings: [] }),
+				reason: () => ({
+					reasoning: 'logical',
+					get conclusion() {
+						reads.conclusion += 1
+						return reads.conclusion === 1
+					},
+					get rules() {
+						reads.rules += 1
+						return reads.rules === 1 ? [FIRST_RULE] : []
+					},
+					get count() {
+						reads.count += 1
+						return reads.count === 1 ? 1 : 99
+					},
+					get success() {
+						reads.success += 1
+						return reads.success === 1
+					},
+					get trace() {
+						reads.trace += 1
+						return reads.trace === 1 ? ['ready'] : []
+					},
+					get errors() {
+						reads.errors += 1
+						return reads.errors === 1 ? [] : ['forged']
+					},
+				}),
+			},
+		],
+	})
+}
+
+/** The static twin of `buildCountingReason` — each member's first answer, as plain data. */
+export function buildStableReason(): ReasonInterface {
+	return createReason({
+		reasoners: [
+			{
+				id: 'stable',
+				reasoning: 'logical',
+				supports: () => true,
+				validate: () => ({ valid: true, errors: [], warnings: [] }),
+				reason: () => ({
+					reasoning: 'logical',
+					conclusion: true,
+					rules: [FIRST_RULE],
+					count: 1,
+					success: true,
+					trace: ['ready'],
+					errors: [],
+				}),
+			},
+		],
+	})
+}
+
+/** A reasons engine that refuses through `conclusion` alone and names no failing rule. */
+export function buildSilentReason(): ReasonInterface {
+	return createReason({
+		reasoners: [
+			{
+				id: 'silent',
+				reasoning: 'logical',
+				supports: () => true,
+				validate: () => ({ valid: true, errors: [], warnings: [] }),
+				reason: () => ({
+					reasoning: 'logical',
+					conclusion: false,
+					rules: [],
+					count: 0,
+					success: true,
+					trace: [],
+					errors: [],
+				}),
+			},
+		],
+	})
 }
 
 /**

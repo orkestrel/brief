@@ -303,6 +303,24 @@ describe('countSentences', () => {
 		expect(countSentences('Refactor useForm')).toBe(1)
 		expect(findUnmetRules(buildBrief())).toStrictEqual([])
 	})
+
+	it('reads an embedded abbreviation as a boundary — the documented limit', () => {
+		// Pinned as a LIMIT, not as desired behaviour. Separating `Dr.` from a real boundary
+		// needs a lexicon or a heuristic, and a heuristic gets a different set wrong quietly, in
+		// the direction of letting a compound statement through — the failure this rule exists
+		// to prevent. So the count is reported and the author judges.
+		expect(countSentences('Ask Dr. Smith')).toBe(2)
+		expect(countSentences('Compare React vs. Vue')).toBe(2)
+		expect(countSentences('Use e.g. this approach')).toBe(2)
+		// Which means the gate refuses them, and the message says why.
+		const abbreviated = brief(task('review', 'code', 'Ask Dr. Smith'), {
+			outcomes: [outcome(1, 'x')],
+			proofs: [proof('x', 'npm test')],
+		})
+		expect(findUnmetRules(abbreviated)).toContain('single')
+		// The control: the same statement without the abbreviation passes.
+		expect(countSentences('Ask the reviewer')).toBe(1)
+	})
 })
 
 describe('find leaves', () => {
@@ -711,6 +729,19 @@ describe('briefToMarkdown', () => {
 		expect(row).toBe('- `  leading and trailing  ` → `  out  `')
 		// The control: a value with no boundary space renders with exactly one pad each side.
 		expect(exampleToLines(example('tight', 'out'))[0]).toBe('- ` tight ` → ` out `')
+	})
+
+	it('pads an EMPTY exemplar side, which has no spaces to preserve', () => {
+		// The all-space exception must not swallow the empty string. An empty side has no
+		// boundary spaces to lose, and withholding the pad emitted two adjacent backticks — a
+		// run with no closer, which does not parse as a code span at all.
+		//
+		// `isExample` requires both sides non-empty, so a validated brief never reaches this;
+		// `exampleToLines` is a public export a caller can drive directly.
+		expect(exampleToLines(example('', 'out'))[0]).toBe('- `  ` → ` out `')
+		expect(exampleToLines(example('in', ''))[0]).toBe('- ` in ` → `  `')
+		// The control: an all-SPACE side is the genuine exception and stays unpadded.
+		expect(exampleToLines(example('  ', 'out'))[0]).toBe('- `  ` → ` out `')
 	})
 
 	it('leaves an all-space exemplar side unpadded, decided per side', () => {

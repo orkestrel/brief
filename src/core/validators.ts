@@ -8,7 +8,6 @@ import {
 	isInteger,
 	isNonEmptyString,
 	isNumber,
-	isRecord,
 	isString,
 	literalOf,
 	recordOf,
@@ -66,6 +65,25 @@ export const isOutputFormat: Guard<OutputFormat> = literalOf(OUTPUT_FORMATS)
 export const isRiskSeverity: Guard<RiskSeverity> = literalOf(RISK_SEVERITIES)
 
 /**
+ * `true` when the value is a non-null object whose named members can be read.
+ *
+ * @remarks
+ * Wider than the contract package's plain-record guard, which refuses any object carrying its
+ * own prototype — a class instance among them. The verdict guards below narrow FOREIGN
+ * interfaces, and an
+ * interface is satisfied by a class instance as readily as by a literal — refusing one is the
+ * same narrowing-past-the-contract mistake that made an exact-record verdict guard fail the
+ * gate closed on a valid engine.
+ *
+ * Arrays are excluded because no interface this narrows is an array, and admitting one would
+ * let index access stand in for member access.
+ */
+export const isObject: Guard<Record<string, unknown>> = (
+	value: unknown,
+): value is Record<string, unknown> =>
+	typeof value === 'object' && value !== null && !Array.isArray(value)
+
+/**
  * `true` when the value is a well-formed reasons `RuleResult`.
  *
  * @remarks
@@ -73,7 +91,7 @@ export const isRiskSeverity: Guard<RiskSeverity> = literalOf(RISK_SEVERITIES)
  * off a BORROWED engine's return value, so the shape has to be checked rather than trusted.
  */
 export const isRuleVerdict: Guard<RuleResult> = (value: unknown): value is RuleResult =>
-	isRecord(value) &&
+	isObject(value) &&
 	isNonEmptyString(value['id']) &&
 	isBoolean(value['applied']) &&
 	arrayOf(isBoolean)(value['premises']) &&
@@ -103,7 +121,7 @@ export const isRuleVerdict: Guard<RuleResult> = (value: unknown): value is RuleR
  * type says `number`, and narrowing past a foreign contract is the same mistake.
  */
 export const isLogicalVerdict: Guard<LogicalResult> = (value: unknown): value is LogicalResult =>
-	isRecord(value) &&
+	isObject(value) &&
 	value['reasoning'] === 'logical' &&
 	isBoolean(value['conclusion']) &&
 	arrayOf(isRuleVerdict)(value['rules']) &&

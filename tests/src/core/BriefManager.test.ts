@@ -257,6 +257,26 @@ describe('BriefManager remove', () => {
 		registry.destroy()
 	})
 
+	it('refuses a brief whose own trace does not describe it', () => {
+		// `trace` gets the same reconciliation `hash` does, and needs it more: a hash is opaque,
+		// while the trace is the census line `briefToMarkdown` prints at the top of the
+		// executor's prompt. A stale one misdescribes the brief where it is most read.
+		const forged = parseBrief(
+			JSON.stringify({
+				...pinBrief(buildBrief()),
+				trace: 'plan/ops · outcomes:9 · gaps:0/0 · proofs:9',
+			}),
+		)
+		expect(forged).toBeDefined()
+		const registry = createBriefManager()
+		const failure = captureError(() => registry.add(requireValue(forged, 'the forged brief')))
+		expect(readErrorCode(failure)).toBe('INVALID')
+		expect(registry.size).toBe(0)
+		// The control: the same brief with the trace its own content derives is accepted.
+		expect(registry.add(pinBrief(buildBrief())).version).toBe(1)
+		registry.destroy()
+	})
+
 	it('reads a repeated id as the set it names, not as two attempts', () => {
 		// The contract is about the listed SET. Iterating the raw list removed the record on
 		// the first pass and then reported it missing on the second, so a caller who passed

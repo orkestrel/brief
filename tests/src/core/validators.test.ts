@@ -235,6 +235,22 @@ describe('isLogicalVerdict', () => {
 		expect(isLogicalVerdict({ ...sound, elapsed: 12, conclusion: 'yes' })).toBe(false)
 	})
 
+	it('accepts a verdict carrying a prototype, because an interface admits one', () => {
+		// `isRecord` admits only a PLAIN record, so it refused any object with its own prototype
+		// — a class instance among them. `LogicalResult` is a TypeScript interface, and a class
+		// instance satisfies an interface as readily as a literal does, so refusing one is the
+		// same narrowing-past-a-foreign-contract mistake that failed the gate closed once
+		// already.
+		const carried: unknown = Object.assign(Object.create({ inherited: true }), sound)
+		expect(isLogicalVerdict(carried)).toBe(true)
+		// The control: the prototype does not excuse a member that is wrong.
+		expect(
+			isLogicalVerdict(Object.assign(Object.create({ inherited: true }), sound, { count: 'one' })),
+		).toBe(false)
+		// And an array is still refused — no interface this narrows is an array.
+		expect(isLogicalVerdict(Object.assign([], sound))).toBe(false)
+	})
+
 	it('is total for adversarial input', () => {
 		for (const value of buildAdversarialValues()) expect(isLogicalVerdict(value)).toBe(false)
 		for (const value of buildAdversarialValues()) expect(isRuleVerdict(value)).toBe(false)

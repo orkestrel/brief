@@ -3,7 +3,7 @@ import { Emitter } from '@orkestrel/emitter'
 import type { ManagerAddOptions } from '@orkestrel/interpret'
 import { snapshotBrief } from './cloners.js'
 import { BriefError } from './errors.js'
-import { briefToContent, briefToHash } from './helpers.js'
+import { briefToContent, briefToHash, briefToTrace } from './helpers.js'
 import type {
 	Brief,
 	BriefManagerEventMap,
@@ -139,6 +139,17 @@ export class BriefManager implements BriefManagerInterface {
 			throw new BriefError('INVALID', 'Brief carries a hash that does not describe it', {
 				field: 'hash',
 				hash: owned.hash,
+			})
+		}
+		// `trace` gets the same reconciliation, and needs it more: `hash` is an opaque digest a
+		// reader cannot check, while `trace` is the census line `briefToMarkdown` prints at the
+		// top of the executor's prompt. A stale one misdescribes the brief exactly where it is
+		// most read.
+		const trace = briefToTrace(owned)
+		if (owned.trace !== undefined && owned.trace !== trace) {
+			throw new BriefError('INVALID', 'Brief carries a trace that does not describe it', {
+				field: 'trace',
+				trace: owned.trace,
 			})
 		}
 		const id = options?.id ?? hash

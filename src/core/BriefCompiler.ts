@@ -17,6 +17,7 @@ import {
 	findBlockingGaps,
 	findUnmetRules,
 	freezeDeep,
+	gap,
 	pinBrief,
 	gateDefinition,
 	manifest,
@@ -119,32 +120,30 @@ export class BriefCompiler implements BriefCompilerInterface {
 			stages.push(Object.freeze({ stage: 'draft', input: {}, error: message }))
 			failures.push(Object.freeze({ stage: 'draft', code: 'DRAFT_FAILED', message }))
 			this.#emitter.emit('error', taken.error)
-			return this.#refuse(undefined, [], undefined, stages, failures)
+			return this.#refuse(undefined, undefined, [], undefined, stages, failures)
 		}
 		const owned = taken.value
 
 		const interpretation = this.#read(owned, stages, failures)
 
-		const drafted = attempt(() => this.#draft(owned, interpretation))
+		const drafted = attempt(() =>
+			this.#draft(owned, interpretation, this.#unresolved(interpretation, failures)),
+		)
 		if (!drafted.success) {
 			const message = errorToMessage(drafted.error)
 			stages.push(Object.freeze({ stage: 'draft', input: owned, error: message }))
 			failures.push(Object.freeze({ stage: 'draft', code: 'DRAFT_FAILED', message }))
 			this.#emitter.emit('error', drafted.error)
-			return this.#refuse(interpretation, [], undefined, stages, failures)
+			return this.#refuse(interpretation, undefined, [], undefined, stages, failures)
 		}
 		const draft = drafted.value
 		stages.push(Object.freeze({ stage: 'draft', input: owned, output: draft }))
 
 		const questions = findBlockingGaps(draft)
 		const subject = Object.freeze(briefToSubject(draft))
-		// The verdict is OWNED before it is recorded, for the reason the draft input is. It comes
-		// from a borrowed engine, and nothing in `ReasonInterface` promises a fresh object per
-		// call — an engine pooling one mutable result rewrote the verdict of a briefing already
-		// returned. Cloning breaks the alias; freezing alone would only have sealed the engine's
-		// own object. Contained, because a verdict carrying something unclonable is the engine's
-		// fault and must not throw out of `compile`.
-		const ruled = attempt(() => this.#own(this.gate(draft)))
+		// `gate` owns the verdict at arrival, so it is already this compiler's own frozen value —
+		// no second reading here. Contained, because a borrowed engine's throw must not escape.
+		const ruled = attempt(() => this.gate(draft))
 		if (ruled.success) {
 			stages.push(Object.freeze({ stage: 'gate', input: subject, output: ruled.value }))
 		} else {
@@ -163,7 +162,7 @@ export class BriefCompiler implements BriefCompilerInterface {
 		if (unready.length > 0 || verdict === undefined || !verdict.conclusion) {
 			const refusal = this.#blockage(questions, unready, verdict)
 			if (refusal !== undefined) failures.push(Object.freeze(refusal))
-			return this.#refuse(interpretation, questions, verdict, stages, failures)
+			return this.#refuse(interpretation, draft, questions, verdict, stages, failures)
 		}
 
 		const stamped = attempt(() => pinBrief(draft))
@@ -172,7 +171,7 @@ export class BriefCompiler implements BriefCompilerInterface {
 			stages.push(Object.freeze({ stage: 'pin', input: draft, error: message }))
 			failures.push(Object.freeze({ stage: 'pin', code: 'PIN_FAILED', message }))
 			this.#emitter.emit('error', stamped.error)
-			return this.#refuse(interpretation, questions, verdict, stages, failures)
+			return this.#refuse(interpretation, draft, questions, verdict, stages, failures)
 		}
 		const pinned = stamped.value
 		stages.push(Object.freeze({ stage: 'pin', input: draft, output: pinned }))
@@ -196,7 +195,12 @@ export class BriefCompiler implements BriefCompilerInterface {
 		// an engine the caller already destroyed, for one. Every throw out of this module is a
 		// `BriefError` that `isBriefError` narrows, so a foreign throw is translated rather than
 		// leaked.
-		const ruled = attempt(() => this.#reason.reason(briefToSubject(source), gateDefinition()))
+		// OWNED at arrival, then validated on the owned copy — one reading of the foreign value,
+		// the law `compile` already applies to the caller's input. Validating one reading and
+		// recording another let a getter bless a shape the pipeline never saw.
+		const ruled = attempt(() =>
+			this.#own(this.#reason.reason(briefToSubject(source), gateDefinition())),
+		)
 		if (!ruled.success) {
 			throw new BriefError('GATE_FAILED', errorToMessage(ruled.error), {
 				stage: 'gate',
@@ -237,11 +241,24 @@ export class BriefCompiler implements BriefCompilerInterface {
 		return freezeDeep(structuredClone(input))
 	}
 
-	// The same ownership boundary for a value a BORROWED engine returned. `Briefing` is
-	// documented as replayable, and a foreign engine's object is neither ours nor stable — it
-	// may be pooled, mutated later, or handed to another caller.
+	// THE ownership boundary for every value a BORROWED engine returns. `Briefing` is documented
+	// as replayable, and a foreign object is neither ours nor stable — it may be pooled, mutated
+	// later, or handed to another caller.
+	//
+	// It NEVER narrows past the foreign contract, which is the law the verdict guards already
+	// follow. `structuredClone` accepts JSON and a little more; the contracts here are wider —
+	// `Entity.value` is declared `unknown`, and `LogicalResult` is an interface a class instance
+	// satisfies. Cloning unconditionally therefore FAILED a stage for a type-conforming engine
+	// result, and for the interpret stage that failure deleted the derived blocking gaps and let
+	// an under-specified brief through the gate.
+	//
+	// So: clone when the value permits it, which also breaks the alias, and otherwise seal in
+	// place. Sealing alone is enough against the stated threat — a pooled engine rewriting a
+	// returned briefing — because the write throws in the engine instead of corrupting the
+	// record. What is never acceptable is refusing the value.
 	#own<TValue>(value: TValue): TValue {
-		return freezeDeep(structuredClone(value))
+		const cloned = attempt(() => structuredClone(value))
+		return freezeDeep(cloned.success ? cloned.value : value)
 	}
 
 	// The interpret stage. Skipped entirely when the input carries no text, in which case
@@ -293,12 +310,53 @@ export class BriefCompiler implements BriefCompilerInterface {
 			.filter((entry) => !entry.conclusion)
 			.map((entry) => entry.id)
 			.join(', ')
+		// A borrowed engine may refuse through `conclusion` alone and name no failing rule, which
+		// rendered as `Gate refused: ` — a refusal with the cause cut off. The refusal is correct
+		// and this is the one case where the supplied engine is the sole decider, so say so.
+		if (refused.length === 0) {
+			return {
+				stage: 'gate',
+				code: 'BLOCKED',
+				message: 'Gate refused: the supplied reasoner named no failing rule',
+			}
+		}
 		return { stage: 'gate', code: 'BLOCKED', message: `Gate refused: ${refused}` }
+	}
+
+	// The blocking gap a CONTAINED interpret failure owes the brief.
+	//
+	// Containing that failure is right, but it silently deleted what the stage would have
+	// produced: `deriveGaps(interpretation.ambiguities)`. With the ambiguities gone,
+	// `findBlockingGaps` was empty, `findUnmetRules` dropped `specified`, the gate passed, and
+	// `compile` emitted a pinned brief for a request it had correctly refused a moment earlier.
+	// A failure that removes evidence must never read as evidence of readiness.
+	//
+	// Empty when an interpretation survived — a caller-supplied `BriefInput.interpretation`
+	// carries its own ambiguities, so nothing was lost.
+	#unresolved(
+		interpretation: Interpretation | undefined,
+		failures: readonly BriefStageFailure[],
+	): readonly Gap[] {
+		if (interpretation !== undefined) return []
+		if (!failures.some((entry) => entry.stage === 'interpret')) return []
+		return [
+			gap(
+				'gaps',
+				'The interpret stage failed, so the request is unread and its unknowns are unknown',
+				{
+					blocking: true,
+				},
+			),
+		]
 	}
 
 	// The draft stage. Derived sections come first and caller sections merge OVER them,
 	// so the user is never overridden; derived and caller gaps and givens accumulate.
-	#draft(input: BriefInput, interpretation: Interpretation | undefined): Brief {
+	#draft(
+		input: BriefInput,
+		interpretation: Interpretation | undefined,
+		unresolved: readonly Gap[],
+	): Brief {
 		const derived =
 			interpretation === undefined
 				? undefined
@@ -330,6 +388,7 @@ export class BriefCompiler implements BriefCompilerInterface {
 				citations: input.citations ?? [],
 				gaps: [
 					...(interpretation === undefined ? [] : deriveGaps(interpretation.ambiguities)),
+					...unresolved,
 					...(input.gaps ?? []),
 				],
 				risks: input.risks ?? [],
@@ -342,6 +401,7 @@ export class BriefCompiler implements BriefCompilerInterface {
 	// The one incomplete result shape: no brief, the questions visible, `block` emitted.
 	#refuse(
 		interpretation: Interpretation | undefined,
+		draft: Brief | undefined,
 		questions: readonly Gap[],
 		verdict: LogicalResult | undefined,
 		stages: readonly BriefStageRecord[],
@@ -362,7 +422,15 @@ export class BriefCompiler implements BriefCompilerInterface {
 			...(verdict === undefined ? {} : { verdict }),
 			stages: Object.freeze([...stages]),
 			failures: Object.freeze([...failures]),
-			digest: digestValue({ questions, failures }),
+			// The DRAFT is digested, for the reason the pinned brief is on the complete path.
+			// Digesting only `questions` and `failures` gave every ordinary refusal one digest —
+			// two entirely different requests refused for "no proofs" were indistinguishable, in
+			// the member documented as identifying the outcome and offered as a cache key.
+			digest: digestValue({
+				...(draft === undefined ? {} : { brief: draft }),
+				questions,
+				failures,
+			}),
 		})
 		this.#emitter.emit('block', asked)
 		return briefing

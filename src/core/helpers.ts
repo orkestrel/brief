@@ -401,10 +401,19 @@ export function findUnmetRules(source: Brief): readonly string[] {
  * Count the sentences a statement holds.
  *
  * @remarks
- * A terminator run (`.`, `!`, `?`) followed by whitespace or the end of the text closes
- * one sentence; text with no terminator at all is still one sentence. An embedded
- * abbreviation therefore reads as a boundary, which is why `validateBrief` reports the
- * count rather than guessing at intent.
+ * A terminator run (`.`, `!`, `?`) followed by whitespace or the end of the text closes one
+ * sentence, and a trailing run with no terminator closes one more.
+ *
+ * LIMIT, stated because it decides a gate: an embedded abbreviation reads as a boundary, so
+ * `'Ask Dr. Smith'` and `'Compare React vs. Vue'` count TWO and the `single` rule refuses
+ * them. Rewrite the statement without the abbreviation — a brief's statement is one
+ * imperative sentence naming the object of the work, and it rarely needs one.
+ *
+ * This is inherent rather than unfinished. Separating `'Dr.'` from a real boundary needs a
+ * lexicon or a heuristic over capitalisation and word length, and a heuristic gets a
+ * different set of statements wrong — quietly, in the direction of letting a genuinely
+ * compound statement through, which is the failure this rule exists to prevent. `validateBrief`
+ * therefore reports the count and lets the author judge, rather than guessing at intent.
  *
  * @param statement - The statement to measure.
  * @returns The sentence count; `0` for empty or whitespace-only text.
@@ -414,7 +423,8 @@ export function findUnmetRules(source: Brief): readonly string[] {
  * import { countSentences } from '@orkestrel/brief'
  *
  * countSentences('Refactor useForm to native APIs.') // 1
- * countSentences('Refactor useForm. Then update the tests.') // 2
+ * countSentences('Refactor useForm. Then update the tests') // 2 — the tail counts
+ * countSentences('Ask Dr. Smith') // 2 — an abbreviation reads as a boundary
  * countSentences('') // 0
  * ```
  */
@@ -864,14 +874,36 @@ export function assertBrief(data: unknown): Brief {
 export function pinBrief(source: Brief): Brief {
 	const owned = snapshotBrief(source)
 	const { trace: _trace, hash: _hash, ...content } = owned
-	const blocking = findBlockingGaps(owned).length
-	const trace = [
-		`${owned.task.operation}/${owned.task.domain}`,
-		`outcomes:${String(owned.outcomes.length)}`,
-		`gaps:${String(blocking)}/${String(owned.gaps.length)}`,
-		`proofs:${String(owned.proofs.length)}`,
+	return snapshotBrief({ ...content, trace: briefToTrace(owned), hash: briefToHash(owned) })
+}
+
+/**
+ * The one-line census `pinBrief` stamps onto a brief.
+ *
+ * @remarks
+ * Extracted so it has ONE implementation. `pinBrief` derives it and `BriefManager` re-derives
+ * it to reconcile an inbound brief's own `trace` against its content — an inbound `trace` is
+ * shape-checked rather than verified, and it is the line `briefToMarkdown` prints at the top
+ * of the executor's prompt, so a stale one misdescribes the brief where it is most read.
+ *
+ * @param source - The brief to describe.
+ * @returns The census line: operation/domain, outcomes, blocking-over-total gaps, proofs.
+ *
+ * @example
+ * ```ts
+ * import { brief, briefToTrace, task } from '@orkestrel/brief'
+ *
+ * briefToTrace(brief(task('document', 'writing', 'Write the guide.')))
+ * // 'document/writing · outcomes:0 · gaps:0/0 · proofs:0'
+ * ```
+ */
+export function briefToTrace(source: Brief): string {
+	return [
+		`${source.task.operation}/${source.task.domain}`,
+		`outcomes:${String(source.outcomes.length)}`,
+		`gaps:${String(findBlockingGaps(source).length)}/${String(source.gaps.length)}`,
+		`proofs:${String(source.proofs.length)}`,
 	].join(' · ')
-	return snapshotBrief({ ...content, trace, hash: briefToHash(owned) })
 }
 
 /**

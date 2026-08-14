@@ -200,28 +200,29 @@ extra key fails, which is why the builders below omit absent optional keys. A ke
 PRESENT but holds `undefined` also fails, matching this workspace's
 `exactOptionalPropertyTypes` contract.
 
-| API                | Kind  | Narrows to                                                                                        |
-| ------------------ | ----- | ------------------------------------------------------------------------------------------------- |
-| `isText`           | const | A string carrying no line terminator, empty included.                                             |
-| `isLine`           | const | A NON-EMPTY string carrying no line terminator — the shape of nearly every field.                 |
-| `isTaskOperation`  | const | `TaskOperation`.                                                                                  |
-| `isTaskDomain`     | const | `TaskDomain`.                                                                                     |
-| `isOutputFormat`   | const | `OutputFormat`.                                                                                   |
-| `isRiskSeverity`   | const | `RiskSeverity`.                                                                                   |
-| `isTask`           | const | `Task` — `operation` and `domain` on-vocabulary, `statement` non-empty.                           |
-| `isReference`      | const | `Reference` — both `path` and `note` present and single-line.                                     |
-| `isRuleVerdict`    | const | a reasons `RuleResult` — reason publishes the type but no guard.                                  |
-| `isLogicalVerdict` | const | a reasons `LogicalResult`, whole shape — what the gate checks a BORROWED engine's return against. |
-| `isManifest`       | const | `Manifest` — the four partitions present (disjointness is `validateBrief`'s job).                 |
-| `isOutcome`        | const | `Outcome` — `rank` a positive integer.                                                            |
-| `isGiven`          | const | `Given`.                                                                                          |
-| `isExample`        | const | `Example`.                                                                                        |
-| `isCitation`       | const | `Citation` — `name`, `url`, and `note` all present and single-line.                               |
-| `isGap`            | const | `Gap`.                                                                                            |
-| `isRisk`           | const | `Risk` — `severity` must be a `RiskSeverity`.                                                     |
-| `isOutput`         | const | `Output` — `format` must be an `OutputFormat`.                                                    |
-| `isProof`          | const | `Proof`.                                                                                          |
-| `isBrief`          | const | `Brief` — the whole exact-record contract, section guards composed.                               |
+| API                | Kind  | Narrows to                                                                                                                        |
+| ------------------ | ----- | --------------------------------------------------------------------------------------------------------------------------------- |
+| `isText`           | const | A string carrying no line terminator, empty included.                                                                             |
+| `isLine`           | const | A NON-EMPTY string carrying no line terminator — the shape of nearly every field.                                                 |
+| `isTaskOperation`  | const | `TaskOperation`.                                                                                                                  |
+| `isTaskDomain`     | const | `TaskDomain`.                                                                                                                     |
+| `isOutputFormat`   | const | `OutputFormat`.                                                                                                                   |
+| `isRiskSeverity`   | const | `RiskSeverity`.                                                                                                                   |
+| `isTask`           | const | `Task` — `operation` and `domain` on-vocabulary, `statement` non-empty.                                                           |
+| `isReference`      | const | `Reference` — both `path` and `note` present and single-line.                                                                     |
+| `isObject`         | const | any non-null, non-array object, prototype or not — wider than a plain-record check, because an interface admits a class instance. |
+| `isRuleVerdict`    | const | a reasons `RuleResult` — reason publishes the type but no guard.                                                                  |
+| `isLogicalVerdict` | const | a reasons `LogicalResult`, whole shape — what the gate checks a BORROWED engine's return against.                                 |
+| `isManifest`       | const | `Manifest` — the four partitions present (disjointness is `validateBrief`'s job).                                                 |
+| `isOutcome`        | const | `Outcome` — `rank` a positive integer.                                                                                            |
+| `isGiven`          | const | `Given`.                                                                                                                          |
+| `isExample`        | const | `Example`.                                                                                                                        |
+| `isCitation`       | const | `Citation` — `name`, `url`, and `note` all present and single-line.                                                               |
+| `isGap`            | const | `Gap`.                                                                                                                            |
+| `isRisk`           | const | `Risk` — `severity` must be a `RiskSeverity`.                                                                                     |
+| `isOutput`         | const | `Output` — `format` must be an `OutputFormat`.                                                                                    |
+| `isProof`          | const | `Proof`.                                                                                                                          |
+| `isBrief`          | const | `Brief` — the whole exact-record contract, section guards composed.                                                               |
 
 ```ts
 import {
@@ -234,6 +235,7 @@ import {
 	isCitation,
 	isExample,
 	isLogicalVerdict,
+	isObject,
 	isRuleVerdict,
 	isGiven,
 	isManifest,
@@ -253,6 +255,8 @@ isReference({ path: 'AGENTS.md', note: 'project law' }) // true
 isReference({ path: 'AGENTS.md' }) // false — `note` is required
 isLogicalVerdict(undefined) // false — total, so a borrowed engine cannot crash the gate
 isRuleVerdict({ id: 'proven', applied: true, premises: [true], conclusion: true }) // true
+isObject(new Date()) // true — a prototype is not a disqualification
+isObject([]) // false — no interface these guards narrow is an array
 isManifest({ read: [], edit: [], locked: [], forbidden: [] }) // true
 isOutcome({ rank: 1, text: 'the tests pass', required: true }) // true
 isGiven({ category: 'convention', name: 'indentation', value: 'tabs' }) // true
@@ -427,38 +431,40 @@ Pure, exported utility functions — the referentially-transparent leaves behind
 `BriefCompiler` and the projection surface. Projections use the `{noun}To{Noun}` idiom: each
 consumes a WHOLE and returns a derived view of it.
 
-| API                      | Kind     | Summary                                                                                                                                                         |
-| ------------------------ | -------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `briefToMarkdown`        | function | Project a `Brief` into the copy-ready agent prompt — sections in authority order, paths referenced, never inlined; an empty section is omitted.                 |
-| `briefToGoal`            | function | Project a `Brief` into a `/goal` completion condition — the proofs' commands verbatim plus a turn cap defaulting to `DEFAULT_BRIEF_TURNS`.                      |
-| `briefToDispatch`        | function | Project a `Brief` into a `Dispatch` — `manifest.edit` becomes the owned set, `locked` and `forbidden` do-not-touch, and `authority` the ranked precedence list. |
-| `briefToSubject`         | function | Project a `Brief` into a reasons `Subject` of readiness measures the gate rules read.                                                                           |
-| `briefToHash`            | function | The canonical structural digest of a brief's content, with `trace` and `hash` stripped first.                                                                   |
-| `briefToContent`         | function | The canonical TEXT the hash describes — the identity two briefs must share to be the same brief, since eight hex digits are not identity.                       |
-| `findUnmetRules`         | function | The readiness rules a brief fails, measured in CODE — the gate's decision, which `compile` makes rather than delegating to a borrowed engine.                   |
-| `pinBrief`               | function | Return a fresh `Brief` with `trace` and `hash` filled — deterministic, no clocks, no run-specific data, idempotent, and deeply frozen.                          |
-| `snapshotBrief`          | function | One deeply owned, deeply frozen, validated reading of a `Brief` — the identity boundary the pin, the registry, and every projection cross.                      |
-| `assertBrief`            | function | Narrow unknown data to a `Brief` by IDENTITY, throwing `BriefError` `INVALID` when the guard refuses.                                                           |
-| `exampleToLines`         | function | Render one `Example` as markdown lines — a single-line pair becomes one row, a multi-line pair becomes a fenced block.                                          |
-| `validateBrief`          | function | The semantic pass over an already-shape-valid brief; returns a reasons `ReasonValidationResult`, never throws.                                                  |
-| `countSentences`         | function | The sentence count of a statement — `validateBrief` errors when it is not exactly one.                                                                          |
-| `findBlockingGaps`       | function | The gaps with `blocking: true`; non-empty means the gate MUST fail closed.                                                                                      |
-| `findManifestOverlaps`   | function | The paths appearing in more than one manifest partition, once each.                                                                                             |
-| `findUngrantedAuthority` | function | The authority paths no partition opens — every ranked path must appear in `read`, `edit`, or `locked`, because the executor cannot obey what it cannot open.    |
-| `findUnpairedGaps`       | function | The open gaps past the assumption count — the discipline is exactly one recorded assumption per open gap.                                                       |
-| `deriveStatement`        | function | Derive one imperative statement from free text — whitespace collapsed, first letter raised, terminator appended.                                                |
-| `deriveTask`             | function | Derive a `Task` from an interprets `Intent` through CALLER action and domain vocabularies; `undefined` when either side is unmapped.                            |
-| `deriveGivens`           | function | Derive `Given[]` from an interprets `Entity[]` — each becomes a `{ category: 'extracted', name, value }` fact.                                                  |
-| `deriveGaps`             | function | Derive `Gap[]` from an interprets `Ambiguity[]` — REQUIRED ambiguities become BLOCKING gaps, the rest open.                                                     |
-| `errorToMessage`         | function | Render a value thrown by a stage into the message a `BriefStageFailure` carries — TOTAL, because it runs inside the `catch` that contains a stage failure.      |
-| `freezeDeep`             | function | Freeze a value and everything reachable from it, cycles included — `Object.freeze` is shallow, so a frozen record's nested arrays stayed writable.              |
-| `freezeBranch`           | function | Freeze one branch against a shared visited set — the recursion `freezeDeep` drives.                                                                             |
+| API                      | Kind     | Summary                                                                                                                                                                |
+| ------------------------ | -------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `briefToMarkdown`        | function | Project a `Brief` into the copy-ready agent prompt — sections in authority order, paths referenced, never inlined; an empty section is omitted.                        |
+| `briefToGoal`            | function | Project a `Brief` into a `/goal` completion condition — the proofs' commands verbatim plus a turn cap defaulting to `DEFAULT_BRIEF_TURNS`.                             |
+| `briefToDispatch`        | function | Project a `Brief` into a `Dispatch` — `manifest.edit` becomes the owned set, `locked` and `forbidden` do-not-touch, and `authority` the ranked precedence list.        |
+| `briefToSubject`         | function | Project a `Brief` into a reasons `Subject` of readiness measures the gate rules read.                                                                                  |
+| `briefToHash`            | function | The canonical structural digest of a brief's content, with `trace` and `hash` stripped first.                                                                          |
+| `briefToTrace`           | function | The one-line census `pinBrief` stamps on — operation/domain, outcomes, blocking-over-total gaps, proofs; re-derived by `BriefManager` to reconcile an inbound `trace`. |
+| `briefToContent`         | function | The canonical TEXT the hash describes — the identity two briefs must share to be the same brief, since eight hex digits are not identity.                              |
+| `findUnmetRules`         | function | The readiness rules a brief fails, measured in CODE — the gate's decision, which `compile` makes rather than delegating to a borrowed engine.                          |
+| `pinBrief`               | function | Return a fresh `Brief` with `trace` and `hash` filled — deterministic, no clocks, no run-specific data, idempotent, and deeply frozen.                                 |
+| `snapshotBrief`          | function | One deeply owned, deeply frozen, validated reading of a `Brief` — the identity boundary the pin, the registry, and every projection cross.                             |
+| `assertBrief`            | function | Narrow unknown data to a `Brief` by IDENTITY, throwing `BriefError` `INVALID` when the guard refuses.                                                                  |
+| `exampleToLines`         | function | Render one `Example` as markdown lines — a single-line pair becomes one row, a multi-line pair becomes a fenced block.                                                 |
+| `validateBrief`          | function | The semantic pass over an already-shape-valid brief; returns a reasons `ReasonValidationResult`, never throws.                                                         |
+| `countSentences`         | function | The sentence count of a statement — `validateBrief` errors when it is not exactly one.                                                                                 |
+| `findBlockingGaps`       | function | The gaps with `blocking: true`; non-empty means the gate MUST fail closed.                                                                                             |
+| `findManifestOverlaps`   | function | The paths appearing in more than one manifest partition, once each.                                                                                                    |
+| `findUngrantedAuthority` | function | The authority paths no partition opens — every ranked path must appear in `read`, `edit`, or `locked`, because the executor cannot obey what it cannot open.           |
+| `findUnpairedGaps`       | function | The open gaps past the assumption count — the discipline is exactly one recorded assumption per open gap.                                                              |
+| `deriveStatement`        | function | Derive one imperative statement from free text — whitespace collapsed, first letter raised, terminator appended.                                                       |
+| `deriveTask`             | function | Derive a `Task` from an interprets `Intent` through CALLER action and domain vocabularies; `undefined` when either side is unmapped.                                   |
+| `deriveGivens`           | function | Derive `Given[]` from an interprets `Entity[]` — each becomes a `{ category: 'extracted', name, value }` fact.                                                         |
+| `deriveGaps`             | function | Derive `Gap[]` from an interprets `Ambiguity[]` — REQUIRED ambiguities become BLOCKING gaps, the rest open.                                                            |
+| `errorToMessage`         | function | Render a value thrown by a stage into the message a `BriefStageFailure` carries — TOTAL, because it runs inside the `catch` that contains a stage failure.             |
+| `freezeDeep`             | function | Freeze a value and everything reachable from it, cycles included — `Object.freeze` is shallow, so a frozen record's nested arrays stayed writable.                     |
+| `freezeBranch`           | function | Freeze one branch against a shared visited set — the recursion `freezeDeep` drives.                                                                                    |
 
 ```ts
 import {
 	briefToDispatch,
 	briefToGoal,
 	briefToHash,
+	briefToTrace,
 	briefToMarkdown,
 	briefToSubject,
 	countSentences,
@@ -479,6 +485,7 @@ import {
 const pinned = pinBrief(draft)
 pinned.hash // an eight-hex-digit digest of the brief's content, stable across runs
 pinned.trace // 'refactor/code · outcomes:2 · gaps:0/1 · proofs:1' — derived, never authored
+briefToTrace(pinned) === pinned.trace // true — one implementation, and what reconciles an inbound trace
 briefToHash(pinned) === briefToHash(draft) // true — pinning does not move the identity
 
 briefToMarkdown(pinned) // '# Brief: Refactor useForm…\n\nrefactor · code\n…'
@@ -681,8 +688,17 @@ These invariants hold across `src/core` and this guide:
    no randomness, no I/O, nothing async. The same `BriefInput` therefore produces the same
    `Briefing` for as long as the engines do — which is unconditional for the engines the
    compiler wires itself, and inherited for a BORROWED `interpret` or `reason`. A stateful
-   supplied engine that answers differently on its second call makes `compile` answer
-   differently too, and that is the engine's determinism, not this module's.
+   supplied engine that answers differently on a LATER CALL makes `compile` answer differently
+   too, and that is the engine's determinism, not this module's.
+
+   Within ONE call the answer cannot drift, because how many times a foreign object is read is
+   this module's decision rather than the engine's: every value an engine returns is owned at
+   arrival — copied where the value permits it, sealed in place where it does not — and read
+   exactly once thereafter. A verdict whose members answer differently on a second read
+   produces the same `Briefing` as one returning those first answers as plain data. The
+   earlier wording said "on its second call" while the module was in fact reading one returned
+   object twice, which made a sentence about the engine's determinism cover a defect in this
+   module's.
    `pinBrief`'s `trace` and `hash` derive from CONTENT alone — the hash is the canonical
    structural digest interprets `digestValue` computes — and the `BriefManager` mints record
    ids from that hash, so re-adding unchanged content is a version no-op. No input is ever

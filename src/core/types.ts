@@ -425,6 +425,27 @@ export type BriefCompilerEventMap = {
  * engines it created itself. `actions` and `domains` map an interpret `Intent`'s free
  * strings onto the closed task vocabularies; an unmapped value drafts no task. The gate
  * is FIXED: readiness is this package's contract, not a caller setting.
+ *
+ * A borrowed engine is the caller's own code, not an attacker, and this package does not
+ * treat it as one. The line is OWNERSHIP, and it produces four obligations worth stating
+ * because none of them is enforced in code:
+ *
+ * - Every value a borrowed engine returns is OWNED AT ARRIVAL — copied where the value
+ *   permits it, sealed in place where it does not — and then read exactly once. What the
+ *   engine does with its own object afterwards cannot reach a `Briefing`.
+ * - Only the VERDICT is shape-checked, because `ReasonInterface.reason` publishes a union
+ *   this package must narrow. The `Interpretation` is owned and not validated: it is a
+ *   14-member foreign interface with no published guard, and only four of its members are
+ *   read, inside contained code. That asymmetry is deliberate — guarding it would trade a
+ *   contained failure for a wrong refusal against a valid engine.
+ * - Neither engine is narrowed past its published contract. `Entity.value` is `unknown` and
+ *   `LogicalResult` is an interface a class instance satisfies, so a value JSON cannot
+ *   express is on-contract and is sealed rather than refused.
+ * - `actions` and `domains` are read LIVE on every `compile`, not snapshotted at
+ *   construction. Mutating them between calls changes what the next call derives.
+ *
+ * Whether the engine is correct, and whether it answers the same way twice, remain the
+ * caller's own problem.
  */
 export interface BriefCompilerOptions {
 	readonly interpret?: InterpretInterface
