@@ -1,0 +1,269 @@
+import {
+	BriefManager,
+	brief,
+	briefToContent,
+	briefToHash,
+	createBriefManager,
+	isBriefError,
+	outcome,
+	pinBrief,
+	proof,
+	task,
+} from '@src/core'
+import { captureError, createRecorder, requireValue } from '@orkestrel/test'
+import { describe, expect, it } from 'vitest'
+import { buildBrief, buildTask, readErrorCode } from '../../setup.js'
+
+describe('BriefManager records', () => {
+	it('mints the record id from the brief content hash', () => {
+		const registry = createBriefManager()
+		const record = registry.add(buildBrief())
+		expect(record.id).toBe(record.hash)
+		expect(record.hash).toBe(briefToHash(buildBrief()))
+		expect(record.version).toBe(1)
+		expect(record.brief).toEqual(buildBrief())
+		registry.destroy()
+	})
+
+	it('accepts a caller-named id without changing the hash', () => {
+		const registry = createBriefManager()
+		const record = registry.add(buildBrief(), { id: 'useform' })
+		expect(record.id).toBe('useform')
+		expect(record.hash).toBe(briefToHash(buildBrief()))
+		registry.destroy()
+	})
+
+	it('keeps the version when the content is unchanged and bumps it when it moves', () => {
+		const registry = createBriefManager()
+		expect(registry.add(buildBrief(), { id: 'x' }).version).toBe(1)
+		expect(registry.add(buildBrief(), { id: 'x' }).version).toBe(1)
+		expect(registry.add(buildBrief({ rules: ['No deps.'] }), { id: 'x' }).version).toBe(2)
+		expect(registry.add(buildBrief(), { id: 'x' }).version).toBe(3)
+		registry.destroy()
+	})
+
+	it('ignores an existing pin when deriving the hash', () => {
+		const registry = createBriefManager()
+		const plain = registry.add(buildBrief(), { id: 'x' })
+		const pinned = registry.add(pinBrief(buildBrief()), { id: 'x' })
+		expect(pinned.hash).toBe(plain.hash)
+		expect(pinned.version).toBe(1)
+		registry.destroy()
+	})
+
+	it('registers a seed collection at construction', () => {
+		const registry = createBriefManager({ briefs: [buildBrief(), buildBrief({ rules: ['a'] })] })
+		expect(registry.size).toBe(2)
+		registry.destroy()
+	})
+
+	it('collapses two identical seeds onto one record', () => {
+		const registry = createBriefManager({ briefs: [buildBrief(), buildBrief()] })
+		expect(registry.size).toBe(1)
+		registry.destroy()
+	})
+})
+
+describe('BriefManager accessors', () => {
+	it('answers has, brief, and briefs', () => {
+		const registry = createBriefManager()
+		const record = registry.add(buildBrief())
+		expect(registry.has(record.id)).toBe(true)
+		expect(registry.has('absent')).toBe(false)
+		expect(registry.brief(record.id)).toEqual(record)
+		expect(registry.brief('absent')).toBeUndefined()
+		expect(registry.briefs()).toEqual([record])
+		registry.destroy()
+	})
+
+	it('cannot be desynchronised by a caller mutating the arrays it was given', () => {
+		// The defect this pins: the record adopted the caller's array, so a later push changed
+		// content the stored hash had already described.
+		const outcomes = [outcome(1, 'original')]
+		const source = brief(buildTask(), { outcomes, proofs: [proof('x', 'npm test')] })
+		const registry = createBriefManager()
+		const record = registry.add(source)
+
+		outcomes.push(outcome(2, 'smuggled'))
+
+		expect(record.brief.outcomes).toHaveLength(1)
+		expect(briefToHash(record.brief)).toBe(record.hash)
+		expect(registry.brief(record.id)?.brief.outcomes).toHaveLength(1)
+		registry.destroy()
+	})
+
+	it('refuses two different briefs that collide on one content hash', () => {
+		// The digest is eight hex digits, so distinct briefs DO land on one id — this pair was
+		// found by search, at the 739,234th distinct hash. Treating a collision as unchanged
+		// content silently replaced the first record and reported version 1.
+		const collide = (statement: string) =>
+			brief(task('plan', 'ops', statement), { proofs: [proof('x', 'npm test')] })
+		const first = collide('Plan release 42vu.')
+		const second = collide('Plan release fuea.')
+		expect(briefToHash(first)).toBe(briefToHash(second))
+		expect(briefToContent(first)).not.toBe(briefToContent(second))
+
+		const registry = createBriefManager()
+		const record = registry.add(first)
+		const error = captureError(() => registry.add(second))
+		expect(readErrorCode(error)).toBe('INVALID')
+		expect(registry.size).toBe(1)
+		expect(briefToContent(requireValue(registry.brief(record.id), 'the first record').brief)).toBe(
+			briefToContent(first),
+		)
+		registry.destroy()
+	})
+
+	it('treats a re-add of identical content as a version no-op', () => {
+		// The control for the refusal above: equal content must NOT be read as a collision.
+		const registry = createBriefManager()
+		const source = buildBrief()
+		const first = registry.add(source)
+		const again = registry.add(source)
+		expect(again.version).toBe(first.version)
+		expect(registry.size).toBe(1)
+		// And a pinned form of the same content shares the hash without colliding.
+		expect(registry.add(pinBrief(source), { id: first.id }).version).toBe(first.version)
+		registry.destroy()
+	})
+
+	it('stores a deeply frozen record that refuses a direct write', () => {
+		const registry = createBriefManager()
+		const record = registry.add(buildBrief())
+		// The record itself, not only its brief: redefining `hash` on it once changed what the
+		// manager reported while the brief still recomputed to the original digest.
+		expect(Object.isFrozen(record)).toBe(true)
+		expect(() => Object.defineProperty(record, 'hash', { value: 'forged' })).toThrow(
+			/Cannot redefine property/u,
+		)
+		expect(requireValue(registry.brief(record.id), 'the record').hash).toBe(
+			briefToHash(record.brief),
+		)
+		registry.destroy()
+	})
+
+	it('freezes the stored brief all the way down', () => {
+		const registry = createBriefManager()
+		const record = registry.add(buildBrief())
+		expect(Object.isFrozen(record.brief)).toBe(true)
+		expect(Object.isFrozen(record.brief.outcomes)).toBe(true)
+		expect(Object.isFrozen(record.brief.manifest.read)).toBe(true)
+		registry.destroy()
+	})
+
+	it('returns a fresh array from briefs', () => {
+		const registry = createBriefManager({ briefs: [buildBrief()] })
+		expect(registry.briefs()).not.toBe(registry.briefs())
+		expect(registry.briefs()).toEqual(registry.briefs())
+		registry.destroy()
+	})
+})
+
+describe('BriefManager remove', () => {
+	it('removes one brief by id', () => {
+		const registry = createBriefManager()
+		const record = registry.add(buildBrief())
+		expect(registry.remove(record.id)).toBe(true)
+		expect(registry.remove(record.id)).toBe(false)
+		expect(registry.size).toBe(0)
+		registry.destroy()
+	})
+
+	it('removes a listed batch and reports false when one id was absent', () => {
+		const registry = createBriefManager()
+		const first = registry.add(buildBrief(), { id: 'a' })
+		const second = registry.add(buildBrief({ rules: ['x'] }), { id: 'b' })
+		expect(registry.remove([first.id, second.id])).toBe(true)
+		expect(registry.size).toBe(0)
+
+		registry.add(buildBrief(), { id: 'a' })
+		expect(registry.remove(['a', 'absent'])).toBe(false)
+		expect(registry.has('a')).toBe(false)
+		registry.destroy()
+	})
+
+	it('removes every brief when called with no argument', () => {
+		const registry = createBriefManager({ briefs: [buildBrief(), buildBrief({ rules: ['x'] })] })
+		expect(registry.remove()).toBeUndefined()
+		expect(registry.size).toBe(0)
+		registry.destroy()
+	})
+})
+
+describe('BriefManager observation', () => {
+	it('emits add per registration and remove per removed id', () => {
+		const added = createRecorder<readonly [string]>()
+		const removed = createRecorder<readonly [string]>()
+		const registry = createBriefManager({ on: { add: added.handler, remove: removed.handler } })
+		const record = registry.add(buildBrief())
+		expect(added.calls).toStrictEqual([[record.id]])
+
+		registry.remove('absent')
+		expect(removed.count).toBe(0)
+		registry.remove(record.id)
+		expect(removed.calls).toStrictEqual([[record.id]])
+		registry.destroy()
+	})
+
+	it('emits add for every seed', () => {
+		const added = createRecorder<readonly [string]>()
+		createBriefManager({
+			briefs: [buildBrief(), buildBrief({ rules: ['x'] })],
+			on: { add: added.handler },
+		}).destroy()
+		expect(added.count).toBe(2)
+	})
+
+	it('routes a throwing listener to the error handler and keeps its siblings running', () => {
+		const failures = createRecorder<readonly [unknown, string]>()
+		const survivor = createRecorder<readonly [string]>()
+		const registry = new BriefManager({
+			on: { add: survivor.handler },
+			error: failures.handler,
+		})
+		registry.emitter.on('add', () => {
+			throw new Error('listener boom')
+		})
+		registry.add(buildBrief())
+		expect(survivor.count).toBe(1)
+		expect(failures.count).toBe(1)
+		expect(failures.calls[0]?.[1]).toBe('add')
+		registry.destroy()
+	})
+
+	it('emits destroy once and tears the emitter down last', () => {
+		const stopped = createRecorder<readonly []>()
+		const registry = createBriefManager({ on: { destroy: stopped.handler } })
+		registry.destroy()
+		registry.destroy()
+		expect(stopped.count).toBe(1)
+		expect(registry.emitter.destroyed).toBe(true)
+	})
+})
+
+describe('BriefManager teardown', () => {
+	it('refuses every method except the getters and destroy', () => {
+		const registry = createBriefManager()
+		registry.destroy()
+		expect(registry.size).toBe(0)
+		expect(registry.emitter.destroyed).toBe(true)
+		for (const call of [
+			() => registry.has('x'),
+			() => registry.brief('x'),
+			() => registry.briefs(),
+			() => registry.add(buildBrief()),
+			() => registry.remove('x'),
+		]) {
+			expect(call).toThrow('BriefManager has been destroyed')
+		}
+	})
+
+	it('throws a narrowable DESTROYED error', () => {
+		const registry = createBriefManager()
+		registry.destroy()
+		const error = captureError(() => registry.briefs())
+		expect(isBriefError(error)).toBe(true)
+		expect(readErrorCode(error)).toBe('DESTROYED')
+		expect(readErrorCode(new Error('unrelated'))).toBeUndefined()
+	})
+})
