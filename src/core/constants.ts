@@ -1,10 +1,4 @@
-import type {
-	CitationRole,
-	OutputFormat,
-	RiskSeverity,
-	TaskDomain,
-	TaskOperation,
-} from './types.js'
+import type { OutputFormat, RiskSeverity, TaskDomain, TaskOperation } from './types.js'
 
 /** The twelve `TaskOperation` values, frozen. */
 export const TASK_OPERATIONS: readonly TaskOperation[] = Object.freeze([
@@ -32,14 +26,6 @@ export const TASK_DOMAINS: readonly TaskDomain[] = Object.freeze([
 	'data',
 	'ops',
 	'other',
-])
-
-/** The four `CitationRole` values, frozen. */
-export const CITATION_ROLES: readonly CitationRole[] = Object.freeze([
-	'docs',
-	'spec',
-	'api',
-	'standard',
 ])
 
 /** The five `OutputFormat` values, frozen. */

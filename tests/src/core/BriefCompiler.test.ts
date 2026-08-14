@@ -298,21 +298,34 @@ describe('BriefCompiler fail-closed paths', () => {
 		compiler.destroy()
 	})
 
-	it('refuses a brief whose authority its own manifest forbids', () => {
+	it('refuses a brief whose authority no manifest partition opens', () => {
 		// The cross-section check the merged `Reference` makes possible: `authority` and every
 		// manifest partition hold one record type, so the two are comparable by path. Driven
 		// through `compile` rather than the leaf, because the gate is where it has to bite.
 		const compiler = createBriefCompiler()
-		const briefing = compiler.compile({
+		// Banned outright.
+		const banned = compiler.compile({
 			task: buildTask(),
 			authority: [reference('AGENTS.md', 'project law')],
 			manifest: manifest({ forbidden: [reference('AGENTS.md', 'out of scope')] }),
 			outcomes: [outcome(1, 'x')],
 			proofs: [proof('x', 'npm test')],
 		})
-		expect(briefing.brief).toBeUndefined()
-		expect(briefing.failures[0]?.message).toBe('Gate refused: granted')
-		// The control: the same brief with the authority moved out of `forbidden` compiles.
+		expect(banned.brief).toBeUndefined()
+		expect(banned.failures[0]?.message).toBe('Gate refused: granted')
+		// Never granted at all. A forbidden-only check let this compile, projecting an authority
+		// the executor has no permission to open — the emptiest possible manifest, and the whole
+		// reason the rule is "every authority is granted" rather than "none is forbidden".
+		const ungranted = compiler.compile({
+			task: buildTask(),
+			authority: [reference('AGENTS.md', 'project law')],
+			manifest: manifest(),
+			outcomes: [outcome(1, 'x')],
+			proofs: [proof('x', 'npm test')],
+		})
+		expect(ungranted.brief).toBeUndefined()
+		expect(ungranted.failures[0]?.message).toBe('Gate refused: granted')
+		// The control: granted by `locked`, and it compiles.
 		const allowed = compiler.compile({
 			task: buildTask(),
 			authority: [reference('AGENTS.md', 'project law')],

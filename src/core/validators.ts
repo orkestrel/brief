@@ -11,7 +11,6 @@ import {
 	recordOf,
 } from '@orkestrel/contract'
 import {
-	CITATION_ROLES,
 	LINE_BREAK_PATTERN,
 	OUTPUT_FORMATS,
 	RISK_SEVERITIES,
@@ -21,7 +20,6 @@ import {
 import type {
 	Brief,
 	Citation,
-	CitationRole,
 	Example,
 	Gap,
 	Given,
@@ -57,9 +55,6 @@ export const isTaskOperation: Guard<TaskOperation> = literalOf(TASK_OPERATIONS)
 
 /** `true` when the value is one of the eight `TaskDomain` literals. */
 export const isTaskDomain: Guard<TaskDomain> = literalOf(TASK_DOMAINS)
-
-/** `true` when the value is one of the four `CitationRole` literals. */
-export const isCitationRole: Guard<CitationRole> = literalOf(CITATION_ROLES)
 
 /** `true` when the value is one of the five `OutputFormat` literals. */
 export const isOutputFormat: Guard<OutputFormat> = literalOf(OUTPUT_FORMATS)
@@ -123,11 +118,11 @@ export const isExample: Guard<Example> = recordOf(
 	['note'],
 )
 
-/** `true` when the value is a well-formed `Citation` — `role` on the closed vocabulary. */
+/** `true` when the value is a well-formed `Citation` — all three members single-line. */
 export const isCitation: Guard<Citation> = recordOf({
 	name: isLine,
-	role: isCitationRole,
 	url: isLine,
+	note: isLine,
 })
 
 /** `true` when the value is a well-formed `Gap`. */

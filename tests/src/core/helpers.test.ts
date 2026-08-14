@@ -17,7 +17,7 @@ import {
 	example,
 	exampleToLines,
 	findBlockingGaps,
-	findDeniedAuthority,
+	findUngrantedAuthority,
 	findManifestOverlaps,
 	findUnpairedGaps,
 	findUnmetRules,
@@ -70,10 +70,12 @@ describe('builders', () => {
 		// interpretation the executor would have to supply.
 		expect(isReference(ranked)).toBe(true)
 		expect(isReference({ path: 'AGENTS.md' })).toBe(false)
-		expect(citation('MDN', 'docs', 'https://developer.mozilla.org/')).toStrictEqual({
+		expect(
+			citation('MDN', 'https://developer.mozilla.org/', 'the native validity behavior'),
+		).toStrictEqual({
 			name: 'MDN',
-			role: 'docs',
 			url: 'https://developer.mozilla.org/',
+			note: 'the native validity behavior',
 		})
 		expect(risk('medium', 'subtle drift', 'assert in tests')).toStrictEqual({
 			severity: 'medium',
@@ -309,31 +311,50 @@ describe('find leaves', () => {
 		expect(findManifestOverlaps(buildBrief())).toStrictEqual([])
 	})
 
-	it('finds an authority the manifest forbids, and treats a lock as no denial', () => {
-		const denied = buildBrief({
-			authority: [reference('AGENTS.md', 'project law'), reference('guides/brief.md', 'the spec')],
+	it('treats all three of read, edit, and locked as grants', () => {
+		const granted = buildBrief({
+			authority: [
+				reference('README.md', 'orientation'),
+				reference('src/a.ts', 'the file under repair'),
+				reference('guides/brief.md', 'the spec'),
+			],
 			manifest: manifest({
 				read: [reference('README.md', 'orientation')],
+				edit: [reference('src/a.ts', 'the file under repair')],
 				locked: [reference('guides/brief.md', 'the spec')],
-				forbidden: [reference('AGENTS.md', 'out of scope')],
 			}),
 		})
-		// Only `forbidden` denies. `locked` is read-only, which is exactly what an authority
-		// needs, so the spec listed in both partitions is not a contradiction, and a `read`
-		// entry is not one either.
-		expect(findDeniedAuthority(denied)).toStrictEqual(['AGENTS.md'])
-		expect(findDeniedAuthority(buildBrief())).toStrictEqual([])
+		// `locked` grants: read-only is exactly what obeying a file requires. So does `edit`.
+		expect(findUngrantedAuthority(granted)).toStrictEqual([])
+		expect(findUngrantedAuthority(buildBrief())).toStrictEqual([])
 	})
 
-	it('compares paths exactly, so a glob never denies what it would match', () => {
+	it('reports an authority no partition opens, whether banned or simply absent', () => {
+		// The case a forbidden-only check missed entirely: the brief never says the executor
+		// may open what it must obey. Nothing is banned here — the manifest is just silent.
+		const absent = buildBrief({
+			authority: [reference('AGENTS.md', 'project law')],
+			manifest: manifest(),
+		})
+		expect(findUngrantedAuthority(absent)).toStrictEqual(['AGENTS.md'])
+		// And the banned case still reports, because the partitions are disjoint: a forbidden
+		// path is in none of the three grants, so it arrives here without a special branch.
+		const banned = buildBrief({
+			authority: [reference('AGENTS.md', 'project law')],
+			manifest: manifest({ forbidden: [reference('AGENTS.md', 'out of scope')] }),
+		})
+		expect(findUngrantedAuthority(banned)).toStrictEqual(['AGENTS.md'])
+	})
+
+	it('compares paths exactly, so a glob never grants what it would match', () => {
 		// The documented limit, pinned so it cannot change silently. Closing it means glob
 		// intersection, which needs a matcher this package does not carry; `findManifestOverlaps`
-		// has compared exact strings since before `findDeniedAuthority` existed.
+		// has compared exact strings since before the authority checks existed.
 		const globbed = buildBrief({
-			authority: [reference('app/AGENTS.md', 'project law')],
-			manifest: manifest({ forbidden: [reference('app/**', 'out of scope')] }),
+			authority: [reference('guides/brief.md', 'the spec')],
+			manifest: manifest({ read: [reference('guides/**', 'the guides')] }),
 		})
-		expect(findDeniedAuthority(globbed)).toStrictEqual([])
+		expect(findUngrantedAuthority(globbed)).toStrictEqual(['guides/brief.md'])
 		expect(
 			findManifestOverlaps(
 				buildBrief({
@@ -344,12 +365,12 @@ describe('find leaves', () => {
 				}),
 			),
 		).toStrictEqual([])
-		// The control: spelled identically, both checks fire.
+		// The control: spelled identically, the grant lands.
 		const literal = buildBrief({
-			authority: [reference('app/**', 'project law')],
-			manifest: manifest({ forbidden: [reference('app/**', 'out of scope')] }),
+			authority: [reference('guides/**', 'the guides')],
+			manifest: manifest({ read: [reference('guides/**', 'the guides')] }),
 		})
-		expect(findDeniedAuthority(literal)).toStrictEqual(['app/**'])
+		expect(findUngrantedAuthority(literal)).toStrictEqual([])
 	})
 
 	it('finds the open gaps past the assumption count and never a blocking one', () => {
@@ -380,7 +401,7 @@ describe('briefToSubject', () => {
 			locks: 1,
 			bans: 1,
 			overlaps: 0,
-			denied: 0,
+			ungranted: 0,
 			risks: 0,
 			examples: 0,
 		})
@@ -433,17 +454,27 @@ describe('validateBrief', () => {
 		)
 	})
 
-	it('errors on an authority the manifest forbids', () => {
-		const result = validateBrief(
+	it('errors on an authority no partition grants access to', () => {
+		const message =
+			'Authority "AGENTS.md" is in no manifest partition that grants access — the executor cannot obey what it cannot open'
+		// Banned outright.
+		const banned = validateBrief(
 			buildBrief({
 				authority: [reference('AGENTS.md', 'project law')],
 				manifest: manifest({ forbidden: [reference('AGENTS.md', 'out of scope')] }),
 			}),
 		)
-		expect(result.valid).toBe(false)
-		expect(result.errors).toContain(
-			'Authority "AGENTS.md" is forbidden — the executor cannot obey what it cannot read',
+		expect(banned.valid).toBe(false)
+		expect(banned.errors).toContain(message)
+		// Simply never granted — the case a forbidden-only check could not see.
+		const absent = validateBrief(
+			buildBrief({
+				authority: [reference('AGENTS.md', 'project law')],
+				manifest: manifest(),
+			}),
 		)
+		expect(absent.valid).toBe(false)
+		expect(absent.errors).toContain(message)
 	})
 
 	it('warns without failing on duplicate ranks, unpaired gaps, and a misranked optional', () => {
@@ -467,7 +498,9 @@ describe('validateBrief', () => {
 			authority: [reference('AGENTS.md', 'project law')],
 			givens: [given('convention', 'indentation', 'tabs')],
 			examples: [example('in', 'out', 'note')],
-			citations: [citation('MDN', 'docs', 'https://developer.mozilla.org/')],
+			citations: [
+				citation('MDN', 'https://developer.mozilla.org/', 'the native validity behavior'),
+			],
 			risks: [risk('low', 'drift', 'assert')],
 			output: output('diff', { sections: ['a'], include: ['b'], exclude: ['c'] }),
 		})
@@ -542,7 +575,10 @@ describe('briefToMarkdown', () => {
 					assumptions: ['Wording is preserved.'],
 					givens: [given('convention', 'indentation', 'tabs')],
 					examples: [example('<input required>', 'el.validity', 'the exemplar path')],
-					citations: [citation('MDN', 'docs', 'https://developer.mozilla.org/')],
+					citations: [
+						citation('MDN', 'https://developer.mozilla.org/', 'the native validity behavior'),
+						citation('WHATWG', 'https://html.spec.whatwg.org/', 'the parsing rules'),
+					],
 					gaps: [gap('rules', 'Keep the wording?')],
 					risks: [risk('medium', 'subtle drift', 'assert in tests')],
 					output: output('diff', { include: ['updated useForm.ts'] }),
@@ -577,6 +613,14 @@ describe('briefToMarkdown', () => {
 		expect(rendered).toContain('1. useForm uses native FormData with no behavior change (required)')
 		expect(rendered).toContain('- convention · indentation: tabs')
 		expect(rendered).toContain('- `<input required>` → `el.validity` (the exemplar path)')
+		// The whole row, in field order. Asserting only the heading let the three members be
+		// reordered without a red test, which is exactly what happened when `role` became `note`.
+		expect(rendered).toContain(
+			'1. MDN — the native validity behavior — https://developer.mozilla.org/',
+		)
+		// TWO citations, numbered, because "list ORDER is the trust order" is a contract claim
+		// and a one-entry fixture proves nothing about ordering or about the `index + 1` count.
+		expect(rendered).toContain('2. WHATWG — the parsing rules — https://html.spec.whatwg.org/')
 		expect(rendered).toContain('- [open] rules: Keep the wording?')
 		expect(rendered).toContain('- medium: subtle drift — assert in tests')
 		expect(rendered).toContain('- format: diff')
@@ -798,6 +842,40 @@ describe('briefToDispatch', () => {
 		expect(dispatch.prompt.startsWith('# Brief: ')).toBe(true)
 		expect(dispatch.prompt).toContain('## Manifest')
 		expect(dispatch.prompt).toContain('src/browser/composables/useForm.ts')
+	})
+
+	it('carries ranked authority as paths, on its own axis rather than a fifth partition', () => {
+		// Every ranked path is granted somewhere, because the gate refuses a brief where one is
+		// not. A fixture that skipped that would model a brief `compile` rejects.
+		const source = buildBrief({
+			authority: [
+				reference('src/browser/types.ts', 'the published contract'),
+				reference('AGENTS.md', 'project law'),
+			],
+		})
+		expect(findUngrantedAuthority(source)).toStrictEqual([])
+		const dispatch = briefToDispatch(source)
+		// Rank order, preserved — index 0 wins every conflict, so the order IS the contract.
+		// Deliberately not the manifest's order, so a projection that re-sorted would report.
+		expect(dispatch.authority).toStrictEqual(['src/browser/types.ts', 'AGENTS.md'])
+		// The overlap is by design and now mandatory: the executor must open what it obeys, so
+		// every ranked path also sits in a permission set. That is why the arrays are never
+		// unioned — here one authority is granted by `locked` and the other by `read`.
+		expect(dispatch.read).toStrictEqual(['AGENTS.md'])
+		expect(dispatch.locked).toStrictEqual(['src/browser/types.ts'])
+		// Every key the interface declares, so a member added later cannot go unasserted.
+		expect(Object.keys(dispatch).sort()).toStrictEqual([
+			'authority',
+			'edit',
+			'forbidden',
+			'locked',
+			'prompt',
+			'read',
+		])
+		// The control: a brief with no authority projects an empty list, not a missing key.
+		const bare = briefToDispatch(buildBrief())
+		expect(bare.authority).toStrictEqual([])
+		expect(Object.hasOwn(bare, 'authority')).toBe(true)
 	})
 
 	it('owns exactly manifest.edit', () => {

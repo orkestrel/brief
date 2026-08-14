@@ -14,8 +14,10 @@
 > markdown a projection renders is FOR an external model, never consumed internally. A
 > brief with blocking gaps yields a visible INCOMPLETE `Briefing` carrying the questions,
 > because a half-specified brief is worse than a question. Every discriminant names its
-> axis, never `kind` or `type`: `stage` splits the four pipeline phases, `role` splits what
-> an external source is to the task, `severity` splits risks, `code` splits coded errors.
+> axis, never `kind` or `type`: `stage` splits the four pipeline phases, `severity` splits
+> risks, `code` splits coded errors — and a record whose container already fixes what it is,
+> like a referenced path, or whose candidate vocabulary was neither closed nor disjoint, like
+> a cited source, carries no discriminant at all.
 > Source: [`src/core`](../src/core). Surfaced through the `@src/core` barrel.
 
 You cannot make a model's sampling deterministic from a prompt, but you can make the TASK
@@ -77,43 +79,42 @@ pipeline at all.
 
 ### Types
 
-| Type                     | Kind      | Shape                                                                                                                                                                                                              |
-| ------------------------ | --------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| `TaskOperation`          | type      | `'create' \| 'refactor' \| 'debug' \| 'extract' \| 'migrate' \| 'explain' \| 'review' \| 'optimize' \| 'audit' \| 'test' \| 'document' \| 'plan'` — the closed operation vocabulary.                               |
-| `TaskDomain`             | type      | `'code' \| 'writing' \| 'research' \| 'analysis' \| 'design' \| 'data' \| 'ops' \| 'other'` — the closed domain vocabulary.                                                                                        |
-| `CitationRole`           | type      | `'docs' \| 'spec' \| 'api' \| 'standard'` — what an external citation IS to the task.                                                                                                                              |
-| `OutputFormat`           | type      | `'markdown' \| 'json' \| 'code' \| 'diff' \| 'prose'` — the closed deliverable-format vocabulary.                                                                                                                  |
-| `RiskSeverity`           | type      | `'low' \| 'medium' \| 'high'` — the closed severity vocabulary.                                                                                                                                                    |
-| `BriefStage`             | type      | `'interpret' \| 'draft' \| 'gate' \| 'pin'` — the four fixed pipeline phases, in order.                                                                                                                            |
-| `BriefErrorCode`         | type      | `'INTERPRET_FAILED' \| 'DRAFT_FAILED' \| 'GATE_FAILED' \| 'PIN_FAILED' \| 'BLOCKED' \| 'INVALID' \| 'DESTROYED'` — coded `BriefError` reasons.                                                                     |
-| `Task`                   | interface | `{ operation, domain, statement }` — ONE imperative sentence naming the object; a compound statement is two briefs.                                                                                                |
-| `Reference`              | interface | `{ path, note }` — one referenced path and why it is listed; the ONE path record, carrying no classifier because its container supplies the meaning.                                                               |
-| `Manifest`               | interface | `{ read, edit, locked, forbidden }` — the four DISJOINT file partitions, each `readonly Reference[]`; `read` order is the reading order.                                                                           |
-| `Outcome`                | interface | `{ rank, text, required }` — one ranked outcome, not a step; `required: true` gates "done".                                                                                                                        |
-| `Given`                  | interface | `{ category, name, value }` — one context fact handed to the executor.                                                                                                                                             |
-| `Example`                | interface | `{ input, output, note? }` — one input-to-output exemplar; the highest-leverage ambiguity remover.                                                                                                                 |
-| `Citation`               | interface | `{ name, role, url }` — one external source; list ORDER is the trust order.                                                                                                                                        |
-| `Gap`                    | interface | `{ field, question, blocking, candidates? }` — one unknown; `blocking: true` means no safe default exists and the gate must fail closed.                                                                           |
-| `Risk`                   | interface | `{ severity, text, mitigation }` — one pre-empted risk.                                                                                                                                                            |
-| `Output`                 | interface | `{ format, sections?, include?, exclude? }` — the closed shape of the deliverable.                                                                                                                                 |
-| `Proof`                  | interface | `{ text, command }` — one mechanical, transcript-provable check; `command` should carry a clear exit signal.                                                                                                       |
-| `Brief`                  | interface | `{ task, authority, manifest, outcomes, rules, invariants, givens, examples, assumptions, citations, gaps, risks, output, proofs, trace?, hash? }` — the closed execution contract.                                |
-| `BriefInput`             | interface | `{ text?, interpretation?, task?, … }` — one `compile()` input; every brief section is an optional caller-authored override.                                                                                       |
-| `Briefing`               | interface | `{ interpretation?, brief?, questions, verdict?, stages, failures, digest }` — the full, replayable outcome of one `compile()` call; `brief` is present exactly when it completed, so it IS the completeness test. |
-| `Dispatch`               | interface | `{ prompt, read, edit, locked, forbidden }` — the subagent projection; `edit` is the owned set, `locked` and `forbidden` are do-not-touch.                                                                         |
-| `InterpretStageRecord`   | interface | `{ stage: 'interpret', input: string, output?: Interpretation, error? }` — the interpret phase snapshot.                                                                                                           |
-| `DraftStageRecord`       | interface | `{ stage: 'draft', input: BriefInput, output?: Brief, error? }` — the draft phase snapshot.                                                                                                                        |
-| `GateStageRecord`        | interface | `{ stage: 'gate', input: Subject, output?: LogicalResult, error? }` — the gate phase snapshot.                                                                                                                     |
-| `PinStageRecord`         | interface | `{ stage: 'pin', input: Brief, output?: Brief, error? }` — the pin phase snapshot.                                                                                                                                 |
-| `BriefStageRecord`       | type      | `InterpretStageRecord \| DraftStageRecord \| GateStageRecord \| PinStageRecord` — one phase, discriminated by `stage`, so narrowing types BOTH payloads with no assertion.                                         |
-| `BriefStageFailure`      | interface | `{ stage, code, message }` — a visible marker for a stage that failed.                                                                                                                                             |
-| `BriefRecord`            | interface | `{ id, brief, version, hash }` — a versioned, content-hashed `Brief` inside a `BriefManager`.                                                                                                                      |
-| `BriefCompilerEventMap`  | type      | `BriefCompiler`'s push observation surface — `compile(briefing)` · `block(questions)` · `error(error)` · `destroy()`.                                                                                              |
-| `BriefCompilerOptions`   | interface | `{ interpret?, reason?, actions?, domains?, on?, error? }` — input to `createBriefCompiler`; the gate is FIXED and no option reaches it.                                                                           |
-| `BriefCompilerInterface` | interface | The compilation orchestrator contract — `emitter` / `interpret` / `reason` plus `compile` / `gate` / `destroy`.                                                                                                    |
-| `BriefManagerEventMap`   | type      | `BriefManager`'s push observation surface — `add(id)` · `remove(id)` · `destroy()`.                                                                                                                                |
-| `BriefManagerOptions`    | interface | `{ briefs?, on?, error? }` — input to `createBriefManager`.                                                                                                                                                        |
-| `BriefManagerInterface`  | interface | The brief registry contract — `emitter` / `size` plus `has` / `brief` / `briefs` / `add` / `remove` / `destroy`.                                                                                                   |
+| Type                     | Kind      | Shape                                                                                                                                                                                                                           |
+| ------------------------ | --------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `TaskOperation`          | type      | `'create' \| 'refactor' \| 'debug' \| 'extract' \| 'migrate' \| 'explain' \| 'review' \| 'optimize' \| 'audit' \| 'test' \| 'document' \| 'plan'` — the closed operation vocabulary.                                            |
+| `TaskDomain`             | type      | `'code' \| 'writing' \| 'research' \| 'analysis' \| 'design' \| 'data' \| 'ops' \| 'other'` — the closed domain vocabulary.                                                                                                     |
+| `OutputFormat`           | type      | `'markdown' \| 'json' \| 'code' \| 'diff' \| 'prose'` — the closed deliverable-format vocabulary.                                                                                                                               |
+| `RiskSeverity`           | type      | `'low' \| 'medium' \| 'high'` — the closed severity vocabulary.                                                                                                                                                                 |
+| `BriefStage`             | type      | `'interpret' \| 'draft' \| 'gate' \| 'pin'` — the four fixed pipeline phases, in order.                                                                                                                                         |
+| `BriefErrorCode`         | type      | `'INTERPRET_FAILED' \| 'DRAFT_FAILED' \| 'GATE_FAILED' \| 'PIN_FAILED' \| 'BLOCKED' \| 'INVALID' \| 'DESTROYED'` — coded `BriefError` reasons.                                                                                  |
+| `Task`                   | interface | `{ operation, domain, statement }` — ONE imperative sentence naming the object; a compound statement is two briefs.                                                                                                             |
+| `Reference`              | interface | `{ path, note }` — one referenced path and why it is listed; the ONE path record, carrying no classifier because its container supplies the meaning.                                                                            |
+| `Manifest`               | interface | `{ read, edit, locked, forbidden }` — the four DISJOINT file partitions, each `readonly Reference[]`; `read` order is the reading order.                                                                                        |
+| `Outcome`                | interface | `{ rank, text, required }` — one ranked outcome, not a step; `required: true` gates "done".                                                                                                                                     |
+| `Given`                  | interface | `{ category, name, value }` — one context fact handed to the executor.                                                                                                                                                          |
+| `Example`                | interface | `{ input, output, note? }` — one input-to-output exemplar; the highest-leverage ambiguity remover.                                                                                                                              |
+| `Citation`               | interface | `{ name, url, note }` — one external source and why it is cited; the off-repository twin of `Reference`. List ORDER is the trust order.                                                                                         |
+| `Gap`                    | interface | `{ field, question, blocking, candidates? }` — one unknown; `blocking: true` means no safe default exists and the gate must fail closed.                                                                                        |
+| `Risk`                   | interface | `{ severity, text, mitigation }` — one pre-empted risk.                                                                                                                                                                         |
+| `Output`                 | interface | `{ format, sections?, include?, exclude? }` — the closed shape of the deliverable.                                                                                                                                              |
+| `Proof`                  | interface | `{ text, command }` — one mechanical, transcript-provable check; `command` should carry a clear exit signal.                                                                                                                    |
+| `Brief`                  | interface | `{ task, authority, manifest, outcomes, rules, invariants, givens, examples, assumptions, citations, gaps, risks, output, proofs, trace?, hash? }` — the closed execution contract.                                             |
+| `BriefInput`             | interface | `{ text?, interpretation?, task?, … }` — one `compile()` input; every brief section is an optional caller-authored override.                                                                                                    |
+| `Briefing`               | interface | `{ interpretation?, brief?, questions, verdict?, stages, failures, digest }` — the full, replayable outcome of one `compile()` call; `brief` is present exactly when it completed, so it IS the completeness test.              |
+| `Dispatch`               | interface | `{ prompt, authority, read, edit, locked, forbidden }` — the subagent projection on TWO axes: `authority` is precedence, the four path sets are permission. `edit` is the owned set; `locked` and `forbidden` are do-not-touch. |
+| `InterpretStageRecord`   | interface | `{ stage: 'interpret', input: string, output?: Interpretation, error? }` — the interpret phase snapshot.                                                                                                                        |
+| `DraftStageRecord`       | interface | `{ stage: 'draft', input: BriefInput, output?: Brief, error? }` — the draft phase snapshot.                                                                                                                                     |
+| `GateStageRecord`        | interface | `{ stage: 'gate', input: Subject, output?: LogicalResult, error? }` — the gate phase snapshot.                                                                                                                                  |
+| `PinStageRecord`         | interface | `{ stage: 'pin', input: Brief, output?: Brief, error? }` — the pin phase snapshot.                                                                                                                                              |
+| `BriefStageRecord`       | type      | `InterpretStageRecord \| DraftStageRecord \| GateStageRecord \| PinStageRecord` — one phase, discriminated by `stage`, so narrowing types BOTH payloads with no assertion.                                                      |
+| `BriefStageFailure`      | interface | `{ stage, code, message }` — a visible marker for a stage that failed.                                                                                                                                                          |
+| `BriefRecord`            | interface | `{ id, brief, version, hash }` — a versioned, content-hashed `Brief` inside a `BriefManager`.                                                                                                                                   |
+| `BriefCompilerEventMap`  | type      | `BriefCompiler`'s push observation surface — `compile(briefing)` · `block(questions)` · `error(error)` · `destroy()`.                                                                                                           |
+| `BriefCompilerOptions`   | interface | `{ interpret?, reason?, actions?, domains?, on?, error? }` — input to `createBriefCompiler`; the gate is FIXED and no option reaches it.                                                                                        |
+| `BriefCompilerInterface` | interface | The compilation orchestrator contract — `emitter` / `interpret` / `reason` plus `compile` / `gate` / `destroy`.                                                                                                                 |
+| `BriefManagerEventMap`   | type      | `BriefManager`'s push observation surface — `add(id)` · `remove(id)` · `destroy()`.                                                                                                                                             |
+| `BriefManagerOptions`    | interface | `{ briefs?, on?, error? }` — input to `createBriefManager`.                                                                                                                                                                     |
+| `BriefManagerInterface`  | interface | The brief registry contract — `emitter` / `size` plus `has` / `brief` / `briefs` / `add` / `remove` / `destroy`.                                                                                                                |
 
 The `Briefing` deliberately carries CROSS-PACKAGE payloads by their originating types:
 `interpretation` is an `@orkestrel/interpret` `Interpretation`, `verdict` is an
@@ -128,7 +129,6 @@ check, met or missed, narrated by the reasoner.
 | --------------------- | ----- | ----------------------------------------------------------------------------------------------------- |
 | `TASK_OPERATIONS`     | const | The twelve `TaskOperation` values, frozen — compose with `literalOf(…)` / `parseEnum(…)`.             |
 | `TASK_DOMAINS`        | const | The eight `TaskDomain` values, frozen.                                                                |
-| `CITATION_ROLES`      | const | The four `CitationRole` values, frozen.                                                               |
 | `OUTPUT_FORMATS`      | const | The five `OutputFormat` values, frozen.                                                               |
 | `RISK_SEVERITIES`     | const | The three `RiskSeverity` values, frozen.                                                              |
 | `DEFAULT_BRIEF_TURNS` | const | `16` — the default turn cap `briefToGoal` renders; domain-qualified to keep the barrel clean.         |
@@ -138,7 +138,6 @@ check, met or missed, narrated by the reasoner.
 
 ```ts
 import {
-	CITATION_ROLES,
 	DEFAULT_BRIEF_TURNS,
 	GATE_ID,
 	OUTPUT_FORMATS,
@@ -149,7 +148,6 @@ import {
 
 TASK_OPERATIONS.length // 12
 TASK_DOMAINS // ['code', 'writing', 'research', 'analysis', 'design', 'data', 'ops', 'other']
-CITATION_ROLES // ['docs', 'spec', 'api', 'standard']
 OUTPUT_FORMATS // ['markdown', 'json', 'code', 'diff', 'prose']
 RISK_SEVERITIES // ['low', 'medium', 'high']
 DEFAULT_BRIEF_TURNS // 16
@@ -202,7 +200,6 @@ PRESENT but holds `undefined` also fails, matching this workspace's
 | `isLine`          | const | A NON-EMPTY string carrying no line terminator — the shape of nearly every field. |
 | `isTaskOperation` | const | `TaskOperation`.                                                                  |
 | `isTaskDomain`    | const | `TaskDomain`.                                                                     |
-| `isCitationRole`  | const | `CitationRole`.                                                                   |
 | `isOutputFormat`  | const | `OutputFormat`.                                                                   |
 | `isRiskSeverity`  | const | `RiskSeverity`.                                                                   |
 | `isTask`          | const | `Task` — `operation` and `domain` on-vocabulary, `statement` non-empty.           |
@@ -211,7 +208,7 @@ PRESENT but holds `undefined` also fails, matching this workspace's
 | `isOutcome`       | const | `Outcome` — `rank` a positive integer.                                            |
 | `isGiven`         | const | `Given`.                                                                          |
 | `isExample`       | const | `Example`.                                                                        |
-| `isCitation`      | const | `Citation` — `role` must be a `CitationRole`.                                     |
+| `isCitation`      | const | `Citation` — `name`, `url`, and `note` all present and single-line.               |
 | `isGap`           | const | `Gap`.                                                                            |
 | `isRisk`          | const | `Risk` — `severity` must be a `RiskSeverity`.                                     |
 | `isOutput`        | const | `Output` — `format` must be an `OutputFormat`.                                    |
@@ -227,7 +224,6 @@ import {
 	isTaskDomain,
 	isTaskOperation,
 	isCitation,
-	isCitationRole,
 	isExample,
 	isGiven,
 	isManifest,
@@ -249,8 +245,7 @@ isManifest({ read: [], edit: [], locked: [], forbidden: [] }) // true
 isOutcome({ rank: 1, text: 'the tests pass', required: true }) // true
 isGiven({ category: 'convention', name: 'indentation', value: 'tabs' }) // true
 isExample({ input: '<input required>', output: 'el.validity' }) // true
-isCitation({ name: 'MDN', role: 'docs', url: 'https://developer.mozilla.org/' }) // true
-isCitationRole('docs') // true
+isCitation({ name: 'MDN', url: 'https://developer.mozilla.org/', note: 'native validity' }) // true
 isGap({ field: 'output', question: 'Diff or files?', blocking: true, candidates: ['diff'] }) // true
 isRisk({ severity: 'medium', text: 'subtle drift', mitigation: 'assert in tests' }) // true
 isRiskSeverity('medium') // true
@@ -331,8 +326,16 @@ proofShape.type // 'object'
 ### Builders
 
 Lowercase value builders following the reasons idiom — every builder returns a FRESH object
-and OMITS absent optional keys entirely, so its output round-trips the exact-record
-validators above.
+and OMITS absent optional keys entirely, so its SHAPE round-trips the exact-record validators
+above.
+
+Builders are structural, not validating: they adopt whatever they are handed. `reference('a',
+'')` and `citation('MDN', 'https://x', 'a\nb')` both return a typed value the matching guard
+rejects, because the single-line and non-empty contracts bind where a guard runs rather than
+where a value is built. That is deliberate and uniform across all thirteen — validation lives
+at the boundaries the data actually crosses: `parseBrief` on the way in, `snapshotBrief` inside
+every projection, and the gate before emission. Pass on-contract arguments, or check the
+result.
 
 | API              | Kind     | Builds…                                                                                                                                                          |
 | ---------------- | -------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------- |
@@ -342,7 +345,7 @@ validators above.
 | `outcome`        | function | an `Outcome` from rank / text; `required` defaults to `true` — an outcome gates "done" unless demoted.                                                           |
 | `given`          | function | a `Given` from category / name / value.                                                                                                                          |
 | `example`        | function | an `Example` from input / output; `note` is omitted when absent.                                                                                                 |
-| `citation`       | function | a `Citation` from name / role / url.                                                                                                                             |
+| `citation`       | function | a `Citation` from name / url / note.                                                                                                                             |
 | `gap`            | function | a `Gap` from field / question; `blocking` defaults to `false` and `candidates` is omitted when absent.                                                           |
 | `risk`           | function | a `Risk` from severity / text / mitigation.                                                                                                                      |
 | `output`         | function | an `Output` from format; `sections` / `include` / `exclude` are omitted when absent.                                                                             |
@@ -384,7 +387,13 @@ const draft = brief(task('refactor', 'code', 'Refactor useForm to native browser
 	givens: [given('convention', 'indentation', 'tabs')],
 	examples: [example('<input required>', 'validity read from el.validity')],
 	assumptions: ['Validation message wording is preserved.'],
-	citations: [citation('MDN Constraint Validation', 'docs', 'https://developer.mozilla.org/')],
+	citations: [
+		citation(
+			'MDN Constraint Validation',
+			'https://developer.mozilla.org/',
+			'the native validity behavior being adopted',
+		),
+	],
 	gaps: [gap('rules', 'Should validation message wording change?')],
 	risks: [risk('medium', 'native validation differs subtly', 'assert message and state in tests')],
 	output: output('diff', { include: ['updated useForm.ts'] }),
@@ -401,30 +410,30 @@ Pure, exported utility functions — the referentially-transparent leaves behind
 `BriefCompiler` and the projection surface. Projections use the `{noun}To{Noun}` idiom: each
 consumes a WHOLE and returns a derived view of it.
 
-| API                    | Kind     | Summary                                                                                                                                         |
-| ---------------------- | -------- | ----------------------------------------------------------------------------------------------------------------------------------------------- |
-| `briefToMarkdown`      | function | Project a `Brief` into the copy-ready agent prompt — sections in authority order, paths referenced, never inlined; an empty section is omitted. |
-| `briefToGoal`          | function | Project a `Brief` into a `/goal` completion condition — the proofs' commands verbatim plus a turn cap defaulting to `DEFAULT_BRIEF_TURNS`.      |
-| `briefToDispatch`      | function | Project a `Brief` into a `Dispatch` — `manifest.edit` becomes the owned set, `locked` and `forbidden` become do-not-touch.                      |
-| `briefToSubject`       | function | Project a `Brief` into a reasons `Subject` of readiness measures the gate rules read.                                                           |
-| `briefToHash`          | function | The canonical structural digest of a brief's content, with `trace` and `hash` stripped first.                                                   |
-| `briefToContent`       | function | The canonical TEXT the hash describes — the identity two briefs must share to be the same brief, since eight hex digits are not identity.       |
-| `findUnmetRules`       | function | The readiness rules a brief fails, measured in CODE — the gate's decision, which `compile` makes rather than delegating to a borrowed engine.   |
-| `pinBrief`             | function | Return a fresh `Brief` with `trace` and `hash` filled — deterministic, no clocks, no run-specific data, idempotent, and deeply frozen.          |
-| `snapshotBrief`        | function | One deeply owned, deeply frozen, validated reading of a `Brief` — the identity boundary the pin, the registry, and every projection cross.      |
-| `assertBrief`          | function | Narrow unknown data to a `Brief` by IDENTITY, throwing `BriefError` `INVALID` when the guard refuses.                                           |
-| `exampleToLines`       | function | Render one `Example` as markdown lines — a single-line pair becomes one row, a multi-line pair becomes a fenced block.                          |
-| `validateBrief`        | function | The semantic pass over an already-shape-valid brief; returns a reasons `ReasonValidationResult`, never throws.                                  |
-| `countSentences`       | function | The sentence count of a statement — `validateBrief` errors when it is not exactly one.                                                          |
-| `findBlockingGaps`     | function | The gaps with `blocking: true`; non-empty means the gate MUST fail closed.                                                                      |
-| `findManifestOverlaps` | function | The paths appearing in more than one manifest partition, once each.                                                                             |
-| `findDeniedAuthority`  | function | The authority paths `manifest.forbidden` bans — the executor cannot obey a file it may not open; `locked` is read-only and never a denial.      |
-| `findUnpairedGaps`     | function | The open gaps past the assumption count — the discipline is exactly one recorded assumption per open gap.                                       |
-| `deriveStatement`      | function | Derive one imperative statement from free text — whitespace collapsed, first letter raised, terminator appended.                                |
-| `deriveTask`           | function | Derive a `Task` from an interprets `Intent` through CALLER action and domain vocabularies; `undefined` when either side is unmapped.            |
-| `deriveGivens`         | function | Derive `Given[]` from an interprets `Entity[]` — each becomes a `{ category: 'extracted', name, value }` fact.                                  |
-| `deriveGaps`           | function | Derive `Gap[]` from an interprets `Ambiguity[]` — REQUIRED ambiguities become BLOCKING gaps, the rest open.                                     |
-| `errorToMessage`       | function | Render a value thrown by a stage into the message a `BriefStageFailure` carries.                                                                |
+| API                      | Kind     | Summary                                                                                                                                                         |
+| ------------------------ | -------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `briefToMarkdown`        | function | Project a `Brief` into the copy-ready agent prompt — sections in authority order, paths referenced, never inlined; an empty section is omitted.                 |
+| `briefToGoal`            | function | Project a `Brief` into a `/goal` completion condition — the proofs' commands verbatim plus a turn cap defaulting to `DEFAULT_BRIEF_TURNS`.                      |
+| `briefToDispatch`        | function | Project a `Brief` into a `Dispatch` — `manifest.edit` becomes the owned set, `locked` and `forbidden` do-not-touch, and `authority` the ranked precedence list. |
+| `briefToSubject`         | function | Project a `Brief` into a reasons `Subject` of readiness measures the gate rules read.                                                                           |
+| `briefToHash`            | function | The canonical structural digest of a brief's content, with `trace` and `hash` stripped first.                                                                   |
+| `briefToContent`         | function | The canonical TEXT the hash describes — the identity two briefs must share to be the same brief, since eight hex digits are not identity.                       |
+| `findUnmetRules`         | function | The readiness rules a brief fails, measured in CODE — the gate's decision, which `compile` makes rather than delegating to a borrowed engine.                   |
+| `pinBrief`               | function | Return a fresh `Brief` with `trace` and `hash` filled — deterministic, no clocks, no run-specific data, idempotent, and deeply frozen.                          |
+| `snapshotBrief`          | function | One deeply owned, deeply frozen, validated reading of a `Brief` — the identity boundary the pin, the registry, and every projection cross.                      |
+| `assertBrief`            | function | Narrow unknown data to a `Brief` by IDENTITY, throwing `BriefError` `INVALID` when the guard refuses.                                                           |
+| `exampleToLines`         | function | Render one `Example` as markdown lines — a single-line pair becomes one row, a multi-line pair becomes a fenced block.                                          |
+| `validateBrief`          | function | The semantic pass over an already-shape-valid brief; returns a reasons `ReasonValidationResult`, never throws.                                                  |
+| `countSentences`         | function | The sentence count of a statement — `validateBrief` errors when it is not exactly one.                                                                          |
+| `findBlockingGaps`       | function | The gaps with `blocking: true`; non-empty means the gate MUST fail closed.                                                                                      |
+| `findManifestOverlaps`   | function | The paths appearing in more than one manifest partition, once each.                                                                                             |
+| `findUngrantedAuthority` | function | The authority paths no partition opens — every ranked path must appear in `read`, `edit`, or `locked`, because the executor cannot obey what it cannot open.    |
+| `findUnpairedGaps`       | function | The open gaps past the assumption count — the discipline is exactly one recorded assumption per open gap.                                                       |
+| `deriveStatement`        | function | Derive one imperative statement from free text — whitespace collapsed, first letter raised, terminator appended.                                                |
+| `deriveTask`             | function | Derive a `Task` from an interprets `Intent` through CALLER action and domain vocabularies; `undefined` when either side is unmapped.                            |
+| `deriveGivens`           | function | Derive `Given[]` from an interprets `Entity[]` — each becomes a `{ category: 'extracted', name, value }` fact.                                                  |
+| `deriveGaps`             | function | Derive `Gap[]` from an interprets `Ambiguity[]` — REQUIRED ambiguities become BLOCKING gaps, the rest open.                                                     |
+| `errorToMessage`         | function | Render a value thrown by a stage into the message a `BriefStageFailure` carries.                                                                                |
 
 ```ts
 import {
@@ -440,7 +449,7 @@ import {
 	deriveTask,
 	errorToMessage,
 	findBlockingGaps,
-	findDeniedAuthority,
+	findUngrantedAuthority,
 	findManifestOverlaps,
 	findUnpairedGaps,
 	pinBrief,
@@ -461,7 +470,7 @@ briefToSubject(pinned) // { operation: 'refactor', blocking: 0, outcomes: 2, pro
 countSentences('Refactor useForm. Then update the tests.') // 2
 findBlockingGaps(pinned) // [] — safe to emit
 findManifestOverlaps(pinned) // [] — the four partitions are disjoint
-findDeniedAuthority(pinned) // [] — no ranked authority sits in `forbidden`
+findUngrantedAuthority(pinned) // [] — every ranked authority is opened by some partition
 findUnpairedGaps(pinned) // [] — the one open gap has its assumption
 validateBrief(pinned) // { valid: true, errors: [], warnings: [] }
 
@@ -479,16 +488,23 @@ errorToMessage(new Error('boom')) // 'boom'
 
 `validateBrief` ERRORS on the structural violations no assumption can paper over — a
 manifest overlap (`Path "<path>" appears in more than one manifest partition`), an authority
-the manifest forbids (`Authority "<path>" is forbidden — the executor cannot obey what it
-cannot read`), an empty `proofs` list, and a `task.statement` that is not one sentence
-(`Statement holds <n> sentences — a compound statement is two briefs`). It WARNS on the
-runnable-but-suspicious: duplicate outcome ranks, an open gap without its paired assumption,
-and an optional outcome ranked above every required one.
+no partition grants access to (`Authority "<path>" is in no manifest partition that grants
+access — the executor cannot obey what it cannot open`), an empty `proofs` list, and a
+`task.statement` that is not one sentence (`Statement holds <n> sentences — a compound
+statement is two briefs`). It WARNS on the runnable-but-suspicious: duplicate outcome ranks,
+an open gap without its paired assumption, and an optional outcome ranked above every
+required one.
 
-Both path checks compare EXACT strings and never expand a glob. `forbidden: 'app/**'` does
-not deny `authority: 'app/AGENTS.md'`, and it does not overlap `edit: 'app/file.ts'`.
-Disjointness and denial are properties of the written paths, so state a lock or a ban as the
-same literal path the section it contradicts carries.
+The grant check reads `read`, `edit`, and `locked` — all three OPEN a file, and read-only is
+exactly what obeying one requires. It subsumes the narrower question of an authority sitting
+in `forbidden`, because the four partitions are disjoint, and it also catches the case a
+forbidden-only check cannot see: an authority the manifest never mentions at all, where the
+brief simply never says the executor may open what it must obey.
+
+Both path checks compare EXACT strings and never expand a glob. `read: 'guides/**'` does not
+grant `authority: 'guides/brief.md'`, and `forbidden: 'app/**'` does not overlap
+`edit: 'app/file.ts'`. Disjointness and grant are properties of the written paths, so state a
+grant as the same literal path the authority carries.
 
 ### Parsers
 
@@ -682,8 +698,13 @@ These invariants hold across `src/core` and this guide:
 4. **The brief is the source of truth; projections never add.** `briefToMarkdown`,
    `briefToGoal`, and `briefToDispatch` are pure views over the pinned brief: the prompt
    references paths and never inlines file contents, the goal condition is the proofs'
-   commands verbatim plus the turn cap, and the dispatch's owned set is exactly
-   `manifest.edit`. The artifacts cannot disagree with the contract or each other, and that
+   commands verbatim plus the turn cap, the dispatch's owned set is exactly `manifest.edit`,
+   and its `authority` is exactly `brief.authority` in rank order. The dispatch therefore says
+   in data every PATH the prompt says in prose, so a machine consumer never parses the
+   rendering to decide what it may touch or what wins. Everything else the prompt carries —
+   outcomes, the proofs' commands, gaps, risks, the output shape, each path's `note` — stays
+   in the prompt, which is written for a model; a consumer wanting those reads the `Brief`.
+   The artifacts cannot disagree with the contract or each other, and that
    is enforced in the DATA rather than in the renderer: every brief string is one line
    (`isLine` / `isText`), so no field can carry the line break that would forge a heading or
    a second manifest row. An `Example`'s two sides are the single exception, because they
@@ -731,14 +752,28 @@ list and four DISJOINT partitions — order and set membership, fully served by 
 (`JSON.stringify` out, `parseBrief` back in), a turn cap on `BriefCompilerOptions` (nothing in the
 pipeline renders a goal, so the cap is `briefToGoal`'s argument), glob expansion (both path
 checks compare exact strings, and a glob engine is a dependency this package will not take),
-and any LLM invocation — the authoring judgment is the caller's.
+a guard or shape for any PROJECTION (`Briefing`, `BriefStageRecord`, `BriefRecord`, and
+`Dispatch` have neither, because a guard narrows untrusted inbound data and nothing accepts
+those — the published round trip is the `Brief`, through `JSON.stringify` and `parseBrief`,
+and a consumer derives its own dispatch locally), URL validation on `Citation.url` (see its
+TSDoc: a `pattern` there makes the seeded generator throw for the whole brief, and four
+working mechanisms beat one stricter member), and any LLM invocation — the authoring
+judgment is the caller's.
 
-`Dispatch` carries no `authority` array, and that is a decision rather than an omission. Its
-four arrays are `Manifest` flattened 1:1 and answer one question — may I touch this file.
-Ranked authority answers a different one and already travels in `prompt`, which
-`briefToMarkdown` renders `## Authority (ranked)` into. A fifth array would also stop the
-four being a partition: an authority path normally sits in `read` or `locked` too, so a
-consumer unioning the arrays to compute "files I may open" would double-count it.
+`Dispatch` carries TWO axes, and reading it as five partitions is the one way to get it
+wrong. PERMISSION is `read` / `edit` / `locked` / `forbidden`, flattened 1:1 from `Manifest`
+— they answer "may I touch this file", and they are mutually disjoint in a GATED brief, which
+is what `findManifestOverlaps` measures and the `disjoint` rule refuses on. `briefToDispatch`
+runs no gate, so projecting an unvetted draft can produce arrays that intersect: gate before
+you dispatch. PRECEDENCE is `authority`, in rank order, index 0 winning every conflict.
+
+`authority` therefore OVERLAPS the permission arrays by design, and by requirement: the
+executor has to open what it obeys, so a ranked path ALWAYS also sits in `read`, `edit`, or
+`locked`, and the `granted` rule refuses a brief where one does not. Read the four to decide
+what may be touched and `authority` to decide what wins. Never union all five — that was
+already wrong before `authority` existed, since `forbidden` is an exclusion rather than a
+grant. It is projected as paths rather than left to `prompt` because a machine consumer must
+not have to parse a document written for a model to discover mandatory authority.
 
 ## Patterns
 
@@ -842,7 +877,7 @@ blocked.destroy()
 ```
 
 A gate that refuses for a reason OTHER than a blocking gap — no proofs, a compound
-statement, an overlapping manifest, an authority the manifest forbids — reports the unmet
+statement, an overlapping manifest, an authority no partition opens — reports the unmet
 rule ids instead, and the briefing is
 incomplete the same way. A brief with no proofs and a two-sentence statement reports
 `Gate refused: proven, single`.
@@ -943,6 +978,7 @@ const handoff = briefToDispatch(pinned)
 handoff.edit // ['src/browser/composables/useForm.ts'] — the subagent's owned files
 handoff.locked // ['src/browser/types.ts'] — read, never write
 handoff.forbidden // ['app/**'] — never opened
+handoff.authority // ['AGENTS.md'] — precedence, not permission; index 0 wins every conflict
 handoff.prompt // the briefToMarkdown rendering, ready to hand off
 ```
 
@@ -1026,8 +1062,10 @@ store.destroy()
   one exception is `examples`: an input-to-output exemplar removes more ambiguity than prose.
 - **Let the container say what a path is.** Both sections hold the same `Reference`, so a path
   gets its meaning from where it sits: rank in `authority`, permission in a manifest partition.
-  Write `note` for why the path is listed, not for what kind of file it is. Never list a path in
-  `authority` and in `forbidden` — `findDeniedAuthority` refuses that at the gate.
+  Write `note` for why the path is listed, not for what kind of file it is.
+- **List every authority in the manifest too.** Ranking a path says obey it; a partition says
+  the executor may open it, and it needs both. Put it in `read`, or in `locked` when it must
+  not change. `findUngrantedAuthority` refuses the gap at the gate, so this is not advice.
 - **Pin the outcome, not a plan.** Specify `output` and `proofs` and leave the route free; a
   brittle step list in `rules` makes runs diverge. A rule belongs in `rules` only when the
   METHOD is the requirement.

@@ -9,7 +9,6 @@ import {
 	stringShape,
 } from '@orkestrel/contract'
 import {
-	CITATION_ROLES,
 	OUTPUT_FORMATS,
 	RISK_SEVERITIES,
 	TASK_DOMAINS,
@@ -83,12 +82,12 @@ export const exampleShape = objectShape(
 	{ description: 'One input to output exemplar.' },
 )
 
-/** The `Citation` shape — one external source with a closed role. */
+/** The `Citation` shape — a name, a locator, and why the source is cited. */
 export const citationShape = objectShape(
 	{
 		name: lineShape,
-		role: literalShape(CITATION_ROLES),
 		url: lineShape,
+		note: lineShape,
 	},
 	{ description: 'One external source; list order is the trust order.' },
 )

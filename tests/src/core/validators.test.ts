@@ -1,7 +1,6 @@
 import {
 	isBrief,
 	isCitation,
-	isCitationRole,
 	isExample,
 	isGap,
 	isGiven,
@@ -23,7 +22,6 @@ import { buildAdversarialValues, buildBrief } from '../../setup.js'
 const VOCABULARY_GUARDS = [
 	{ name: 'isTaskOperation', guard: isTaskOperation, valid: 'refactor', invalid: 'improve' },
 	{ name: 'isTaskDomain', guard: isTaskDomain, valid: 'code', invalid: 'frontend' },
-	{ name: 'isCitationRole', guard: isCitationRole, valid: 'docs', invalid: 'blog' },
 	{ name: 'isOutputFormat', guard: isOutputFormat, valid: 'diff', invalid: 'patch' },
 	{ name: 'isRiskSeverity', guard: isRiskSeverity, valid: 'high', invalid: 'critical' },
 ]
@@ -68,8 +66,8 @@ const RECORD_GUARDS = [
 	{
 		name: 'isCitation',
 		guard: isCitation,
-		valid: { name: 'MDN', role: 'docs', url: 'https://developer.mozilla.org/' },
-		offContract: { name: 'MDN', role: 'blog', url: 'https://developer.mozilla.org/' },
+		valid: { name: 'MDN', url: 'https://developer.mozilla.org/', note: 'native validity' },
+		offContract: { name: 'MDN', url: 'https://developer.mozilla.org/' },
 	},
 	{
 		name: 'isGap',
@@ -122,7 +120,6 @@ describe('vocabulary guards', () => {
 		expect(VOCABULARY_GUARDS.map((entry) => entry.name)).toStrictEqual([
 			'isTaskOperation',
 			'isTaskDomain',
-			'isCitationRole',
 			'isOutputFormat',
 			'isRiskSeverity',
 		])

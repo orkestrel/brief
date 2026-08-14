@@ -8,7 +8,6 @@ import { DEFAULT_BRIEF_TURNS, GATE_ID, LINE_BREAK_PATTERN } from './constants.js
 import type {
 	Brief,
 	Citation,
-	CitationRole,
 	Dispatch,
 	Example,
 	Gap,
@@ -148,19 +147,23 @@ export function example(input: string, result: string, note?: string): Example {
  * Build a `Citation`.
  *
  * @param name - The source's display name.
- * @param role - What the source IS to the task.
  * @param url - Where the source lives.
+ * @param note - Why the source is cited.
  * @returns A fresh `Citation`.
  *
  * @example
  * ```ts
  * import { citation } from '@orkestrel/brief'
  *
- * citation('MDN Constraint Validation', 'docs', 'https://developer.mozilla.org/')
+ * citation(
+ * 	'MDN Constraint Validation',
+ * 	'https://developer.mozilla.org/',
+ * 	'the native validity behavior being adopted',
+ * )
  * ```
  */
-export function citation(name: string, role: CitationRole, url: string): Citation {
-	return { name, role, url }
+export function citation(name: string, url: string, note: string): Citation {
+	return { name, url, note }
 }
 
 /**
@@ -330,7 +333,7 @@ export function gateDefinition(): LogicalDefinition {
 		),
 		rule('proven', [atom('proofs', 'above', 0)], atom('proven', 'equals', true)),
 		rule('disjoint', [atom('overlaps', 'equals', 0)], atom('disjoint', 'equals', true)),
-		rule('granted', [atom('denied', 'equals', 0)], atom('granted', 'equals', true)),
+		rule('granted', [atom('ungranted', 'equals', 0)], atom('granted', 'equals', true)),
 		rule('single', [atom('sentences', 'equals', 1)], atom('single', 'equals', true)),
 	]
 	return logicalDefinition(GATE_ID, 'Brief readiness', [
@@ -387,7 +390,7 @@ export function findUnmetRules(source: Brief): readonly string[] {
 		unready.push('aimed')
 	if (source.proofs.length === 0) unready.push('proven')
 	if (findManifestOverlaps(source).length !== 0) unready.push('disjoint')
-	if (findDeniedAuthority(source).length !== 0) unready.push('granted')
+	if (findUngrantedAuthority(source).length !== 0) unready.push('granted')
 	if (countSentences(source.task.statement) !== 1) unready.push('single')
 	return unready
 }
@@ -441,38 +444,48 @@ export function findBlockingGaps(source: Brief): readonly Gap[] {
 }
 
 /**
- * The authority paths the manifest forbids.
+ * The authority paths the manifest never grants access to.
  *
  * @remarks
- * A brief that ranks a path as authority and then forbids touching it tells the executor
- * to obey a file it may not open. `locked` is not a denial — read-only is exactly what an
- * authority needs — so only `forbidden` counts.
+ * An authority the executor cannot open is an instruction it cannot follow, so every ranked
+ * path must appear in `read`, `edit`, or `locked`. Those three are the grants: `locked` is a
+ * grant, because read-only is exactly what obeying a file requires.
+ *
+ * This subsumes the narrower question of an authority sitting in `forbidden`. The four
+ * partitions are disjoint — `findManifestOverlaps` and the `disjoint` rule enforce it — so a
+ * forbidden path is in none of the three grants and is reported here. An authority named in
+ * NO partition at all is reported for the same reason, and that is the case a forbidden-only
+ * check misses entirely: the brief simply never says the executor may open what it must obey.
  *
  * Paths are compared as EXACT strings, matching `findManifestOverlaps`. A glob is never
- * expanded, so `forbidden: 'app/**'` does not deny `authority: 'app/AGENTS.md'`. State a
- * denied authority as the same literal path the authority carries.
+ * expanded, so `read: 'guides/**'` does not grant `authority: 'guides/brief.md'`. State a
+ * grant as the same literal path the authority carries.
  *
  * @param source - The brief to inspect.
- * @returns Each denied authority path once, in authority order; empty when none is denied.
+ * @returns Each ungranted authority path once, in authority order; empty when all are granted.
  *
  * @example
  * ```ts
- * import { brief, findDeniedAuthority, manifest, reference, task } from '@orkestrel/brief'
+ * import { brief, findUngrantedAuthority, manifest, reference, task } from '@orkestrel/brief'
  *
  * const draft = brief(task('debug', 'code', 'Fix the leak.'), {
  * 	authority: [reference('AGENTS.md', 'project law')],
- * 	manifest: manifest({ forbidden: [reference('AGENTS.md', 'out of scope')] }),
+ * 	manifest: manifest(),
  * })
- * findDeniedAuthority(draft) // ['AGENTS.md']
+ * findUngrantedAuthority(draft) // ['AGENTS.md'] — ranked, but no partition opens it
  * ```
  */
-export function findDeniedAuthority(source: Brief): readonly string[] {
-	const banned = new Set(source.manifest.forbidden.map((entry) => entry.path))
-	const denied: string[] = []
+export function findUngrantedAuthority(source: Brief): readonly string[] {
+	const granted = new Set(
+		[...source.manifest.read, ...source.manifest.edit, ...source.manifest.locked].map(
+			(entry) => entry.path,
+		),
+	)
+	const ungranted: string[] = []
 	for (const path of new Set(source.authority.map((entry) => entry.path))) {
-		if (banned.has(path)) denied.push(path)
+		if (!granted.has(path)) ungranted.push(path)
 	}
-	return denied
+	return ungranted
 }
 
 /**
@@ -579,7 +592,7 @@ export function briefToSubject(source: Brief): Subject {
 		locks: source.manifest.locked.length,
 		bans: source.manifest.forbidden.length,
 		overlaps: findManifestOverlaps(source).length,
-		denied: findDeniedAuthority(source).length,
+		ungranted: findUngrantedAuthority(source).length,
 		risks: source.risks.length,
 		examples: source.examples.length,
 	}
@@ -590,8 +603,8 @@ export function briefToSubject(source: Brief): Subject {
  *
  * @remarks
  * ERRORS are the structural violations no assumption can paper over: a manifest
- * overlap, an authority the manifest forbids, an empty `proofs` list, and a statement
- * that is not exactly one sentence.
+ * overlap, an authority no partition grants access to, an empty `proofs` list, and a
+ * statement that is not exactly one sentence.
  * WARNINGS are runnable but suspicious: duplicate outcome ranks, an unpaired open gap,
  * and an optional outcome ranked above a required one. Never throws.
  *
@@ -615,8 +628,10 @@ export function validateBrief(source: Brief): ReasonValidationResult {
 	for (const path of findManifestOverlaps(source)) {
 		errors.push(`Path "${path}" appears in more than one manifest partition`)
 	}
-	for (const path of findDeniedAuthority(source)) {
-		errors.push(`Authority "${path}" is forbidden — the executor cannot obey what it cannot read`)
+	for (const path of findUngrantedAuthority(source)) {
+		errors.push(
+			`Authority "${path}" is in no manifest partition that grants access — the executor cannot obey what it cannot open`,
+		)
 	}
 	if (source.proofs.length === 0) {
 		errors.push('Brief records no proof — nothing can settle "done"')
@@ -930,7 +945,7 @@ export function briefToMarkdown(input: Brief): string {
 		lines.push('## Citations (trust order)', '')
 		lines.push(
 			...source.citations.map(
-				(entry, index) => `${String(index + 1)}. ${entry.name} — ${entry.role} — ${entry.url}`,
+				(entry, index) => `${String(index + 1)}. ${entry.name} — ${entry.note} — ${entry.url}`,
 			),
 		)
 		lines.push('')
@@ -1015,26 +1030,36 @@ export function briefToGoal(input: Brief, turns: number = DEFAULT_BRIEF_TURNS): 
  * `edit` is exactly `manifest.edit`, so two dispatches whose `edit` sets do not intersect
  * can run concurrently under the same brief without conflict.
  *
+ * `authority` is exactly `brief.authority` in rank order, and it is a SEPARATE axis from the
+ * four permission sets rather than a fifth partition — a ranked path normally also appears in
+ * `read` or `locked`, because the executor has to open what it obeys. It is projected as
+ * paths so a machine consumer never has to parse `prompt`, which is written for a model.
+ *
  * @param source - The brief to project.
- * @returns The dispatch — the rendered prompt plus the four path sets.
+ * @returns The dispatch — the rendered prompt, the ranked authority, and the four path sets.
  *
  * @example
  * ```ts
  * import { brief, briefToDispatch, manifest, reference, task } from '@orkestrel/brief'
  *
  * const draft = brief(task('migrate', 'code', 'Migrate the stores.'), {
- * 	manifest: manifest({ edit: [reference('src/core/stores/**', 'implementation')] }),
+ * 	authority: [reference('AGENTS.md', 'project law')],
+ * 	manifest: manifest({ edit: [reference('src/core/stores/**', 'the legacy stores')] }),
  * })
  * briefToDispatch(draft).edit // ['src/core/stores/**']
+ * briefToDispatch(draft).authority // ['AGENTS.md']
  * ```
  */
 export function briefToDispatch(input: Brief): Dispatch {
-	// ONE read for both halves. Rendering from one read of the brief and projecting the paths
-	// from a second read is what let a shifting getter put a row in the prompt that the path
-	// set does not contain.
+	// Both halves derive from ONE owned reading of the caller's value. `briefToMarkdown`
+	// snapshots again, but of `source` rather than of `input`, and re-snapshotting an owned
+	// frozen record is idempotent — so the prompt and the path arrays cannot disagree. Reading
+	// the CALLER's value twice is what let a shifting getter put a row in the prompt that the
+	// path arrays do not contain.
 	const source = snapshotBrief(input)
 	return {
 		prompt: briefToMarkdown(source),
+		authority: source.authority.map((entry) => entry.path),
 		read: source.manifest.read.map((entry) => entry.path),
 		edit: source.manifest.edit.map((entry) => entry.path),
 		locked: source.manifest.locked.map((entry) => entry.path),

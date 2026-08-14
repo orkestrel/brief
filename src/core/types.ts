@@ -34,9 +34,6 @@ export type TaskDomain =
 	| 'ops'
 	| 'other'
 
-/** What an external citation IS to the task. */
-export type CitationRole = 'docs' | 'spec' | 'api' | 'standard'
-
 /** The closed vocabulary of deliverable shapes. */
 export type OutputFormat = 'markdown' | 'json' | 'code' | 'diff' | 'prose'
 
@@ -138,15 +135,37 @@ export interface Example {
 }
 
 /**
- * One external source.
+ * One external source — what it is called, where it lives, and why it is cited.
  *
  * @remarks
  * List ORDER is the trust order; there is no per-entry weight.
+ *
+ * The off-repository twin of {@link Reference}: `note` says why the entry is listed, in both.
+ * It carries `name` where a reference does not because a path is already readable and a URL
+ * is not, so the name is the citation's readable half rather than a classifier in disguise.
+ *
+ * It carries no classifier for a different reason than a reference does. A reference has none
+ * because its container already fixes what it is; a citation has none because the closed
+ * vocabulary this once held — `docs`, `spec`, `api`, `standard` — was a document taxonomy no
+ * mechanism read, and its members were not disjoint, so a page documenting an API or a
+ * specification that is also a standard forced an arbitrary choice.
+ *
+ * `url` is validated as a single line and NOT as a URL, so `url: 'docs'` is on-contract. That
+ * is a limit rather than an oversight: constraining it needs a `pattern` on `citationShape`,
+ * and the shape DSL's seeded generator builds a random alphanumeric string and throws when it
+ * fails the pattern — so any pattern requiring a scheme's colon makes `createBriefContract()`
+ * ungeneratable for the whole brief. Constraining only the guard would leave the guard and the
+ * compiled shape disagreeing, which is the parity this package holds in lockstep. Four working
+ * mechanisms beat one stricter member.
+ *
+ * The cost lands on one migration: `citation` takes `(name, url, note)` where it once took
+ * `(name, role, url)` — three strings either way, so a stale call still compiles and still
+ * passes the guard, and only renders wrong. Nothing is published, so a version bump carries it.
  */
 export interface Citation {
 	readonly name: string
-	readonly role: CitationRole
 	readonly url: string
+	readonly note: string
 }
 
 /**
@@ -330,11 +349,27 @@ export interface Briefing {
  * The subagent projection of a brief.
  *
  * @remarks
- * `edit` is the owned set two concurrent dispatches must not intersect on;
- * `locked` and `forbidden` are do-not-touch.
+ * Two orthogonal axes, not five partitions. PERMISSION is `read`, `edit`, `locked`, and
+ * `forbidden`, with `edit` the owned set two concurrent dispatches must not intersect on and
+ * `locked` and `forbidden` do-not-touch. PRECEDENCE is `authority`, in ranked order, index 0
+ * winning every conflict.
+ *
+ * `authority` therefore OVERLAPS the permission arrays by design: a ranked path ALWAYS also
+ * sits in `read`, `edit`, or `locked`, because the executor has to open what it obeys, and
+ * the `granted` gate rule refuses a brief where it does not. Read the four to decide what may
+ * be touched and `authority` to decide what wins. Never union all five — that was already
+ * wrong before `authority` existed, because `forbidden` is an exclusion rather than a grant.
+ * `authority` is a path list rather than a rendered section because a machine consumer must
+ * reach mandatory authority without parsing `prompt`, which is written for a model.
+ *
+ * The four permission arrays are mutually disjoint in a GATED brief — `findManifestOverlaps`
+ * measures it and the `disjoint` rule refuses on it. `briefToDispatch` is a pure projection
+ * and runs no gate, so projecting an unvetted draft can produce arrays that intersect. Gate
+ * before you dispatch, or treat disjointness as unproven.
  */
 export interface Dispatch {
 	readonly prompt: string
+	readonly authority: readonly string[]
 	readonly read: readonly string[]
 	readonly edit: readonly string[]
 	readonly locked: readonly string[]
