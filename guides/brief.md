@@ -789,6 +789,21 @@ These invariants hold across `src/core` and this guide:
 9. **DOC and SOURCE method bijection.** Every behavioral interface's `## Methods` table lists
    exactly its public methods — exhaustive, both directions — and each implementing class
    exposes the same public methods, no more.
+10. **A borrowed engine is the caller's code, not an attacker.** `BriefCompilerOptions.interpret`
+    and `.reason` are seams, and what crosses them obeys three rules: OWN AT ARRIVAL — copied
+    where the value permits it, sealed in place where it does not; VALIDATE THE OWNED COPY;
+    NEVER READ A FOREIGN OBJECT TWICE. How many times a foreign object is read is this module's
+    decision, so a briefing never depends on it.
+
+    Bounding that, and equally load-bearing: never narrow past the published contract. `Entity.value`
+    is `unknown` and `LogicalResult` is an interface a class instance satisfies, so a value JSON
+    cannot express is on-contract and is sealed rather than refused. Every defect this seam
+    produced came from narrowing it — an exact guard that failed the gate closed on a valid
+    engine, and a JSON clone that turned a correct refusal into an emitted brief.
+
+    Only the verdict is shape-checked, because `ReasonInterface.reason` publishes a union that
+    must be narrowed; the `Interpretation` is owned and not validated. That asymmetry is
+    deliberate, and `BriefCompilerOptions` states the obligations it places on a caller's engine.
 
 Deliberately absent: a relation or graph layer over briefs (a brief's links are one RANKED
 list and four DISJOINT partitions — order and set membership, fully served by the guards,
