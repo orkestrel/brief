@@ -29,7 +29,7 @@ describe('BriefCompiler pipeline', () => {
 		const briefing = compiler.compile(buildReadyInput())
 		expect(briefing.stages.map((record) => record.stage)).toStrictEqual(['draft', 'gate', 'pin'])
 		expect(briefing.interpretation).toBeUndefined()
-		expect(briefing.complete).toBe(true)
+		expect(briefing.brief).toBeDefined()
 		compiler.destroy()
 	})
 
@@ -51,7 +51,8 @@ describe('BriefCompiler pipeline', () => {
 			'pin',
 		])
 		expect(briefing.stages.every((record) => record.error === undefined)).toBe(true)
-		expect(briefing.text).toBe('migrate the 3 legacy stores to the new driver seam')
+		// The text lives on the interpretation, not echoed onto the briefing.
+		expect(briefing.interpretation?.text).toBe('migrate the 3 legacy stores to the new driver seam')
 		expect(briefing.interpretation?.intent.action).toBe('migrate')
 		expect(briefing.brief?.task).toEqual({
 			operation: 'migrate',
@@ -59,7 +60,7 @@ describe('BriefCompiler pipeline', () => {
 			statement: 'Migrate the 3 legacy stores to the new driver seam.',
 		})
 		expect(briefing.brief?.givens).toEqual([{ category: 'extracted', name: 'count', value: '3' }])
-		expect(briefing.complete).toBe(true)
+		expect(briefing.brief).toBeDefined()
 		compiler.destroy()
 	})
 
@@ -129,7 +130,7 @@ describe('BriefCompiler fail-closed paths', () => {
 				gap('output', 'Diff or full files?', { blocking: true, candidates: ['diff', 'code'] }),
 			],
 		})
-		expect(briefing.complete).toBe(false)
+		expect(briefing.brief).toBeUndefined()
 		expect(briefing.brief).toBeUndefined()
 		expect(briefing.questions).toEqual([
 			{
@@ -169,13 +170,13 @@ describe('BriefCompiler fail-closed paths', () => {
 			{ ...buildReadyInput(), task: task('plan', 'ops', 'Do one thing. Then another.') },
 		]) {
 			const briefing = compiler.compile(unready)
-			expect(briefing.complete).toBe(false)
+			expect(briefing.brief).toBeUndefined()
 			expect(briefing.brief).toBeUndefined()
 			expect(briefing.failures.map((entry) => entry.code)).toStrictEqual(['BLOCKED'])
 		}
 
 		// The control: the same permissive engine still emits a genuinely ready brief.
-		expect(compiler.compile(buildReadyInput()).complete).toBe(true)
+		expect(compiler.compile(buildReadyInput()).brief).toBeDefined()
 		compiler.destroy()
 		permissive.destroy()
 	})
@@ -189,7 +190,7 @@ describe('BriefCompiler fail-closed paths', () => {
 			...buildReadyInput(),
 			gaps: [gap('output', 'Diff or files?', { blocking: true })],
 		})
-		expect(briefing.complete).toBe(false)
+		expect(briefing.brief).toBeUndefined()
 		expect(Object.isFrozen(briefing)).toBe(true)
 		expect(Object.isFrozen(briefing.stages)).toBe(true)
 		expect(Object.isFrozen(briefing.failures)).toBe(true)
@@ -202,7 +203,7 @@ describe('BriefCompiler fail-closed paths', () => {
 	it('freezes every stage record on the complete path too', () => {
 		const compiler = createBriefCompiler()
 		const briefing = compiler.compile(buildReadyInput())
-		expect(briefing.complete).toBe(true)
+		expect(briefing.brief).toBeDefined()
 		for (const record of briefing.stages) expect(Object.isFrozen(record)).toBe(true)
 		compiler.destroy()
 	})
@@ -251,7 +252,7 @@ describe('BriefCompiler fail-closed paths', () => {
 		}
 		const compiler = createBriefCompiler()
 		const briefing = compiler.compile(hostile)
-		expect(briefing.complete).toBe(false)
+		expect(briefing.brief).toBeUndefined()
 		expect(briefing.brief).toBeUndefined()
 		expect(briefing.failures.map((entry) => entry.code)).toStrictEqual(['DRAFT_FAILED'])
 		expect(briefing.failures[0]?.message).toContain('hostile text getter')
@@ -287,7 +288,7 @@ describe('BriefCompiler fail-closed paths', () => {
 	it('names the unmet rules when the gate refuses for another reason', () => {
 		const compiler = createBriefCompiler()
 		const briefing = compiler.compile({ task: buildTask(), outcomes: [outcome(1, 'x')] })
-		expect(briefing.complete).toBe(false)
+		expect(briefing.brief).toBeUndefined()
 		expect(briefing.questions).toEqual([])
 		// The MEASURED refusal, named from findUnmetRules — the rules that actually decided, without
 		// the derived conjunction they roll up into.
@@ -298,7 +299,7 @@ describe('BriefCompiler fail-closed paths', () => {
 	it('contains a draft failure rather than throwing when no task can be derived', () => {
 		const compiler = createBriefCompiler()
 		const briefing = compiler.compile({ proofs: [proof('x', 'y')] })
-		expect(briefing.complete).toBe(false)
+		expect(briefing.brief).toBeUndefined()
 		expect(briefing.brief).toBeUndefined()
 		expect(briefing.verdict).toBeUndefined()
 		expect(briefing.failures).toStrictEqual([
@@ -335,7 +336,7 @@ describe('BriefCompiler fail-closed paths', () => {
 			outcomes: [outcome(1, 'x')],
 			proofs: [proof('x', 'y')],
 		})
-		expect(briefing.complete).toBe(false)
+		expect(briefing.brief).toBeUndefined()
 		expect(briefing.questions).toHaveLength(1)
 		expect(briefing.questions[0]?.blocking).toBe(true)
 		compiler.destroy()
@@ -344,7 +345,7 @@ describe('BriefCompiler fail-closed paths', () => {
 	it('reports GATE_FAILED when the reason engine has no logical reasoner', () => {
 		const compiler = createBriefCompiler({ reason: createReason() })
 		const briefing = compiler.compile(buildReadyInput())
-		expect(briefing.complete).toBe(false)
+		expect(briefing.brief).toBeUndefined()
 		expect(briefing.verdict).toBeUndefined()
 		expect(briefing.failures.map((entry) => entry.code)).toStrictEqual(['GATE_FAILED'])
 		compiler.destroy()

@@ -54,7 +54,7 @@ import type {
  * 	outcomes: [{ rank: 1, text: 'every export appears in the guide', required: true }],
  * 	proofs: [proof('parity passes', 'npm run test:guides')],
  * })
- * briefing.complete // true
+ * briefing.brief !== undefined // true — the presence of the brief IS the completeness test
  * compiler.destroy()
  * ```
  */
@@ -109,12 +109,11 @@ export class BriefCompiler implements BriefCompilerInterface {
 			stages.push(Object.freeze({ stage: 'draft', input: {}, error: message }))
 			failures.push(Object.freeze({ stage: 'draft', code: 'DRAFT_FAILED', message }))
 			this.#emitter.emit('error', taken.error)
-			return this.#refuse(undefined, undefined, [], undefined, stages, failures)
+			return this.#refuse(undefined, [], undefined, stages, failures)
 		}
 		const owned = taken.value
 
 		const interpretation = this.#read(owned, stages, failures)
-		const text = owned.text ?? interpretation?.text
 
 		const drafted = attempt(() => this.#draft(owned, interpretation))
 		if (!drafted.success) {
@@ -122,7 +121,7 @@ export class BriefCompiler implements BriefCompilerInterface {
 			stages.push(Object.freeze({ stage: 'draft', input: owned, error: message }))
 			failures.push(Object.freeze({ stage: 'draft', code: 'DRAFT_FAILED', message }))
 			this.#emitter.emit('error', drafted.error)
-			return this.#refuse(text, interpretation, [], undefined, stages, failures)
+			return this.#refuse(interpretation, [], undefined, stages, failures)
 		}
 		const draft = drafted.value
 		stages.push(Object.freeze({ stage: 'draft', input: owned, output: draft }))
@@ -148,7 +147,7 @@ export class BriefCompiler implements BriefCompilerInterface {
 		if (unready.length > 0 || verdict === undefined || !verdict.conclusion) {
 			const refusal = this.#blockage(questions, unready, verdict)
 			if (refusal !== undefined) failures.push(Object.freeze(refusal))
-			return this.#refuse(text, interpretation, questions, verdict, stages, failures)
+			return this.#refuse(interpretation, questions, verdict, stages, failures)
 		}
 
 		const stamped = attempt(() => pinBrief(draft))
@@ -157,21 +156,19 @@ export class BriefCompiler implements BriefCompilerInterface {
 			stages.push(Object.freeze({ stage: 'pin', input: draft, error: message }))
 			failures.push(Object.freeze({ stage: 'pin', code: 'PIN_FAILED', message }))
 			this.#emitter.emit('error', stamped.error)
-			return this.#refuse(text, interpretation, questions, verdict, stages, failures)
+			return this.#refuse(interpretation, questions, verdict, stages, failures)
 		}
 		const pinned = stamped.value
 		stages.push(Object.freeze({ stage: 'pin', input: draft, output: pinned }))
 
 		const briefing: Briefing = Object.freeze({
-			...(text === undefined ? {} : { text }),
 			...(interpretation === undefined ? {} : { interpretation }),
 			brief: pinned,
 			questions: Object.freeze([]),
 			verdict,
 			stages: Object.freeze([...stages]),
 			failures: Object.freeze([...failures]),
-			complete: true,
-			digest: digestValue({ text, brief: pinned, questions: [], complete: true, failures }),
+			digest: digestValue({ brief: pinned, questions: [], failures }),
 		})
 		this.#emitter.emit('compile', briefing)
 		return briefing
@@ -299,7 +296,6 @@ export class BriefCompiler implements BriefCompilerInterface {
 
 	// The one incomplete result shape: no brief, the questions visible, `block` emitted.
 	#refuse(
-		text: string | undefined,
 		interpretation: Interpretation | undefined,
 		questions: readonly Gap[],
 		verdict: LogicalResult | undefined,
@@ -310,14 +306,12 @@ export class BriefCompiler implements BriefCompilerInterface {
 		// headline artifact — the visible refusal — so it must not be the mutable one: a
 		// `failures.pop()` would drop the `BLOCKED` marker the `digest` already attests to.
 		const briefing: Briefing = Object.freeze({
-			...(text === undefined ? {} : { text }),
 			...(interpretation === undefined ? {} : { interpretation }),
 			questions: Object.freeze([...questions]),
 			...(verdict === undefined ? {} : { verdict }),
 			stages: Object.freeze([...stages]),
 			failures: Object.freeze([...failures]),
-			complete: false,
-			digest: digestValue({ text, questions, complete: false, failures }),
+			digest: digestValue({ questions, failures }),
 		})
 		this.#emitter.emit('block', questions)
 		return briefing

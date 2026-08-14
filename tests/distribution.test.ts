@@ -264,7 +264,7 @@ describe('installed package', () => {
 			'})',
 			'compiler.destroy()',
 			'console.log(JSON.stringify({',
-			'  complete: briefing.complete,',
+			'  complete: briefing.brief !== undefined,',
 			'  hash: briefing.brief?.hash,',
 			'  goal: briefing.brief === undefined ? undefined : briefToGoal(briefing.brief),',
 			'}))',

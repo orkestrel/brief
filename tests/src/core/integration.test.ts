@@ -33,7 +33,7 @@ describe('text to brief to projections', () => {
 			proofs: [proof('the core project passes', 'npm run test:src:core')],
 		})
 
-		expect(briefing.complete).toBe(true)
+		expect(briefing.brief).toBeDefined()
 		const compiled = requireValue(briefing.brief, 'a complete briefing carries its brief')
 
 		expect(validateBrief(compiled)).toStrictEqual({ valid: true, errors: [], warnings: [] })
@@ -80,12 +80,12 @@ describe('the blocked brief and its answer', () => {
 				gap('output', 'Diff or full files?', { blocking: true, candidates: ['diff', 'code'] }),
 			],
 		})
-		expect(blocked.complete).toBe(false)
+		expect(blocked.brief).toBeUndefined()
 		expect(blocked.brief).toBeUndefined()
 		expect(blocked.questions.map((entry) => entry.question)).toStrictEqual(['Diff or full files?'])
 
 		const answered = compiler.compile({ ...shared, output: output('diff') })
-		expect(answered.complete).toBe(true)
+		expect(answered.brief).toBeDefined()
 		expect(answered.brief?.output).toEqual({ format: 'diff' })
 		expect(answered.questions).toStrictEqual([])
 		expect(answered.failures).toStrictEqual([])
@@ -105,7 +105,7 @@ describe('the blocked brief and its answer', () => {
 		// relation, so it advises rather than gates — one assumption answering two related
 		// gaps would otherwise be refused for arithmetic.
 		const unpaired = compiler.compile(shared)
-		expect(unpaired.complete).toBe(true)
+		expect(unpaired.brief).toBeDefined()
 		const drafted = requireValue(unpaired.brief, 'an open gap does not block emission')
 		expect(validateBrief(drafted).valid).toBe(true)
 		expect(validateBrief(drafted).warnings).toStrictEqual([
@@ -113,7 +113,7 @@ describe('the blocked brief and its answer', () => {
 		])
 
 		const paired = compiler.compile({ ...shared, assumptions: ['The wording is preserved.'] })
-		expect(paired.complete).toBe(true)
+		expect(paired.brief).toBeDefined()
 		const compiled = requireValue(paired.brief, 'a paired open gap does not block emission')
 		expect(validateBrief(compiled).warnings).toStrictEqual([])
 		compiler.destroy()

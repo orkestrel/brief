@@ -322,21 +322,22 @@ export interface BriefStageFailure {
  * The full, replayable outcome of one `compile()` call.
  *
  * @remarks
- * `brief` is absent exactly when the gate failed closed, and `questions` then carries
- * what the caller must answer. `text` is absent when the caller supplied none, so it is
- * never confused with an empty request. `interpretation` and `verdict` are the
- * originating packages' own types — import them from `@orkestrel/interpret` and
- * `@orkestrel/reason`.
+ * `brief` is present exactly when the compile completed, so it is ALSO the completeness
+ * test — there is no `complete` flag, because a second stored fact is free to disagree
+ * with the first. `questions` carries what the caller must answer when it is absent.
+ *
+ * Nor is the caller's `text` echoed back. It is the caller's own value on the direct
+ * path, and `interpretation.text` on the interpret path, so storing it here would be one
+ * fact in two places. `interpretation` and `verdict` are the originating packages' own
+ * types — import them from `@orkestrel/interpret` and `@orkestrel/reason`.
  */
 export interface Briefing {
-	readonly text?: string
 	readonly interpretation?: Interpretation
 	readonly brief?: Brief
 	readonly questions: readonly Gap[]
 	readonly verdict?: LogicalResult
 	readonly stages: readonly BriefStageRecord[]
 	readonly failures: readonly BriefStageFailure[]
-	readonly complete: boolean
 	readonly digest: string
 }
 

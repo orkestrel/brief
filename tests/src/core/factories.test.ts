@@ -8,7 +8,7 @@ describe('createBriefCompiler', () => {
 		const compiler = createBriefCompiler()
 		expect(compiler.interpret).toBeDefined()
 		expect(compiler.reason.supports('logical')).toBe(true)
-		expect(compiler.compile(buildReadyInput()).complete).toBe(true)
+		expect(compiler.compile(buildReadyInput()).brief).toBeDefined()
 		compiler.destroy()
 	})
 
