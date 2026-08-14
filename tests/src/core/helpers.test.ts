@@ -21,6 +21,7 @@ import {
 	findManifestOverlaps,
 	findUnpairedGaps,
 	findUnmetRules,
+	freezeDeep,
 	gap,
 	gateDefinition,
 	given,
@@ -612,7 +613,7 @@ describe('briefToMarkdown', () => {
 		)
 		expect(rendered).toContain('1. useForm uses native FormData with no behavior change (required)')
 		expect(rendered).toContain('- convention · indentation: tabs')
-		expect(rendered).toContain('- `<input required>` → `el.validity` (the exemplar path)')
+		expect(rendered).toContain('- ` <input required> ` → ` el.validity ` (the exemplar path)')
 		// The whole row, in field order. Asserting only the heading let the three members be
 		// reordered without a red test, which is exactly what happened when `role` became `note`.
 		expect(rendered).toContain(
@@ -675,8 +676,20 @@ describe('briefToMarkdown', () => {
 		expect(row).toContain('``')
 		// Every backtick in the content stays inside a span that its runs cannot terminate.
 		expect(row?.startsWith('- `` ')).toBe(true)
-		// The control: content with no backtick keeps the plain single-tick form.
-		expect(exampleToLines(example('plain', 'ok'))[0]).toBe('- `plain` → `ok`')
+		// The control: content with no backtick keeps the single-tick delimiter, and is padded
+		// like every other span. CommonMark strips exactly one space from each end, so the
+		// padding is lossless — and withholding it deleted an exemplar's own boundary spaces.
+		expect(exampleToLines(example('plain', 'ok'))[0]).toBe('- ` plain ` → ` ok `')
+	})
+
+	it("preserves an exemplar's own boundary spaces", () => {
+		// A padded span is what makes a leading or trailing space survive: with no padding,
+		// CommonMark stripped the exemplar's own space and the executor read a different value
+		// than the author wrote.
+		const [row] = exampleToLines(example(' leading and trailing ', ' out '))
+		expect(row).toBe('- `  leading and trailing  ` → `  out  `')
+		// The control: a value with no boundary space renders with exactly one pad each side.
+		expect(exampleToLines(example('tight', 'out'))[0]).toBe('- ` tight ` → ` out `')
 	})
 
 	it('renders a CRLF exemplar losslessly, without inventing a blank line', () => {
@@ -978,5 +991,55 @@ describe('errorToMessage', () => {
 		expect(errorToMessage('boom')).toBe('boom')
 		expect(errorToMessage(42)).toBe('42')
 		expect(errorToMessage(undefined)).toBe('undefined')
+	})
+
+	it('is total, because it runs inside the catch that contains a stage failure', () => {
+		// Each of these threw before. A throw here escapes `compile` uncontained, from the one
+		// function whose job is turning a thrown stage into a recorded failure.
+		const throwingMessage: unknown = Object.create(Error.prototype, {
+			message: {
+				get() {
+					throw new Error('the message getter throws')
+				},
+			},
+		})
+		const throwingConversion: unknown = {
+			toString() {
+				throw new Error('conversion throws')
+			},
+		}
+		expect(errorToMessage(throwingMessage)).toBe('an unreadable object was thrown')
+		expect(errorToMessage(throwingConversion)).toBe('an unreadable object was thrown')
+		expect(errorToMessage(Object.create(null))).toBe('an unreadable object was thrown')
+		expect(errorToMessage(Symbol('s'))).toBe('Symbol(s)')
+		// The control: a readable value still reports its own message rather than the fallback.
+		expect(errorToMessage(new Error('readable'))).toBe('readable')
+	})
+})
+
+describe('freezeDeep', () => {
+	it('freezes what Object.freeze leaves writable', () => {
+		const value = { outcomes: [{ rank: 1 }], nested: { deep: { list: [1] } } }
+		// The control first: a shallow freeze leaves every nested member writable, which is the
+		// defect this helper exists to close.
+		const shallow = Object.freeze(structuredClone(value))
+		expect(Object.isFrozen(shallow)).toBe(true)
+		expect(Object.isFrozen(shallow.outcomes)).toBe(false)
+
+		const owned = freezeDeep(structuredClone(value))
+		expect(Object.isFrozen(owned)).toBe(true)
+		expect(Object.isFrozen(owned.outcomes)).toBe(true)
+		expect(Object.isFrozen(owned.outcomes[0])).toBe(true)
+		expect(Object.isFrozen(owned.nested.deep.list)).toBe(true)
+	})
+
+	it('terminates on a cycle', () => {
+		// `structuredClone` preserves cycles, so a naive walk would not return. Reaching the
+		// assertion at all is the proof.
+		const cyclic: Record<string, unknown> = { name: 'a' }
+		cyclic['self'] = cyclic
+		const owned = freezeDeep(cyclic)
+		expect(Object.isFrozen(owned)).toBe(true)
+		expect(owned['self']).toBe(owned)
 	})
 })

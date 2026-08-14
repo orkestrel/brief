@@ -1,3 +1,4 @@
+import { attempt } from '@orkestrel/contract'
 import type { Ambiguity, Entity, Intent } from '@orkestrel/interpret'
 import { canonicalize, collapseWhitespace, digestValue } from '@orkestrel/interpret'
 import type { LogicalDefinition, ReasonValidationResult, Rule, Subject } from '@orkestrel/reason'
@@ -714,10 +715,73 @@ export function briefToContent(source: Brief): string {
 }
 
 /**
+ * Freeze a value and everything reachable from it.
+ *
+ * @remarks
+ * `Object.freeze` is SHALLOW, so freezing a record leaves every nested array and object
+ * writable. A `Briefing` is documented as a replayable record, and a shallow freeze let a
+ * consumer rewrite the recorded stage input after the digest describing it was already
+ * sealed — the replay and its hash could disagree.
+ *
+ * Cycles terminate: `structuredClone` preserves them, so a naive walk would not return.
+ * Delegates each branch to `freezeBranch` with the shared visited set.
+ *
+ * @param value - The value to freeze in place; returned for convenience.
+ * @returns The same value, now deeply frozen.
+ *
+ * @example
+ * ```ts
+ * import { freezeDeep } from '@orkestrel/brief'
+ *
+ * const owned = freezeDeep({ outcomes: [{ rank: 1 }] })
+ * Object.isFrozen(owned.outcomes) // true — the nested array too
+ * ```
+ */
+export function freezeDeep<T>(value: T): T {
+	return freezeBranch(value, new WeakSet())
+}
+
+/**
+ * Freeze one branch of a value graph, skipping what the visited set already holds.
+ *
+ * @param value - The branch to freeze.
+ * @param seen - The objects already frozen on this walk; what makes a cycle terminate.
+ * @returns The same branch, now frozen.
+ *
+ * @example
+ * ```ts
+ * import { freezeBranch } from '@orkestrel/brief'
+ *
+ * freezeBranch({ a: [1] }, new WeakSet()) // frozen, one level of nesting included
+ * ```
+ */
+export function freezeBranch<T>(value: T, seen: WeakSet<object>): T {
+	if (value === null || typeof value !== 'object') return value
+	if (seen.has(value)) return value
+	seen.add(value)
+	Object.freeze(value)
+	for (const nested of Object.values(value)) freezeBranch(nested, seen)
+	return value
+}
+
+/**
  * Render a value thrown by a stage into a message.
  *
+ * @remarks
+ * TOTAL: it never throws, for any input. That is load-bearing rather than tidy, because this
+ * is the containment code itself — `compile` calls it inside the `catch` that turns a thrown
+ * stage into a recorded `BriefStageFailure`. A throw here escapes `compile` uncontained and
+ * falsifies the package's central promise that a failing stage yields an incomplete
+ * `Briefing` rather than an exception.
+ *
+ * Three real inputs used to throw: an `Error` subclass whose `message` getter throws, a value
+ * whose string conversion throws, and a null-prototype object, which has no inherited
+ * conversion for String() to reach. Each is wrapped, and an unreadable value degrades to its
+ * type rather than propagating.
+ *
  * @param error - The caught value, of any shape.
- * @returns The `Error` message when there is one, otherwise the value stringified.
+ * @returns The `Error` message when there is one, otherwise the value stringified; a fixed
+ *   description when the value cannot be read at all.
  *
  * @example
  * ```ts
@@ -725,10 +789,13 @@ export function briefToContent(source: Brief): string {
  *
  * errorToMessage(new Error('boom')) // 'boom'
  * errorToMessage('boom') // 'boom'
+ * errorToMessage(Object.create(null)) // 'an unreadable object was thrown'
  * ```
  */
 export function errorToMessage(error: unknown): string {
-	return error instanceof Error ? error.message : String(error)
+	const read = attempt(() => (error instanceof Error ? error.message : String(error)))
+	if (read.success && typeof read.value === 'string') return read.value
+	return `an unreadable ${typeof error} was thrown`
 }
 
 /**
@@ -828,8 +895,14 @@ export function exampleToLines(entry: Example): readonly string[] {
 		// exemplar containing one, which puts the rest of the value outside the code span.
 		// CommonMark strips one leading and trailing space, so a padded span survives content
 		// that begins or ends with a backtick.
+		//
+		// ALWAYS padded, not only when the content carries a backtick. CommonMark strips exactly
+		// one space from each end of a code span, so padding is lossless — while withholding it
+		// deleted an exemplar's own boundary spaces, silently changing the value the executor
+		// reads. An all-spaces side is the one value no padding can preserve; it renders empty,
+		// and no fence choice fixes that.
 		const tick = '`'.repeat(runs + 1)
-		const pad = runs === 0 ? '' : ' '
+		const pad = ' '
 		return [
 			`- ${tick}${pad}${entry.input}${pad}${tick} → ${tick}${pad}${entry.output}${pad}${tick}${note}`,
 		]

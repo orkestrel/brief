@@ -16,11 +16,13 @@ import {
 	errorToMessage,
 	findBlockingGaps,
 	findUnmetRules,
+	freezeDeep,
 	pinBrief,
 	gateDefinition,
 	manifest,
 	output,
 } from './helpers.js'
+import { isLogicalVerdict } from './validators.js'
 import type {
 	Brief,
 	BriefInput,
@@ -69,14 +71,22 @@ export class BriefCompiler implements BriefCompilerInterface {
 	#destroyed = false
 
 	constructor(options?: BriefCompilerOptions) {
+		// ONE read per option, for the reason `compile` takes one reading of its input: a second
+		// read lets a getter answer differently. Reading `interpret` twice decided ownership from
+		// the first answer and stored the second, so a borrowed engine could be destroyed and a
+		// self-made one leaked — the exact inversion of the documented contract.
+		const hooks = options?.on
+		const failed = options?.error
+		const borrowedInterpret = options?.interpret
+		const borrowedReason = options?.reason
 		this.#emitter = new Emitter<BriefCompilerEventMap>({
-			...(options?.on === undefined ? {} : { on: options.on }),
-			...(options?.error === undefined ? {} : { error: options.error }),
+			...(hooks === undefined ? {} : { on: hooks }),
+			...(failed === undefined ? {} : { error: failed }),
 		})
-		this.#ownInterpret = options?.interpret === undefined
-		this.#ownReason = options?.reason === undefined
-		this.#interpret = options?.interpret ?? createInterpret()
-		this.#reason = options?.reason ?? createReason({ reasoners: [createLogicalReasoner()] })
+		this.#ownInterpret = borrowedInterpret === undefined
+		this.#ownReason = borrowedReason === undefined
+		this.#interpret = borrowedInterpret ?? createInterpret()
+		this.#reason = borrowedReason ?? createReason({ reasoners: [createLogicalReasoner()] })
 		this.#actions = options?.actions ?? {}
 		this.#domains = options?.domains ?? {}
 	}
@@ -177,11 +187,15 @@ export class BriefCompiler implements BriefCompilerInterface {
 	gate(source: Brief): LogicalResult {
 		this.#refuseDestroyed()
 		const verdict = this.#reason.reason(briefToSubject(source), gateDefinition())
-		if (verdict.reasoning !== 'logical') {
+		// Guard the WHOLE value, not one field. The reasoner is borrowed, so its return is
+		// foreign data however well-typed the interface is: reading `.reasoning` off `undefined`
+		// threw a raw TypeError where the contract promises `GATE_FAILED`, and a result that
+		// claimed `reasoning: 'logical'` without a `rules` array crashed the caller of this
+		// method instead. `isLogicalVerdict` is total, so every malformed shape lands here.
+		if (!isLogicalVerdict(verdict)) {
 			throw new BriefError('GATE_FAILED', 'The gate reasoner returned a non-logical result', {
 				stage: 'gate',
 				field: 'reasoning',
-				reasoning: verdict.reasoning,
 			})
 		}
 		return verdict
@@ -198,10 +212,12 @@ export class BriefCompiler implements BriefCompilerInterface {
 
 	// THE reading of the caller's input — taken once, deep, and shared by every stage. A
 	// per-field copy left the members aliased, and a second reading let a getter answer
-	// differently, so there is exactly one and no fallback that re-reads. Throws for an input
-	// that cannot be cloned; `compile` contains that into a visible refusal.
+	// differently, so there is exactly one and no fallback that re-reads. The freeze is DEEP
+	// because `Object.freeze` alone left every nested array writable, so a consumer could
+	// rewrite the recorded stage input after the digest describing it was sealed. Throws for
+	// an input that cannot be cloned; `compile` contains that into a visible refusal.
 	#snapshot(input: BriefInput): BriefInput {
-		return Object.freeze(structuredClone(input))
+		return freezeDeep(structuredClone(input))
 	}
 
 	// The interpret stage. Skipped entirely when the input carries no text, in which case
@@ -243,7 +259,10 @@ export class BriefCompiler implements BriefCompilerInterface {
 		if (unready.length > 0) {
 			return { stage: 'gate', code: 'BLOCKED', message: `Gate refused: ${unready.join(', ')}` }
 		}
-		if (verdict === undefined) return undefined
+		// The same total guard `gate` applies. A borrowed engine can hand back a value that
+		// satisfies the compiler and not the contract, and reading `.rules.filter` off one threw
+		// out of `compile` — from the code whose whole job is containing a failure.
+		if (!isLogicalVerdict(verdict)) return undefined
 		const refused = verdict.rules
 			.filter((entry) => !entry.conclusion)
 			.map((entry) => entry.id)
@@ -305,15 +324,21 @@ export class BriefCompiler implements BriefCompilerInterface {
 		// Frozen exactly as the complete path is. The incomplete briefing is this package's
 		// headline artifact — the visible refusal — so it must not be the mutable one: a
 		// `failures.pop()` would drop the `BLOCKED` marker the `digest` already attests to.
+		// ONE frozen array, carried by the briefing AND handed to every listener. Emitting the
+		// caller-reachable `questions` instead gave observers a mutable array that was not the
+		// briefing's: one listener could rewrite what the next was handed, and neither reached
+		// the record the digest attests to. Observation is a side-channel, so it reads exactly
+		// what the briefing carries and can change nothing.
+		const asked = Object.freeze([...questions])
 		const briefing: Briefing = Object.freeze({
 			...(interpretation === undefined ? {} : { interpretation }),
-			questions: Object.freeze([...questions]),
+			questions: asked,
 			...(verdict === undefined ? {} : { verdict }),
 			stages: Object.freeze([...stages]),
 			failures: Object.freeze([...failures]),
 			digest: digestValue({ questions, failures }),
 		})
-		this.#emitter.emit('block', questions)
+		this.#emitter.emit('block', asked)
 		return briefing
 	}
 

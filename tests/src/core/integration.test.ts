@@ -1,15 +1,24 @@
 import type { BriefInput } from '@src/core'
 import {
+	brief,
 	briefToDispatch,
 	briefToGoal,
+	briefToHash,
 	briefToMarkdown,
 	createBriefManager,
 	createBriefCompiler,
+	findBlockingGaps,
+	findManifestOverlaps,
+	findUngrantedAuthority,
+	findUnpairedGaps,
 	gap,
+	manifest,
 	outcome,
 	output,
 	parseBrief,
+	pinBrief,
 	proof,
+	reference,
 	task,
 	validateBrief,
 } from '@src/core'
@@ -117,5 +126,73 @@ describe('the blocked brief and its answer', () => {
 		const compiled = requireValue(paired.brief, 'a paired open gap does not block emission')
 		expect(validateBrief(compiled).warnings).toStrictEqual([])
 		compiler.destroy()
+	})
+})
+
+// `tests/guides.test.ts` proves every backticked NAME in the guide resolves to a real export.
+// It cannot prove a `// value` comment beside a call is true, because it never runs one — so a
+// fence documenting a value the code contradicts shipped green. It did: strengthening the
+// `granted` rule made the guide's own headline example refuse at the gate, and every parity
+// assertion stayed passing. These two tests transcribe the guide's flagship fences and assert
+// the values their comments claim. Change a fence, change the test beside it.
+describe('the guide fences, executed', () => {
+	it("runs the ## Surface fence and yields the 'true' it documents", () => {
+		const compiler = createBriefCompiler()
+		const briefing = compiler.compile({
+			task: task('refactor', 'code', 'Refactor useForm to native browser form APIs.'),
+			authority: [{ path: 'AGENTS.md', note: 'project law; wins every conflict' }],
+			manifest: {
+				read: [
+					{ path: 'AGENTS.md', note: 'project law; wins every conflict' },
+					{ path: 'guides/browser.md', note: 'the composable contract' },
+				],
+				edit: [
+					{ path: 'src/browser/composables/useForm.ts', note: 'the composable being refactored' },
+				],
+				locked: [{ path: 'src/browser/types.ts', note: 'the published contract' }],
+				forbidden: [{ path: 'app/**', note: 'out of scope' }],
+			},
+			outcomes: [outcome(1, 'useForm uses native FormData with no behavior change')],
+			proofs: [proof('type-check and lint pass', 'npm run check')],
+		})
+		// The fence's own comment: `briefing.brief !== undefined // true`.
+		expect(briefing.failures).toStrictEqual([])
+		expect(briefing.brief !== undefined).toBe(true)
+		const emitted = requireValue(briefing.brief, 'the documented Surface fence compiles')
+		expect(briefToMarkdown(emitted).startsWith('# Brief: ')).toBe(true)
+		expect(briefToGoal(emitted)).toBe(
+			'Done when every proof passes: npm run check exits 0. Cap: 16 turns.',
+		)
+		compiler.destroy()
+	})
+
+	it('runs the ### Builders fence and yields every value the Helpers fence documents', () => {
+		const draft = brief(task('refactor', 'code', 'Refactor useForm to native browser form APIs.'), {
+			authority: [reference('AGENTS.md', 'project law; wins every conflict')],
+			manifest: manifest({
+				read: [
+					reference('AGENTS.md', 'project law; wins every conflict'),
+					reference('guides/browser.md', 'the composable contract'),
+				],
+				edit: [reference('src/browser/composables/useForm.ts', 'the composable being refactored')],
+				locked: [reference('src/browser/types.ts', 'the published contract')],
+				forbidden: [reference('app/**', 'out of scope')],
+			}),
+			outcomes: [
+				outcome(1, 'useForm uses native FormData with no behavior change'),
+				outcome(2, 'tests cover the new code paths'),
+			],
+			proofs: [proof('type-check and lint pass', 'npm run check')],
+		})
+		const pinned = pinBrief(draft)
+		// Each assertion below is a documented `// value` comment from `### Helpers`.
+		expect(findUngrantedAuthority(pinned)).toStrictEqual([])
+		expect(findManifestOverlaps(pinned)).toStrictEqual([])
+		expect(findBlockingGaps(pinned)).toStrictEqual([])
+		expect(findUnpairedGaps(pinned)).toStrictEqual([])
+		expect(validateBrief(pinned)).toStrictEqual({ valid: true, errors: [], warnings: [] })
+		expect(briefToHash(pinned)).toBe(briefToHash(draft))
+		expect(briefToDispatch(pinned).edit).toStrictEqual(['src/browser/composables/useForm.ts'])
+		expect(briefToDispatch(pinned).authority).toStrictEqual(['AGENTS.md'])
 	})
 })

@@ -1,4 +1,5 @@
 import type { Guard } from '@orkestrel/contract'
+import type { LogicalResult, RuleResult } from '@orkestrel/reason'
 import {
 	andOf,
 	arrayOf,
@@ -61,6 +62,43 @@ export const isOutputFormat: Guard<OutputFormat> = literalOf(OUTPUT_FORMATS)
 
 /** `true` when the value is one of the three `RiskSeverity` literals. */
 export const isRiskSeverity: Guard<RiskSeverity> = literalOf(RISK_SEVERITIES)
+
+/**
+ * `true` when the value is a well-formed reasons `RuleResult`.
+ *
+ * @remarks
+ * `@orkestrel/reason` publishes the type but no guard for it, and `BriefCompiler` reads these
+ * off a BORROWED engine's return value, so the shape has to be checked rather than trusted.
+ */
+export const isRuleVerdict: Guard<RuleResult> = recordOf({
+	id: isNonEmptyString,
+	applied: isBoolean,
+	premises: arrayOf(isBoolean),
+	conclusion: isBoolean,
+})
+
+/**
+ * `true` when the value is a well-formed reasons `LogicalResult`.
+ *
+ * @remarks
+ * The gate's reasoner is supplied by the caller through `BriefCompilerOptions.reason`, so its
+ * return value is FOREIGN data no matter how well-typed the interface is. `BriefCompiler`
+ * dereferences `reasoning`, `conclusion`, and `rules`; checking one field left a malformed
+ * result to throw a raw `TypeError` out of `compile`, from the very code that contains stage
+ * failures. Total: returns `false` for `undefined`, `null`, and every off-shape value.
+ *
+ * Checks the WHOLE published shape rather than only the three members read today, because a
+ * guard that narrows to `LogicalResult` while ignoring four of its members is unsound.
+ */
+export const isLogicalVerdict: Guard<LogicalResult> = recordOf({
+	reasoning: literalOf(['logical']),
+	conclusion: isBoolean,
+	rules: arrayOf(isRuleVerdict),
+	count: isInteger,
+	success: isBoolean,
+	trace: arrayOf(isString),
+	errors: arrayOf(isString),
+})
 
 /** `true` when the value is a well-formed `Task` — both vocabularies closed, statement one line. */
 export const isTask: Guard<Task> = recordOf({

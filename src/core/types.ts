@@ -48,7 +48,12 @@ export type BriefStage = 'interpret' | 'draft' | 'gate' | 'pin'
  *
  * @remarks
  * Inside `compile` every stage failure is CONTAINED: the four `*_FAILED` codes and
- * `BLOCKED` mark it on the {@link Briefing} rather than throwing. Three codes also reach a
+ * `BLOCKED` mark it on the {@link Briefing} rather than throwing.
+ *
+ * `INTERPRET_FAILED` needs a FOREIGN `InterpretInterface`. `@orkestrel/interpret` contains
+ * its own stage failures and returns a degraded `Interpretation` rather than throwing, so
+ * the default engine never raises it; `BriefCompilerOptions.interpret` is the seam a caller
+ * reaches it through. Three codes also reach a
  * throw, from methods outside that containment — `INVALID` from `assertBrief`,
  * `snapshotBrief`, and `pinBrief`; `DESTROYED` from any method after
  * `destroy()`; and `GATE_FAILED` from `BriefCompiler.gate` when a borrowed reasoner returns a

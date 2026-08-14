@@ -93,9 +93,11 @@ describe('BriefManager accessors', () => {
 	})
 
 	it('refuses two different briefs that collide on one content hash', () => {
-		// The digest is eight hex digits, so distinct briefs DO land on one id — this pair was
-		// found by search, at the 739,234th distinct hash. Treating a collision as unchanged
-		// content silently replaced the first record and reported version 1.
+		// The digest is 32 bits, so distinct briefs DO land on one id — collisions become likely
+		// in the tens of thousands of briefs, and this pair came from a search. The index it was
+		// found at is a draw from a birthday distribution, not a safe-size threshold, so it is
+		// deliberately not recorded here. Treating a collision as unchanged content silently
+		// replaced the first record and reported version 1.
 		const collide = (statement: string) =>
 			brief(task('plan', 'ops', statement), { proofs: [proof('x', 'npm test')] })
 		const first = collide('Plan release 42vu.')
@@ -159,6 +161,62 @@ describe('BriefManager accessors', () => {
 	})
 })
 
+describe('BriefManager seeding', () => {
+	it('seeds all or nothing, announcing nothing when a later seed is refused', () => {
+		// `add` throws INVALID for an off-contract or colliding entry. Seeding straight into
+		// the registry announced earlier entries and then abandoned a constructor that never
+		// returns — hooks holding ids for an instance the caller does not have, and an emitter
+		// nothing can destroy. A refused seed must leave no trace at all.
+		const seen: string[] = []
+		const good = buildBrief()
+		// Type-valid and off-contract: `rank` must be a positive integer, and NaN is a number.
+		const refused = buildBrief({ outcomes: [outcome(Number.NaN, 'unreachable')] })
+		const failure = captureError(
+			() =>
+				new BriefManager({
+					briefs: [good, refused],
+					on: {
+						add: (id) => {
+							seen.push(id)
+						},
+					},
+				}),
+		)
+		expect(isBriefError(failure)).toBe(true)
+		expect(readErrorCode(failure)).toBe('INVALID')
+		expect(seen).toStrictEqual([])
+
+		// The control: a wholly valid seed collection constructs, announces, and registers.
+		const heard: string[] = []
+		const registry = new BriefManager({
+			briefs: [good],
+			on: {
+				add: (id) => {
+					heard.push(id)
+				},
+			},
+		})
+		expect(registry.size).toBe(1)
+		expect(heard).toHaveLength(1)
+		registry.destroy()
+	})
+
+	it('refuses two seeds that collide on one id rather than silently replacing', () => {
+		// The collision check lives in `#version`, which compares against the registry. While
+		// seeding, the registry is still empty, so the check has to run against the entries
+		// staged so far or two colliding seeds would both land and the first would vanish.
+		const first = buildBrief()
+		const second = buildBrief({ rules: ['different content, same forced id'] })
+		const failure = captureError(() => new BriefManager({ briefs: [first, second] }))
+		// Distinct content hashes to distinct ids, so this pair is accepted — the control that
+		// proves the seeding path registers more than one entry at all.
+		expect(failure).toBeUndefined()
+		const registry = new BriefManager({ briefs: [first, second] })
+		expect(registry.size).toBe(2)
+		registry.destroy()
+	})
+})
+
 describe('BriefManager remove', () => {
 	it('removes one brief by id', () => {
 		const registry = createBriefManager()
@@ -179,6 +237,21 @@ describe('BriefManager remove', () => {
 		registry.add(buildBrief(), { id: 'a' })
 		expect(registry.remove(['a', 'absent'])).toBe(false)
 		expect(registry.has('a')).toBe(false)
+		registry.destroy()
+	})
+
+	it('reads a repeated id as the set it names, not as two attempts', () => {
+		// The contract is about the listed SET. Iterating the raw list removed the record on
+		// the first pass and then reported it missing on the second, so a caller who passed
+		// `['a', 'a']` was told the removal failed for a record that is gone.
+		const registry = createBriefManager()
+		registry.add(buildBrief(), { id: 'a' })
+		expect(registry.remove(['a', 'a'])).toBe(true)
+		expect(registry.has('a')).toBe(false)
+		// The control: a genuinely absent id still reports false.
+		registry.add(buildBrief(), { id: 'b' })
+		expect(registry.remove(['b', 'b', 'absent'])).toBe(false)
+		expect(registry.has('b')).toBe(false)
 		registry.destroy()
 	})
 

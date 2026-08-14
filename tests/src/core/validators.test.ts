@@ -1,6 +1,8 @@
 import {
 	isBrief,
 	isCitation,
+	isLogicalVerdict,
+	isRuleVerdict,
 	isExample,
 	isGap,
 	isGiven,
@@ -190,6 +192,41 @@ describe('optional record members', () => {
 			expect(entry.guard({ ...entry.valid, [entry.key]: undefined })).toBe(false)
 		})
 	}
+})
+
+describe('isLogicalVerdict', () => {
+	const sound = {
+		reasoning: 'logical',
+		conclusion: true,
+		rules: [{ id: 'proven', applied: true, premises: [true], conclusion: true }],
+		count: 1,
+		success: true,
+		trace: ['proven'],
+		errors: [],
+	}
+
+	it('accepts a whole logical result and refuses every partial one', () => {
+		// The gate's reasoner is BORROWED, so its return is foreign data whatever the interface
+		// says. `BriefCompiler` dereferences `reasoning`, `conclusion`, and `rules`; checking
+		// one field let `undefined` throw a raw TypeError where the contract promises
+		// GATE_FAILED, and a result claiming `reasoning: 'logical'` with no `rules` crash later.
+		expect(isLogicalVerdict(sound)).toBe(true)
+		expect(isLogicalVerdict(undefined)).toBe(false)
+		expect(isLogicalVerdict(null)).toBe(false)
+		expect(isLogicalVerdict({ reasoning: 'logical' })).toBe(false)
+		expect(isLogicalVerdict({ ...sound, rules: undefined })).toBe(false)
+		expect(isLogicalVerdict({ ...sound, reasoning: 'quantitative' })).toBe(false)
+		// Narrowing to `LogicalResult` while ignoring four of its members would be unsound, so
+		// every published member is checked — not only the three read today.
+		expect(isLogicalVerdict({ ...sound, trace: undefined })).toBe(false)
+		expect(isLogicalVerdict({ ...sound, count: 1.5 })).toBe(false)
+		expect(isLogicalVerdict({ ...sound, rules: [{ id: 'x' }] })).toBe(false)
+	})
+
+	it('is total for adversarial input', () => {
+		for (const value of buildAdversarialValues()) expect(isLogicalVerdict(value)).toBe(false)
+		for (const value of buildAdversarialValues()) expect(isRuleVerdict(value)).toBe(false)
+	})
 })
 
 describe('isBrief', () => {

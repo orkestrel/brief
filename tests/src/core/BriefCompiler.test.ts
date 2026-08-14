@@ -21,6 +21,7 @@ import {
 	buildInterpret,
 	buildPermissiveEvaluator,
 	buildReadyInput,
+	buildFailingInterpret,
 	buildTask,
 	readErrorCode,
 } from '../../setup.js'
@@ -334,6 +335,124 @@ describe('BriefCompiler fail-closed paths', () => {
 			proofs: [proof('x', 'npm test')],
 		})
 		expect(allowed.brief).toBeDefined()
+		compiler.destroy()
+	})
+
+	it('reads each constructor option exactly once, so ownership cannot invert', () => {
+		// `compile` already takes ONE reading of its input because a second lets a getter answer
+		// differently. The constructor did not: it decided ownership from read one and stored
+		// read two, so a borrowed engine could be destroyed and a self-made one leaked.
+		//
+		// Driven with two REAL engines rather than an undefined-then-engine getter: under
+		// `exactOptionalPropertyTypes` a getter typed `InterpretInterface | undefined` is not
+		// assignable to the options, so the undefined vector needs a cast or an untyped JS
+		// caller. The one-reading property is what the fix establishes, and this pins it
+		// directly and type-validly.
+		const first = createInterpret()
+		const second = createInterpret()
+		let reads = 0
+		const compiler = new BriefCompiler({
+			get interpret() {
+				reads += 1
+				return reads === 1 ? first : second
+			},
+		})
+		expect(reads).toBe(1)
+		// The stored engine IS the one ownership was decided from. Reading twice stored the
+		// second answer while deciding from the first.
+		expect(compiler.interpret).toBe(first)
+		compiler.destroy()
+		first.destroy()
+		second.destroy()
+
+		// The control: a plainly-supplied engine is read once and borrowed.
+		const borrowed = createInterpret()
+		let plainReads = 0
+		const third = new BriefCompiler({
+			get interpret() {
+				plainReads += 1
+				return borrowed
+			},
+		})
+		expect(plainReads).toBe(1)
+		expect(third.interpret).toBe(borrowed)
+		third.destroy()
+		borrowed.destroy()
+	})
+
+	it('records a deeply frozen stage input, so the replay cannot be rewritten', () => {
+		// `Briefing` is documented as the replayable outcome and its `digest` attests to what
+		// the stages hold. A shallow freeze left every nested array writable, so a consumer
+		// could rewrite the recorded input after the digest describing it was sealed.
+		const compiler = createBriefCompiler()
+		const briefing = compiler.compile({
+			task: buildTask(),
+			outcomes: [outcome(1, 'x')],
+			proofs: [proof('x', 'npm test')],
+		})
+		const drafted = briefing.stages.find((record) => record.stage === 'draft')
+		expect(drafted?.stage).toBe('draft')
+		const recorded = drafted?.stage === 'draft' ? drafted.input : undefined
+		expect(recorded).toBeDefined()
+		expect(Object.isFrozen(recorded)).toBe(true)
+		// The nested array is the half a shallow freeze left writable.
+		expect(recorded?.outcomes).toHaveLength(1)
+		expect(Object.isFrozen(recorded?.outcomes)).toBe(true)
+		expect(Object.isFrozen(recorded?.outcomes?.[0])).toBe(true)
+		compiler.destroy()
+	})
+
+	it('hands every block listener the same frozen array the briefing carries', () => {
+		// Observation is a side-channel: a listener reads what the briefing holds and can change
+		// nothing. Emitting a separate mutable array let one listener rewrite what the next was
+		// handed, and neither saw the record the digest attests to.
+		const compiler = createBriefCompiler()
+		const seen: Array<readonly Gap[]> = []
+		compiler.emitter.on('block', (questions) => {
+			seen.push(questions)
+		})
+		compiler.emitter.on('block', (questions) => {
+			seen.push(questions)
+		})
+		const briefing = compiler.compile({
+			task: buildTask(),
+			outcomes: [outcome(1, 'x')],
+			proofs: [proof('x', 'npm test')],
+			gaps: [gap('output', 'Diff or files?', { blocking: true })],
+		})
+		expect(seen).toHaveLength(2)
+		expect(seen[0]).toBe(briefing.questions)
+		expect(seen[1]).toBe(briefing.questions)
+		expect(Object.isFrozen(briefing.questions)).toBe(true)
+		compiler.destroy()
+	})
+
+	it('contains an interpret failure and still compiles from the caller-authored task', () => {
+		// The one contained stage code with no coverage. `@orkestrel/interpret` contains its own
+		// stage failures, so this needs a foreign engine — which is exactly what
+		// `BriefCompilerOptions.interpret` publishes as a seam.
+		const compiler = createBriefCompiler({
+			interpret: buildFailingInterpret(),
+			actions: { migrate: 'migrate' },
+			domains: { code: 'code' },
+		})
+		const briefing = compiler.compile({
+			text: 'migrate the stores',
+			task: buildTask(),
+			outcomes: [outcome(1, 'x')],
+			proofs: [proof('x', 'npm test')],
+		})
+		expect(briefing.failures[0]?.stage).toBe('interpret')
+		expect(briefing.failures[0]?.code).toBe('INTERPRET_FAILED')
+		// Contained, not thrown: the caller-authored task carries the compile to completion.
+		expect(briefing.brief).toBeDefined()
+		// Structural, not identical: the emitted brief is an owned null-prototype record, so
+		// `toStrictEqual` would fail on the prototype alone.
+		expect(briefing.brief?.task).toEqual(buildTask())
+		const record = briefing.stages.find((entry) => entry.stage === 'interpret')
+		expect(record?.stage === 'interpret' ? record.error : undefined).toBe(
+			'the interpret engine failed',
+		)
 		compiler.destroy()
 	})
 

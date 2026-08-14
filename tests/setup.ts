@@ -78,6 +78,42 @@ export function buildInterpret(
 }
 
 /**
+ * An interpret engine whose `interpret` throws, for driving the `interpret` stage's failure.
+ *
+ * @remarks
+ * A boundary stub, not a fake: every other member delegates to a REAL `createInterpret`
+ * instance, so nothing project-owned is reimplemented. Only the one method under test is
+ * scripted.
+ *
+ * A throwing extractor does not reach `BriefCompiler` — `@orkestrel/interpret` contains its
+ * own stage failures and returns a degraded `Interpretation` rather than throwing. So
+ * `INTERPRET_FAILED` is reachable only through a FOREIGN `InterpretInterface`, which
+ * `BriefCompilerOptions.interpret` publishes as a seam. This is that caller.
+ */
+export function buildFailingInterpret(): InterpretInterface {
+	const real = createInterpret()
+	return {
+		get emitter() {
+			return real.emitter
+		},
+		interpret: () => {
+			throw new Error('the interpret engine failed')
+		},
+		register: (template) => {
+			real.register(template)
+		},
+		unregister: (id) => real.unregister(id),
+		template: (id) => real.template(id),
+		templates: () => real.templates(),
+		describe: (definition) => real.describe(definition),
+		narrate: (result) => real.narrate(result),
+		destroy: () => {
+			real.destroy()
+		},
+	}
+}
+
+/**
  * Values a total guard must refuse without throwing.
  *
  * @remarks

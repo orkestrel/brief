@@ -37,11 +37,25 @@ export class BriefManager implements BriefManagerInterface {
 	#destroyed = false
 
 	constructor(options?: BriefManagerOptions) {
+		// One read per option; a second read lets a getter answer differently.
+		const hooks = options?.on
+		const failed = options?.error
+		const seeds = options?.briefs ?? []
+		// Seeding is ALL-OR-NOTHING. `add` throws INVALID for an off-contract or colliding
+		// entry, so seeding straight into the registry emitted `add` for earlier entries and
+		// then abandoned a constructor that never returns — hooks observing ids for an instance
+		// the caller does not have, and an emitter nothing can destroy. Validate every seed
+		// first, then build the emitter, then commit.
+		const staged = new Map<string, BriefRecord>()
+		for (const entry of seeds) {
+			const record = this.#stage(entry, staged)
+			staged.set(record.id, record)
+		}
 		this.#emitter = new Emitter<BriefManagerEventMap>({
-			...(options?.on === undefined ? {} : { on: options.on }),
-			...(options?.error === undefined ? {} : { error: options.error }),
+			...(hooks === undefined ? {} : { on: hooks }),
+			...(failed === undefined ? {} : { error: failed }),
 		})
-		for (const entry of options?.briefs ?? []) this.add(entry)
+		for (const record of staged.values()) this.#commit(record)
 	}
 
 	get emitter(): EmitterInterface<BriefManagerEventMap> {
@@ -69,20 +83,8 @@ export class BriefManager implements BriefManagerInterface {
 
 	add(source: Brief, options?: ManagerAddOptions): BriefRecord {
 		this.#refuseDestroyed()
-		// Snapshot first: a record whose brief still aliases the caller's arrays would let a
-		// later push change content this hash already described.
-		const owned = snapshotBrief(source)
-		const hash = briefToHash(owned)
-		const id = options?.id ?? hash
-		const previous = this.#records.get(id)
-		const record: BriefRecord = Object.freeze({
-			id,
-			brief: owned,
-			version: previous === undefined ? 1 : this.#version(previous, owned, hash),
-			hash,
-		})
-		this.#records.set(id, record)
-		this.#emitter.emit('add', id)
+		const record = this.#stage(source, this.#records, options)
+		this.#commit(record)
 		return record
 	}
 
@@ -96,8 +98,11 @@ export class BriefManager implements BriefManagerInterface {
 			return
 		}
 		if (typeof target === 'string') return this.#discard(target)
+		// Deduplicated, because the contract is about the listed SET. A repeated id was removed
+		// on its first pass and then reported missing on its second, so `remove(['a', 'a'])`
+		// returned false for a record it had just removed.
 		let removed = true
-		for (const id of target) {
+		for (const id of new Set(target)) {
 			if (!this.#discard(id)) removed = false
 		}
 		return removed
@@ -109,6 +114,38 @@ export class BriefManager implements BriefManagerInterface {
 		this.#records.clear()
 		this.#emitter.emit('destroy')
 		this.#emitter.destroy()
+	}
+
+	// Build the record without registering or announcing it. Split out of `add` so the
+	// constructor can validate every seed before committing any: `snapshotBrief` and `#version`
+	// both throw INVALID, and seeding straight into the registry left earlier entries announced
+	// on an instance that never returned. `against` is the registry to version against — the
+	// live one for `add`, the in-progress staging map while seeding, so two colliding seeds are
+	// caught the same way two colliding adds are.
+	#stage(
+		source: Brief,
+		against: ReadonlyMap<string, BriefRecord>,
+		options?: ManagerAddOptions,
+	): BriefRecord {
+		// Snapshot first: a record whose brief still aliases the caller's arrays would let a
+		// later push change content this hash already described.
+		const owned = snapshotBrief(source)
+		const hash = briefToHash(owned)
+		const id = options?.id ?? hash
+		const previous = against.get(id)
+		return Object.freeze({
+			id,
+			brief: owned,
+			version: previous === undefined ? 1 : this.#version(previous, owned, hash),
+			hash,
+		})
+	}
+
+	// Register a staged record and announce it. Nothing here can throw, which is what makes
+	// seeding all-or-nothing once every entry has been staged.
+	#commit(record: BriefRecord): void {
+		this.#records.set(record.id, record)
+		this.#emitter.emit('add', record.id)
 	}
 
 	// The version a re-add earns, and the one place a digest collision is caught. The hash is

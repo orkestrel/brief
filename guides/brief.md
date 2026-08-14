@@ -51,7 +51,10 @@ const briefing = compiler.compile({
 	task: task('refactor', 'code', 'Refactor useForm to native browser form APIs.'),
 	authority: [{ path: 'AGENTS.md', note: 'project law; wins every conflict' }],
 	manifest: {
-		read: [{ path: 'guides/browser.md', note: 'the composable contract' }],
+		read: [
+			{ path: 'AGENTS.md', note: 'project law; wins every conflict' },
+			{ path: 'guides/browser.md', note: 'the composable contract' },
+		],
 		edit: [{ path: 'src/browser/composables/useForm.ts', note: 'the composable being refactored' }],
 		locked: [{ path: 'src/browser/types.ts', note: 'the published contract' }],
 		forbidden: [{ path: 'app/**', note: 'out of scope' }],
@@ -194,26 +197,28 @@ extra key fails, which is why the builders below omit absent optional keys. A ke
 PRESENT but holds `undefined` also fails, matching this workspace's
 `exactOptionalPropertyTypes` contract.
 
-| API               | Kind  | Narrows to                                                                        |
-| ----------------- | ----- | --------------------------------------------------------------------------------- |
-| `isText`          | const | A string carrying no line terminator, empty included.                             |
-| `isLine`          | const | A NON-EMPTY string carrying no line terminator — the shape of nearly every field. |
-| `isTaskOperation` | const | `TaskOperation`.                                                                  |
-| `isTaskDomain`    | const | `TaskDomain`.                                                                     |
-| `isOutputFormat`  | const | `OutputFormat`.                                                                   |
-| `isRiskSeverity`  | const | `RiskSeverity`.                                                                   |
-| `isTask`          | const | `Task` — `operation` and `domain` on-vocabulary, `statement` non-empty.           |
-| `isReference`     | const | `Reference` — both `path` and `note` present and single-line.                     |
-| `isManifest`      | const | `Manifest` — the four partitions present (disjointness is `validateBrief`'s job). |
-| `isOutcome`       | const | `Outcome` — `rank` a positive integer.                                            |
-| `isGiven`         | const | `Given`.                                                                          |
-| `isExample`       | const | `Example`.                                                                        |
-| `isCitation`      | const | `Citation` — `name`, `url`, and `note` all present and single-line.               |
-| `isGap`           | const | `Gap`.                                                                            |
-| `isRisk`          | const | `Risk` — `severity` must be a `RiskSeverity`.                                     |
-| `isOutput`        | const | `Output` — `format` must be an `OutputFormat`.                                    |
-| `isProof`         | const | `Proof`.                                                                          |
-| `isBrief`         | const | `Brief` — the whole exact-record contract, section guards composed.               |
+| API                | Kind  | Narrows to                                                                                        |
+| ------------------ | ----- | ------------------------------------------------------------------------------------------------- |
+| `isText`           | const | A string carrying no line terminator, empty included.                                             |
+| `isLine`           | const | A NON-EMPTY string carrying no line terminator — the shape of nearly every field.                 |
+| `isTaskOperation`  | const | `TaskOperation`.                                                                                  |
+| `isTaskDomain`     | const | `TaskDomain`.                                                                                     |
+| `isOutputFormat`   | const | `OutputFormat`.                                                                                   |
+| `isRiskSeverity`   | const | `RiskSeverity`.                                                                                   |
+| `isTask`           | const | `Task` — `operation` and `domain` on-vocabulary, `statement` non-empty.                           |
+| `isReference`      | const | `Reference` — both `path` and `note` present and single-line.                                     |
+| `isRuleVerdict`    | const | a reasons `RuleResult` — reason publishes the type but no guard.                                  |
+| `isLogicalVerdict` | const | a reasons `LogicalResult`, whole shape — what the gate checks a BORROWED engine's return against. |
+| `isManifest`       | const | `Manifest` — the four partitions present (disjointness is `validateBrief`'s job).                 |
+| `isOutcome`        | const | `Outcome` — `rank` a positive integer.                                                            |
+| `isGiven`          | const | `Given`.                                                                                          |
+| `isExample`        | const | `Example`.                                                                                        |
+| `isCitation`       | const | `Citation` — `name`, `url`, and `note` all present and single-line.                               |
+| `isGap`            | const | `Gap`.                                                                                            |
+| `isRisk`           | const | `Risk` — `severity` must be a `RiskSeverity`.                                                     |
+| `isOutput`         | const | `Output` — `format` must be an `OutputFormat`.                                                    |
+| `isProof`          | const | `Proof`.                                                                                          |
+| `isBrief`          | const | `Brief` — the whole exact-record contract, section guards composed.                               |
 
 ```ts
 import {
@@ -225,6 +230,8 @@ import {
 	isTaskOperation,
 	isCitation,
 	isExample,
+	isLogicalVerdict,
+	isRuleVerdict,
 	isGiven,
 	isManifest,
 	isOutcome,
@@ -241,6 +248,8 @@ isTaskOperation('refactor') // true
 isTaskDomain('frontend') // false
 isReference({ path: 'AGENTS.md', note: 'project law' }) // true
 isReference({ path: 'AGENTS.md' }) // false — `note` is required
+isLogicalVerdict(undefined) // false — total, so a borrowed engine cannot crash the gate
+isRuleVerdict({ id: 'proven', applied: true, premises: [true], conclusion: true }) // true
 isManifest({ read: [], edit: [], locked: [], forbidden: [] }) // true
 isOutcome({ rank: 1, text: 'the tests pass', required: true }) // true
 isGiven({ category: 'convention', name: 'indentation', value: 'tabs' }) // true
@@ -373,7 +382,12 @@ import {
 const draft = brief(task('refactor', 'code', 'Refactor useForm to native browser form APIs.'), {
 	authority: [reference('AGENTS.md', 'project law; wins every conflict')],
 	manifest: manifest({
-		read: [reference('guides/browser.md', 'the composable contract')],
+		read: [
+			// Ranked authority must also be granted here — the `granted` rule refuses a brief
+			// that tells the executor to obey a file no partition lets it open.
+			reference('AGENTS.md', 'project law; wins every conflict'),
+			reference('guides/browser.md', 'the composable contract'),
+		],
 		edit: [reference('src/browser/composables/useForm.ts', 'the composable being refactored')],
 		locked: [reference('src/browser/types.ts', 'the published contract')],
 		forbidden: [reference('app/**', 'out of scope')],
@@ -433,7 +447,9 @@ consumes a WHOLE and returns a derived view of it.
 | `deriveTask`             | function | Derive a `Task` from an interprets `Intent` through CALLER action and domain vocabularies; `undefined` when either side is unmapped.                            |
 | `deriveGivens`           | function | Derive `Given[]` from an interprets `Entity[]` — each becomes a `{ category: 'extracted', name, value }` fact.                                                  |
 | `deriveGaps`             | function | Derive `Gap[]` from an interprets `Ambiguity[]` — REQUIRED ambiguities become BLOCKING gaps, the rest open.                                                     |
-| `errorToMessage`         | function | Render a value thrown by a stage into the message a `BriefStageFailure` carries.                                                                                |
+| `errorToMessage`         | function | Render a value thrown by a stage into the message a `BriefStageFailure` carries — TOTAL, because it runs inside the `catch` that contains a stage failure.      |
+| `freezeDeep`             | function | Freeze a value and everything reachable from it, cycles included — `Object.freeze` is shallow, so a frozen record's nested arrays stayed writable.              |
+| `freezeBranch`           | function | Freeze one branch against a shared visited set — the recursion `freezeDeep` drives.                                                                             |
 
 ```ts
 import {
@@ -448,6 +464,7 @@ import {
 	deriveStatement,
 	deriveTask,
 	errorToMessage,
+	freezeDeep,
 	findBlockingGaps,
 	findUngrantedAuthority,
 	findManifestOverlaps,
@@ -484,6 +501,8 @@ deriveTask(
 deriveGivens([{ name: 'count', value: 3, provenance: { category: 'extracted' }, confidence: 1 }]) // [{ category: 'extracted', name: 'count', value: '3' }]
 deriveGaps([{ field: 'output', question: 'Diff or files?', candidates: [], required: true }])
 errorToMessage(new Error('boom')) // 'boom'
+errorToMessage(Object.create(null)) // 'an unreadable object was thrown' — never throws
+freezeDeep({ outcomes: [{ rank: 1 }] }) // nested array frozen too, unlike Object.freeze
 ```
 
 `validateBrief` ERRORS on the structural violations no assumption can paper over — a
@@ -670,12 +689,18 @@ These invariants hold across `src/core` and this guide:
    null-prototype record sharing no reference with its source, which is what lets a hash keep
    describing its brief for as long as the brief exists.
 
-   The digest is EIGHT hex digits, so it is an identity for a working set, not a
-   cryptographic one: distinct briefs do collide, and a search over this package's own
-   builders finds a pair at roughly the 739,000th distinct hash. `BriefManager` therefore
-   compares `briefToContent` before calling a re-add unchanged, and REFUSES a collision with
-   `BriefError('INVALID', …)` rather than silently replacing the record already stored.
-   Registries beyond that scale should name their own ids.
+   The digest is EIGHT hex digits — 32 bits — so it is an identity for a working set, not a
+   cryptographic one. Read that as a birthday bound rather than a threshold: collisions become
+   likely in the TENS OF THOUSANDS of distinct briefs, around a 50% chance near 77,000, and
+   two independent searches over this package's own builders hit their first pair at roughly
+   42,000 and 53,000. Those are two draws from one distribution, not a limit — quoting either
+   as the safe size is the mistake, and an earlier revision of this paragraph quoted a single
+   measured index that overstated the safe scale by more than an order of magnitude.
+
+   `BriefManager` therefore compares `briefToContent` before calling a re-add unchanged, and
+   REFUSES a collision with `BriefError('INVALID', …)` rather than silently replacing the
+   record already stored. A registry expecting more than a few thousand distinct briefs should
+   name its own ids through `ManagerAddOptions.id` instead of letting the digest mint them.
 
 3. **Fail closed at the gate, and the gate is not delegable.** Readiness is decided by
    `findUnmetRules` — in code, from the brief's own measures — BEFORE any verdict is consulted.
