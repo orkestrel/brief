@@ -1,11 +1,11 @@
-import { createBriefContract, createBriefManager, createCompiler, isBrief } from '@src/core'
+import { createBriefContract, createBriefManager, createBriefCompiler, isBrief } from '@src/core'
 import { seededRandom } from '@orkestrel/contract'
 import { describe, expect, it } from 'vitest'
 import { buildAdversarialValues, buildBrief, buildReadyInput } from '../../setup.js'
 
-describe('createCompiler', () => {
+describe('createBriefCompiler', () => {
 	it('wires its own engines when none are supplied', () => {
-		const compiler = createCompiler()
+		const compiler = createBriefCompiler()
 		expect(compiler.interpret).toBeDefined()
 		expect(compiler.reason.supports('logical')).toBe(true)
 		expect(compiler.compile(buildReadyInput()).complete).toBe(true)
@@ -13,7 +13,7 @@ describe('createCompiler', () => {
 	})
 
 	it('drives deriveTask through the supplied vocabularies only', () => {
-		const compiler = createCompiler({ actions: {}, domains: {} })
+		const compiler = createBriefCompiler({ actions: {}, domains: {} })
 		expect(compiler.compile({ proofs: [] }).failures[0]?.code).toBe('DRAFT_FAILED')
 		compiler.destroy()
 	})

@@ -1,8 +1,8 @@
 import type { BriefInput, Briefing, Gap, Outcome } from '@src/core'
 import {
-	Compiler,
+	BriefCompiler,
 	briefToSubject,
-	createCompiler,
+	createBriefCompiler,
 	gap,
 	gateDefinition,
 	isBriefError,
@@ -23,9 +23,9 @@ import {
 	readErrorCode,
 } from '../../setup.js'
 
-describe('Compiler pipeline', () => {
+describe('BriefCompiler pipeline', () => {
 	it('skips the interpret stage when the input carries no text', () => {
-		const compiler = createCompiler()
+		const compiler = createBriefCompiler()
 		const briefing = compiler.compile(buildReadyInput())
 		expect(briefing.stages.map((record) => record.stage)).toStrictEqual(['draft', 'gate', 'pin'])
 		expect(briefing.interpretation).toBeUndefined()
@@ -34,7 +34,7 @@ describe('Compiler pipeline', () => {
 	})
 
 	it('runs all four stages when the input carries text', () => {
-		const compiler = createCompiler({
+		const compiler = createBriefCompiler({
 			interpret: buildInterpret('migrate', 'code', true),
 			actions: { migrate: 'migrate' },
 			domains: { code: 'code' },
@@ -64,7 +64,7 @@ describe('Compiler pipeline', () => {
 	})
 
 	it('pins the emitted brief', () => {
-		const compiler = createCompiler()
+		const compiler = createBriefCompiler()
 		const briefing = compiler.compile(buildReadyInput())
 		expect(briefing.brief?.hash).toMatch(/^[0-9a-f]{8}$/u)
 		expect(briefing.brief?.trace).toBe('refactor/code · outcomes:1 · gaps:0/0 · proofs:1')
@@ -72,7 +72,7 @@ describe('Compiler pipeline', () => {
 	})
 
 	it('produces the same briefing for the same input', () => {
-		const compiler = createCompiler()
+		const compiler = createBriefCompiler()
 		const first = compiler.compile(buildReadyInput())
 		const second = compiler.compile(buildReadyInput())
 		expect(first.digest).toBe(second.digest)
@@ -81,7 +81,7 @@ describe('Compiler pipeline', () => {
 	})
 
 	it('merges caller sections over the derived draft and accumulates gaps and givens', () => {
-		const compiler = createCompiler({
+		const compiler = createBriefCompiler({
 			interpret: buildInterpret('migrate', 'code', true),
 			actions: { migrate: 'migrate' },
 			domains: { code: 'code' },
@@ -111,7 +111,7 @@ describe('Compiler pipeline', () => {
 	})
 
 	it('records each stage input and output', () => {
-		const compiler = createCompiler()
+		const compiler = createBriefCompiler()
 		const briefing = compiler.compile(buildReadyInput())
 		const gateRecord = briefing.stages.find((record) => record.stage === 'gate')
 		expect(gateRecord?.input).toEqual(briefToSubject(briefing.brief ?? buildBrief()))
@@ -120,9 +120,9 @@ describe('Compiler pipeline', () => {
 	})
 })
 
-describe('Compiler fail-closed paths', () => {
+describe('BriefCompiler fail-closed paths', () => {
 	it('blocks on a blocking gap, carrying the questions and no brief', () => {
-		const compiler = createCompiler()
+		const compiler = createBriefCompiler()
 		const briefing = compiler.compile({
 			...buildReadyInput(),
 			gaps: [
@@ -157,7 +157,7 @@ describe('Compiler fail-closed paths', () => {
 		const permissive = createReason({
 			reasoners: [createLogicalReasoner({ evaluator: buildPermissiveEvaluator() })],
 		})
-		const compiler = createCompiler({ reason: permissive })
+		const compiler = createBriefCompiler({ reason: permissive })
 
 		const verdict = compiler.gate(buildBrief({ proofs: [] }))
 		expect(verdict.conclusion).toBe(true) // the engine really does say yes
@@ -184,7 +184,7 @@ describe('Compiler fail-closed paths', () => {
 		// The refusal is this package's headline artifact, and it was the mutable one: nothing
 		// in the incomplete path was frozen, so `failures.pop()` dropped the BLOCKED marker the
 		// digest already attested to.
-		const compiler = createCompiler()
+		const compiler = createBriefCompiler()
 		const briefing = compiler.compile({
 			...buildReadyInput(),
 			gaps: [gap('output', 'Diff or files?', { blocking: true })],
@@ -200,7 +200,7 @@ describe('Compiler fail-closed paths', () => {
 	})
 
 	it('freezes every stage record on the complete path too', () => {
-		const compiler = createCompiler()
+		const compiler = createBriefCompiler()
 		const briefing = compiler.compile(buildReadyInput())
 		expect(briefing.complete).toBe(true)
 		for (const record of briefing.stages) expect(Object.isFrozen(record)).toBe(true)
@@ -209,7 +209,7 @@ describe('Compiler fail-closed paths', () => {
 
 	it('freezes each failure, not only the array that holds them', () => {
 		// `digest` attests to `failures`, so a writable member moves what the digest describes.
-		const compiler = createCompiler()
+		const compiler = createBriefCompiler()
 		const briefing = compiler.compile({ task: buildTask(), outcomes: [outcome(1, 'x')] })
 		expect(briefing.failures.length).toBeGreaterThan(0)
 		for (const failure of briefing.failures) expect(Object.isFrozen(failure)).toBe(true)
@@ -228,7 +228,7 @@ describe('Compiler fail-closed paths', () => {
 				return reads === 1 ? [outcome(1, 'first')] : [outcome(1, 'first'), outcome(2, 'second')]
 			},
 		}
-		const compiler = createCompiler()
+		const compiler = createBriefCompiler()
 		const briefing = compiler.compile(shifting)
 		const drafted = briefing.stages.find((record) => record.stage === 'draft')
 		expect(reads).toBe(1)
@@ -249,7 +249,7 @@ describe('Compiler fail-closed paths', () => {
 				throw new TypeError('hostile text getter')
 			},
 		}
-		const compiler = createCompiler()
+		const compiler = createBriefCompiler()
 		const briefing = compiler.compile(hostile)
 		expect(briefing.complete).toBe(false)
 		expect(briefing.brief).toBeUndefined()
@@ -260,7 +260,7 @@ describe('Compiler fail-closed paths', () => {
 
 	it('records an input the caller cannot move after the call', () => {
 		const outcomes = [outcome(1, 'shipped')]
-		const compiler = createCompiler()
+		const compiler = createBriefCompiler()
 		const briefing = compiler.compile({ ...buildReadyInput(), outcomes })
 		const drafted = briefing.stages.find((record) => record.stage === 'draft')
 		outcomes.push(outcome(2, 'forged'))
@@ -274,7 +274,7 @@ describe('Compiler fail-closed paths', () => {
 
 	it('records a replay that a later mutation of the caller input cannot change', () => {
 		const outcomes = [outcome(1, 'shipped')]
-		const compiler = createCompiler()
+		const compiler = createBriefCompiler()
 		const briefing = compiler.compile({ ...buildReadyInput(), outcomes })
 		const drafted = briefing.stages.find((record) => record.stage === 'draft')
 		const before = drafted?.output?.outcomes.length
@@ -285,18 +285,18 @@ describe('Compiler fail-closed paths', () => {
 	})
 
 	it('names the unmet rules when the gate refuses for another reason', () => {
-		const compiler = createCompiler()
+		const compiler = createBriefCompiler()
 		const briefing = compiler.compile({ task: buildTask(), outcomes: [outcome(1, 'x')] })
 		expect(briefing.complete).toBe(false)
 		expect(briefing.questions).toEqual([])
-		// The MEASURED refusal, named from findUnready — the rules that actually decided, without
+		// The MEASURED refusal, named from findUnmetRules — the rules that actually decided, without
 		// the derived conjunction they roll up into.
 		expect(briefing.failures[0]?.message).toBe('Gate refused: proven')
 		compiler.destroy()
 	})
 
 	it('contains a draft failure rather than throwing when no task can be derived', () => {
-		const compiler = createCompiler()
+		const compiler = createBriefCompiler()
 		const briefing = compiler.compile({ proofs: [proof('x', 'y')] })
 		expect(briefing.complete).toBe(false)
 		expect(briefing.brief).toBeUndefined()
@@ -325,7 +325,7 @@ describe('Compiler fail-closed paths', () => {
 	})
 
 	it('blocks on the language pipeline own required ambiguity when no template matches', () => {
-		const compiler = createCompiler({
+		const compiler = createBriefCompiler({
 			interpret: buildInterpret('migrate', 'code', false),
 			actions: { migrate: 'migrate' },
 			domains: { code: 'code' },
@@ -342,7 +342,7 @@ describe('Compiler fail-closed paths', () => {
 	})
 
 	it('reports GATE_FAILED when the reason engine has no logical reasoner', () => {
-		const compiler = createCompiler({ reason: createReason() })
+		const compiler = createBriefCompiler({ reason: createReason() })
 		const briefing = compiler.compile(buildReadyInput())
 		expect(briefing.complete).toBe(false)
 		expect(briefing.verdict).toBeUndefined()
@@ -351,9 +351,9 @@ describe('Compiler fail-closed paths', () => {
 	})
 })
 
-describe('Compiler gate', () => {
+describe('BriefCompiler gate', () => {
 	it('returns the traceable logical verdict for one brief', () => {
-		const compiler = createCompiler()
+		const compiler = createBriefCompiler()
 		const verdict = compiler.gate(buildBrief())
 		expect(verdict.reasoning).toBe('logical')
 		expect(verdict.conclusion).toBe(true)
@@ -365,17 +365,19 @@ describe('Compiler gate', () => {
 	})
 
 	it('refuses a brief that misses one readiness rule', () => {
-		const compiler = createCompiler()
+		const compiler = createBriefCompiler()
 		expect(compiler.gate(buildBrief({ proofs: [] })).conclusion).toBe(false)
 		compiler.destroy()
 	})
 })
 
-describe('Compiler observation', () => {
+describe('BriefCompiler observation', () => {
 	it('emits compile for a complete briefing and block for an incomplete one, never both', () => {
 		const compiled = createRecorder<readonly [Briefing]>()
 		const blocked = createRecorder<readonly [readonly Gap[]]>()
-		const compiler = createCompiler({ on: { compile: compiled.handler, block: blocked.handler } })
+		const compiler = createBriefCompiler({
+			on: { compile: compiled.handler, block: blocked.handler },
+		})
 
 		compiler.compile(buildReadyInput())
 		expect(compiled.count).toBe(1)
@@ -390,7 +392,7 @@ describe('Compiler observation', () => {
 
 	it('emits the compile event after the briefing it reports', () => {
 		const compiled = createRecorder<readonly [Briefing]>()
-		const compiler = createCompiler({ on: { compile: compiled.handler } })
+		const compiler = createBriefCompiler({ on: { compile: compiled.handler } })
 		const briefing = compiler.compile(buildReadyInput())
 		expect(compiled.calls[0]?.[0]).toBe(briefing)
 		compiler.destroy()
@@ -398,7 +400,7 @@ describe('Compiler observation', () => {
 
 	it('emits error when a stage throws', () => {
 		const failures = createRecorder<readonly [unknown]>()
-		const compiler = createCompiler({ on: { error: failures.handler } })
+		const compiler = createBriefCompiler({ on: { error: failures.handler } })
 		compiler.compile({ proofs: [proof('x', 'y')] })
 		expect(failures.count).toBe(1)
 		expect(isBriefError(failures.calls[0]?.[0])).toBe(true)
@@ -408,7 +410,10 @@ describe('Compiler observation', () => {
 	it('routes a throwing listener to the error handler and keeps its siblings running', () => {
 		const handled = createRecorder<readonly [unknown, string]>()
 		const survivor = createRecorder<readonly [Briefing]>()
-		const compiler = new Compiler({ on: { compile: survivor.handler }, error: handled.handler })
+		const compiler = new BriefCompiler({
+			on: { compile: survivor.handler },
+			error: handled.handler,
+		})
 		compiler.emitter.on('compile', () => {
 			throw new Error('listener boom')
 		})
@@ -421,7 +426,7 @@ describe('Compiler observation', () => {
 
 	it('emits destroy once and tears the emitter down last', () => {
 		const stopped = createRecorder<readonly []>()
-		const compiler = createCompiler({ on: { destroy: stopped.handler } })
+		const compiler = createBriefCompiler({ on: { destroy: stopped.handler } })
 		compiler.destroy()
 		compiler.destroy()
 		expect(stopped.count).toBe(1)
@@ -429,9 +434,9 @@ describe('Compiler observation', () => {
 	})
 })
 
-describe('Compiler engine ownership', () => {
+describe('BriefCompiler engine ownership', () => {
 	it('destroys the engines it created', () => {
-		const compiler = createCompiler()
+		const compiler = createBriefCompiler()
 		const owned = compiler.interpret
 		const reasoner = compiler.reason
 		compiler.destroy()
@@ -442,7 +447,7 @@ describe('Compiler engine ownership', () => {
 	it('leaves a borrowed engine alive', () => {
 		const borrowed = createInterpret()
 		const shared = createReason({ reasoners: [createLogicalReasoner()] })
-		const compiler = createCompiler({ interpret: borrowed, reason: shared })
+		const compiler = createBriefCompiler({ interpret: borrowed, reason: shared })
 		expect(compiler.interpret).toBe(borrowed)
 		expect(compiler.reason).toBe(shared)
 		compiler.destroy()
@@ -454,7 +459,7 @@ describe('Compiler engine ownership', () => {
 
 	it('destroys only the engine it owns when one is borrowed', () => {
 		const borrowed = createInterpret()
-		const compiler = createCompiler({ interpret: borrowed })
+		const compiler = createBriefCompiler({ interpret: borrowed })
 		const owned = compiler.reason
 		compiler.destroy()
 		expect(borrowed.emitter.destroyed).toBe(false)
@@ -463,16 +468,16 @@ describe('Compiler engine ownership', () => {
 	})
 })
 
-describe('Compiler teardown', () => {
+describe('BriefCompiler teardown', () => {
 	it('refuses compile and gate after destroy', () => {
-		const compiler = createCompiler()
+		const compiler = createBriefCompiler()
 		compiler.destroy()
-		expect(() => compiler.compile(buildReadyInput())).toThrow('Compiler has been destroyed')
-		expect(() => compiler.gate(buildBrief())).toThrow('Compiler has been destroyed')
+		expect(() => compiler.compile(buildReadyInput())).toThrow('BriefCompiler has been destroyed')
+		expect(() => compiler.gate(buildBrief())).toThrow('BriefCompiler has been destroyed')
 	})
 
 	it('throws a narrowable DESTROYED error', () => {
-		const compiler = createCompiler()
+		const compiler = createBriefCompiler()
 		compiler.destroy()
 		const error = captureError(() => compiler.gate(buildBrief()))
 		expect(isBriefError(error)).toBe(true)
@@ -480,7 +485,7 @@ describe('Compiler teardown', () => {
 	})
 
 	it('keeps the getters working after destroy', () => {
-		const compiler = createCompiler()
+		const compiler = createBriefCompiler()
 		compiler.destroy()
 		expect(compiler.emitter.destroyed).toBe(true)
 		expect(compiler.interpret).toBeDefined()

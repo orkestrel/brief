@@ -15,7 +15,7 @@ import {
 	deriveTask,
 	errorToMessage,
 	findBlockingGaps,
-	findUnready,
+	findUnmetRules,
 	pinBrief,
 	gateDefinition,
 	manifest,
@@ -25,11 +25,11 @@ import type {
 	Brief,
 	BriefInput,
 	Briefing,
-	CompileFailure,
-	CompileRecord,
-	CompilerEventMap,
-	CompilerInterface,
-	CompilerOptions,
+	BriefStageFailure,
+	BriefStageRecord,
+	BriefCompilerEventMap,
+	BriefCompilerInterface,
+	BriefCompilerOptions,
 	Gap,
 	TaskDomain,
 	TaskOperation,
@@ -46,9 +46,9 @@ import type {
  *
  * @example
  * ```ts
- * import { Compiler, proof, task } from '@orkestrel/brief'
+ * import { BriefCompiler, proof, task } from '@orkestrel/brief'
  *
- * const compiler = new Compiler()
+ * const compiler = new BriefCompiler()
  * const briefing = compiler.compile({
  * 	task: task('audit', 'code', 'Audit the barrel for undocumented exports.'),
  * 	outcomes: [{ rank: 1, text: 'every export appears in the guide', required: true }],
@@ -58,8 +58,8 @@ import type {
  * compiler.destroy()
  * ```
  */
-export class Compiler implements CompilerInterface {
-	readonly #emitter: Emitter<CompilerEventMap>
+export class BriefCompiler implements BriefCompilerInterface {
+	readonly #emitter: Emitter<BriefCompilerEventMap>
 	readonly #interpret: InterpretInterface
 	readonly #reason: ReasonInterface
 	readonly #ownInterpret: boolean
@@ -68,8 +68,8 @@ export class Compiler implements CompilerInterface {
 	readonly #domains: Readonly<Record<string, TaskDomain>>
 	#destroyed = false
 
-	constructor(options?: CompilerOptions) {
-		this.#emitter = new Emitter<CompilerEventMap>({
+	constructor(options?: BriefCompilerOptions) {
+		this.#emitter = new Emitter<BriefCompilerEventMap>({
 			...(options?.on === undefined ? {} : { on: options.on }),
 			...(options?.error === undefined ? {} : { error: options.error }),
 		})
@@ -81,7 +81,7 @@ export class Compiler implements CompilerInterface {
 		this.#domains = options?.domains ?? {}
 	}
 
-	get emitter(): EmitterInterface<CompilerEventMap> {
+	get emitter(): EmitterInterface<BriefCompilerEventMap> {
 		return this.#emitter
 	}
 
@@ -95,8 +95,8 @@ export class Compiler implements CompilerInterface {
 
 	compile(input: BriefInput): Briefing {
 		this.#refuseDestroyed()
-		const stages: CompileRecord[] = []
-		const failures: CompileFailure[] = []
+		const stages: BriefStageRecord[] = []
+		const failures: BriefStageFailure[] = []
 
 		// ONE reading of the caller's object, taken first and used by every stage below. Reading
 		// it again per stage let a getter answer differently each time, so the replay could
@@ -141,10 +141,10 @@ export class Compiler implements CompilerInterface {
 		const verdict = ruled.success ? ruled.value : undefined
 
 		// Readiness is decided HERE, from the measures, before the verdict is consulted. The
-		// reasoner is borrowed — `CompilerOptions.reason` is a documented seam — so its verdict
+		// reasoner is borrowed — `BriefCompilerOptions.reason` is a documented seam — so its verdict
 		// narrates and never decides: a supplied engine can add detail to a refusal and can
 		// never turn one into a pass.
-		const unready = findUnready(draft)
+		const unready = findUnmetRules(draft)
 		if (unready.length > 0 || verdict === undefined || !verdict.conclusion) {
 			const refusal = this.#blockage(questions, unready, verdict)
 			if (refusal !== undefined) failures.push(Object.freeze(refusal))
@@ -211,8 +211,8 @@ export class Compiler implements CompilerInterface {
 	// a caller-supplied interpretation still reaches the draft.
 	#read(
 		input: BriefInput,
-		stages: CompileRecord[],
-		failures: CompileFailure[],
+		stages: BriefStageRecord[],
+		failures: BriefStageFailure[],
 	): Interpretation | undefined {
 		const text = input.text
 		if (text === undefined) return input.interpretation
@@ -234,7 +234,7 @@ export class Compiler implements CompilerInterface {
 		questions: readonly Gap[],
 		unready: readonly string[],
 		verdict: LogicalResult | undefined,
-	): CompileFailure | undefined {
+	): BriefStageFailure | undefined {
 		if (questions.length > 0) {
 			return {
 				stage: 'gate',
@@ -303,8 +303,8 @@ export class Compiler implements CompilerInterface {
 		interpretation: Interpretation | undefined,
 		questions: readonly Gap[],
 		verdict: LogicalResult | undefined,
-		stages: readonly CompileRecord[],
-		failures: readonly CompileFailure[],
+		stages: readonly BriefStageRecord[],
+		failures: readonly BriefStageFailure[],
 	): Briefing {
 		// Frozen exactly as the complete path is. The incomplete briefing is this package's
 		// headline artifact — the visible refusal — so it must not be the mutable one: a
@@ -325,6 +325,6 @@ export class Compiler implements CompilerInterface {
 
 	// Every method except the getters and `destroy` refuses a destroyed compiler.
 	#refuseDestroyed(): void {
-		if (this.#destroyed) throw new BriefError('DESTROYED', 'Compiler has been destroyed')
+		if (this.#destroyed) throw new BriefError('DESTROYED', 'BriefCompiler has been destroyed')
 	}
 }

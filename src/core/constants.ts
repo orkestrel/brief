@@ -88,14 +88,14 @@ export const GATE_ID = 'gate'
  * caller never wrote. Kept unanchored and stateless — no `g` flag — so `test` never carries
  * `lastIndex` between calls.
  */
-export const LINE_BREAK = /\r\n|[\n\r\u2028\u2029]/
+export const LINE_BREAK_PATTERN = /\r\n|[\n\r\u2028\u2029]/
 
 /**
- * The positive form of {@link LINE_BREAK}, for the shape DSL.
+ * The positive form of {@link LINE_BREAK_PATTERN}, for the shape DSL.
  *
  * @remarks
  * `stringShape`'s `pattern` must MATCH an accepted value, so the guard's refusal regex
  * cannot be reused directly. Both are derived from one character class, which is what
  * keeps the hand-composed guards and the compiled shapes refusing the same strings.
  */
-export const LINE_PATTERN = /^[^\n\r\u2028\u2029]*$/
+export const SINGLE_LINE_PATTERN = /^[^\n\r\u2028\u2029]*$/

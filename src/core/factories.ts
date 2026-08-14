@@ -1,14 +1,14 @@
 import type { ContractInterface } from '@orkestrel/contract'
 import { createContract } from '@orkestrel/contract'
 import { BriefManager } from './BriefManager.js'
-import { Compiler } from './Compiler.js'
+import { BriefCompiler } from './BriefCompiler.js'
 import { briefShape } from './shapers.js'
 import type {
 	Brief,
 	BriefManagerInterface,
 	BriefManagerOptions,
-	CompilerInterface,
-	CompilerOptions,
+	BriefCompilerInterface,
+	BriefCompilerOptions,
 } from './types.js'
 
 /**
@@ -21,18 +21,18 @@ import type {
  * instances or observe their emitters — the compiler destroys ONLY what it created.
  *
  * @param options - Engines to borrow, the two intent vocabularies, and emitter hooks.
- * @returns A working {@link CompilerInterface}.
+ * @returns A working {@link BriefCompilerInterface}.
  *
  * @example
  * ```ts
- * import { createCompiler } from '@orkestrel/brief'
+ * import { createBriefCompiler } from '@orkestrel/brief'
  *
- * const compiler = createCompiler({ actions: { refactor: 'refactor' }, domains: { code: 'code' } })
+ * const compiler = createBriefCompiler({ actions: { refactor: 'refactor' }, domains: { code: 'code' } })
  * compiler.destroy()
  * ```
  */
-export function createCompiler(options?: CompilerOptions): CompilerInterface {
-	return new Compiler(options)
+export function createBriefCompiler(options?: BriefCompilerOptions): BriefCompilerInterface {
+	return new BriefCompiler(options)
 }
 
 /**

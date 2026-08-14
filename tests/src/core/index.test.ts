@@ -20,7 +20,7 @@ describe('src core entry', () => {
 	it('re-exports nothing that originates in a dependency', () => {
 		const names = Object.keys(entry)
 		// The instrument must be able to report membership before its absences count.
-		expect(names).toContain('createCompiler')
+		expect(names).toContain('createBriefCompiler')
 		for (const foreign of [
 			'createInterpret',
 			'createReason',

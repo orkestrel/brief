@@ -212,9 +212,9 @@ describe('installed package', () => {
 		scratch.write(
 			'consumer/probe.ts',
 			[
-				"import { createCompiler, outcome, proof, task } from '@orkestrel/brief'",
-				"import type { Brief, Briefing, CompilerInterface } from '@orkestrel/brief'",
-				'const compiler: CompilerInterface = createCompiler()',
+				"import { createBriefCompiler, outcome, proof, task } from '@orkestrel/brief'",
+				"import type { Brief, Briefing, BriefCompilerInterface } from '@orkestrel/brief'",
+				'const compiler: BriefCompilerInterface = createBriefCompiler()',
 				'const briefing: Briefing = compiler.compile({',
 				"  task: task('plan', 'ops', 'Plan the release.'),",
 				"  outcomes: [outcome(1, 'shipped')],",
@@ -255,8 +255,8 @@ describe('installed package', () => {
 		if (!installed && !RELEASE) return
 		// Proves the shipped artifact does the documented work, not merely that it imports.
 		const script = [
-			"import { briefToGoal, createCompiler, outcome, proof, task } from '@orkestrel/brief'",
-			'const compiler = createCompiler()',
+			"import { briefToGoal, createBriefCompiler, outcome, proof, task } from '@orkestrel/brief'",
+			'const compiler = createBriefCompiler()',
 			'const briefing = compiler.compile({',
 			"  task: task('refactor', 'code', 'Refactor useForm to native browser form APIs.'),",
 			"  outcomes: [outcome(1, 'useForm uses native FormData with no behavior change')],",

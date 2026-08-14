@@ -54,7 +54,7 @@ export type OutputFormat = 'markdown' | 'json' | 'code' | 'diff' | 'prose'
 export type RiskSeverity = 'low' | 'medium' | 'high'
 
 /** The four fixed compilation phases, in pipeline order. */
-export type CompileStage = 'interpret' | 'draft' | 'gate' | 'pin'
+export type BriefStage = 'interpret' | 'draft' | 'gate' | 'pin'
 
 /**
  * The machine-readable reasons a {@link BriefError} carries.
@@ -64,7 +64,7 @@ export type CompileStage = 'interpret' | 'draft' | 'gate' | 'pin'
  * `BLOCKED` mark it on the {@link Briefing} rather than throwing. Three codes also reach a
  * throw, from methods outside that containment — `INVALID` from `assertBrief`,
  * `snapshotBrief`, and `pinBrief`; `DESTROYED` from any method after
- * `destroy()`; and `GATE_FAILED` from `Compiler.gate` when a borrowed reasoner returns a
+ * `destroy()`; and `GATE_FAILED` from `BriefCompiler.gate` when a borrowed reasoner returns a
  * non-logical result.
  */
 export type BriefErrorCode =
@@ -267,7 +267,7 @@ export interface BriefInput {
  * `output` is absent exactly when `error` is present, which is what makes the phase
  * failure derivable rather than stored twice.
  */
-export interface InterpretRecord {
+export interface InterpretStageRecord {
 	readonly stage: 'interpret'
 	readonly input: string
 	readonly output?: Interpretation
@@ -275,7 +275,7 @@ export interface InterpretRecord {
 }
 
 /** The `draft` phase snapshot — the caller's input in, an unpinned `Brief` out. */
-export interface DraftRecord {
+export interface DraftStageRecord {
 	readonly stage: 'draft'
 	readonly input: BriefInput
 	readonly output?: Brief
@@ -283,7 +283,7 @@ export interface DraftRecord {
 }
 
 /** The `gate` phase snapshot — the readiness `Subject` in, the reasoner's verdict out. */
-export interface GateRecord {
+export interface GateStageRecord {
 	readonly stage: 'gate'
 	readonly input: Subject
 	readonly output?: LogicalResult
@@ -291,7 +291,7 @@ export interface GateRecord {
 }
 
 /** The `pin` phase snapshot — the drafted `Brief` in, the pinned `Brief` out. */
-export interface PinRecord {
+export interface PinStageRecord {
 	readonly stage: 'pin'
 	readonly input: Brief
 	readonly output?: Brief
@@ -305,11 +305,15 @@ export interface PinRecord {
  * Narrowing on `stage` types both payloads exactly, so a consumer reads a replay without
  * a type assertion. A phase failed exactly when `error` is present.
  */
-export type CompileRecord = InterpretRecord | DraftRecord | GateRecord | PinRecord
+export type BriefStageRecord =
+	| InterpretStageRecord
+	| DraftStageRecord
+	| GateStageRecord
+	| PinStageRecord
 
 /** A visible marker for a phase that failed. */
-export interface CompileFailure {
-	readonly stage: CompileStage
+export interface BriefStageFailure {
+	readonly stage: BriefStage
 	readonly code: BriefErrorCode
 	readonly message: string
 }
@@ -330,8 +334,8 @@ export interface Briefing {
 	readonly brief?: Brief
 	readonly questions: readonly Gap[]
 	readonly verdict?: LogicalResult
-	readonly stages: readonly CompileRecord[]
-	readonly failures: readonly CompileFailure[]
+	readonly stages: readonly BriefStageRecord[]
+	readonly failures: readonly BriefStageFailure[]
 	readonly complete: boolean
 	readonly digest: string
 }
@@ -359,8 +363,8 @@ export interface BriefRecord {
 	readonly hash: string
 }
 
-/** The `Compiler`'s push observation surface. */
-export type CompilerEventMap = {
+/** The `BriefCompiler`'s push observation surface. */
+export type BriefCompilerEventMap = {
 	compile: readonly [briefing: Briefing]
 	block: readonly [questions: readonly Gap[]]
 	error: readonly [error: unknown]
@@ -368,7 +372,7 @@ export type CompilerEventMap = {
 }
 
 /**
- * Input to `createCompiler`.
+ * Input to `createBriefCompiler`.
  *
  * @remarks
  * `interpret` and `reason` are BORROWED when supplied — the compiler destroys only
@@ -376,18 +380,18 @@ export type CompilerEventMap = {
  * strings onto the closed task vocabularies; an unmapped value drafts no task. The gate
  * is FIXED: readiness is this package's contract, not a caller setting.
  */
-export interface CompilerOptions {
+export interface BriefCompilerOptions {
 	readonly interpret?: InterpretInterface
 	readonly reason?: ReasonInterface
 	readonly actions?: Readonly<Record<string, TaskOperation>>
 	readonly domains?: Readonly<Record<string, TaskDomain>>
-	readonly on?: EmitterHooks<CompilerEventMap>
+	readonly on?: EmitterHooks<BriefCompilerEventMap>
 	readonly error?: EmitterErrorHandler
 }
 
 /** The compilation orchestrator contract. */
-export interface CompilerInterface {
-	readonly emitter: EmitterInterface<CompilerEventMap>
+export interface BriefCompilerInterface {
+	readonly emitter: EmitterInterface<BriefCompilerEventMap>
 	readonly interpret: InterpretInterface
 	readonly reason: ReasonInterface
 	compile(input: BriefInput): Briefing

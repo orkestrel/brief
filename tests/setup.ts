@@ -128,7 +128,7 @@ export function readErrorCode(error: unknown): BriefErrorCode | undefined {
  * `createLogicalReasoner`'s `evaluator` is `@orkestrel/reason`'s own published injection
  * point, so this drives the REAL reasoner over a permissive check oracle rather than
  * replacing any project-owned behaviour. It is the engine a caller could legitimately pass
- * through `CompilerOptions.reason`, and the reason readiness cannot be delegated to it.
+ * through `BriefCompilerOptions.reason`, and the reason readiness cannot be delegated to it.
  */
 export function buildPermissiveEvaluator(): EvaluatorInterface {
 	return {

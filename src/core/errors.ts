@@ -5,9 +5,9 @@ import type { BriefErrorCode } from './types.js'
  *
  * @remarks
  * Throws are reserved for caller misuse: `assertBrief`, `snapshotBrief`, and `pinBrief` on
- * off-contract data throw `INVALID`; any method after `destroy()` throws `DESTROYED`; and `Compiler.gate` throws
+ * off-contract data throw `INVALID`; any method after `destroy()` throws `DESTROYED`; and `BriefCompiler.gate` throws
  * `GATE_FAILED` when a borrowed reasoner returns a non-logical result. A stage that fails
- * inside `compile` is CONTAINED as a `CompileFailure` on the `Briefing` instead.
+ * inside `compile` is CONTAINED as a `BriefStageFailure` on the `Briefing` instead.
  *
  * @example
  * ```ts
@@ -43,7 +43,7 @@ export class BriefError extends Error {
  * import { BriefError, isBriefError } from '@orkestrel/brief'
  *
  * try {
- * 	throw new BriefError('DESTROYED', 'Compiler has been destroyed')
+ * 	throw new BriefError('DESTROYED', 'BriefCompiler has been destroyed')
  * } catch (error) {
  * 	if (isBriefError(error)) error.code // 'DESTROYED'
  * }

@@ -13,7 +13,7 @@ import {
 import {
 	AUTHORITY_ROLES,
 	CITATION_ROLES,
-	LINE_BREAK,
+	LINE_BREAK_PATTERN,
 	OUTPUT_FORMATS,
 	RISK_SEVERITIES,
 	TASK_DOMAINS,
@@ -50,7 +50,7 @@ import type {
  * prompt and `briefToDispatch`'s path sets could disagree about the same brief.
  */
 export const isText: Guard<string> = (value: unknown): value is string =>
-	isString(value) && !LINE_BREAK.test(value)
+	isString(value) && !LINE_BREAK_PATTERN.test(value)
 
 /** `true` when the value is a non-empty string holding no line terminator. */
 export const isLine: Guard<string> = andOf(isNonEmptyString, isText)

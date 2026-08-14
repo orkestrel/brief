@@ -15,14 +15,14 @@ import {
 	RISK_SEVERITIES,
 	TASK_DOMAINS,
 	TASK_OPERATIONS,
-	LINE_PATTERN,
+	SINGLE_LINE_PATTERN,
 } from './constants.js'
 
 /** A single-line string of any length, including empty. */
-export const textShape: StringShape = stringShape({ pattern: LINE_PATTERN })
+export const textShape: StringShape = stringShape({ pattern: SINGLE_LINE_PATTERN })
 
 /** A non-empty single-line string — the shape mirror of `isLine`. */
-export const lineShape: StringShape = stringShape({ min: 1, pattern: LINE_PATTERN })
+export const lineShape: StringShape = stringShape({ min: 1, pattern: SINGLE_LINE_PATTERN })
 
 /** The `Task` shape — closed operation and domain vocabularies plus a non-empty statement. */
 export const taskShape = objectShape(

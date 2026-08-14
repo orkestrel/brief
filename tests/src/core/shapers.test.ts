@@ -120,7 +120,7 @@ const PAIRS = [
 	},
 ]
 
-// The single-line contract is the property `LINE_BREAK` and `LINE_PATTERN` exist to hold in
+// The single-line contract is the property `LINE_BREAK_PATTERN` and `SINGLE_LINE_PATTERN` exist to hold in
 // lockstep, and no row above carries a line terminator — so the two derivations of that one
 // character class were proven by nothing. One value per terminator, on both mechanisms.
 const TERMINATORS: readonly string[] = ['\n', '\r', '\u2028', '\u2029']

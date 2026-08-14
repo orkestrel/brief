@@ -4,7 +4,7 @@ import {
 	briefToGoal,
 	briefToMarkdown,
 	createBriefManager,
-	createCompiler,
+	createBriefCompiler,
 	gap,
 	outcome,
 	output,
@@ -19,7 +19,7 @@ import { buildInterpret, buildManifest } from '../../setup.js'
 
 describe('text to brief to projections', () => {
 	it('carries one request from raw text through every downstream view', () => {
-		const compiler = createCompiler({
+		const compiler = createBriefCompiler({
 			interpret: buildInterpret('migrate', 'code', true),
 			actions: { migrate: 'migrate' },
 			domains: { code: 'code' },
@@ -67,7 +67,7 @@ describe('text to brief to projections', () => {
 
 describe('the blocked brief and its answer', () => {
 	it('refuses to emit, then emits once the blocking gap is answered', () => {
-		const compiler = createCompiler()
+		const compiler = createBriefCompiler()
 		const shared: BriefInput = {
 			task: task('refactor', 'code', 'Refactor the session store.'),
 			outcomes: [outcome(1, 'the store implements the async seam')],
@@ -93,7 +93,7 @@ describe('the blocked brief and its answer', () => {
 	})
 
 	it('keeps an open gap runnable and reports the missing assumption as a warning', () => {
-		const compiler = createCompiler()
+		const compiler = createBriefCompiler()
 		const shared: BriefInput = {
 			task: { operation: 'plan', domain: 'ops', statement: 'Plan the release.' },
 			outcomes: [outcome(1, 'the plan lands')],

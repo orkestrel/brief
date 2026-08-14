@@ -205,7 +205,7 @@ describe.each(MANIFEST)('$concept', (entry) => {
 		expect(options.length).toBeGreaterThan(0)
 
 		// Scoped to the OWNING file, not the whole tree. Searching every source at once let
-		// `BriefManagerOptions.on` be satisfied by `Compiler`'s own `options.on`, so a member
+		// `BriefManagerOptions.on` be satisfied by `BriefCompiler`'s own `options.on`, so a member
 		// could go dead in one class while its namesake stayed live in the other.
 		// Coverage: this proves each member is read off an options parameter IN ITS OWNER, not
 		// that the value read is honoured.

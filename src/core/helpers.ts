@@ -4,7 +4,7 @@ import type { LogicalDefinition, ReasonValidationResult, Rule, Subject } from '@
 import { atom, compound, formatField, logicalDefinition, rule } from '@orkestrel/reason'
 import { snapshotBrief } from './cloners.js'
 import { BriefError } from './errors.js'
-import { DEFAULT_BRIEF_TURNS, GATE_ID, LINE_BREAK } from './constants.js'
+import { DEFAULT_BRIEF_TURNS, GATE_ID, LINE_BREAK_PATTERN } from './constants.js'
 import type {
 	Authority,
 	AuthorityRole,
@@ -374,7 +374,7 @@ export function gateDefinition(): LogicalDefinition {
  *
  * @remarks
  * The gate's decision, in code. `gateDefinition()` states the same five rules as data for a
- * reasoner to narrate, and a narration is not a decision: `CompilerOptions.reason` lets a
+ * reasoner to narrate, and a narration is not a decision: `BriefCompilerOptions.reason` lets a
  * caller supply the engine, and an engine that answers "met" to everything would otherwise
  * emit a brief with no proofs. `compile` refuses on THIS and keeps the verdict for its
  * trace, so a supplied engine can add detail and never remove a refusal.
@@ -387,10 +387,10 @@ export function gateDefinition(): LogicalDefinition {
  *
  * @example
  * ```ts
- * import { brief, findUnready, outcome, proof, task } from '@orkestrel/brief'
+ * import { brief, findUnmetRules, outcome, proof, task } from '@orkestrel/brief'
  *
- * findUnready(brief(task('plan', 'ops', 'Plan the release.'))) // ['aimed', 'proven']
- * findUnready(
+ * findUnmetRules(brief(task('plan', 'ops', 'Plan the release.'))) // ['aimed', 'proven']
+ * findUnmetRules(
  * 	brief(task('plan', 'ops', 'Plan the release.'), {
  * 		outcomes: [outcome(1, 'shipped')],
  * 		proofs: [proof('x', 'npm test')],
@@ -398,7 +398,7 @@ export function gateDefinition(): LogicalDefinition {
  * ) // []
  * ```
  */
-export function findUnready(source: Brief): readonly string[] {
+export function findUnmetRules(source: Brief): readonly string[] {
 	const unready: string[] = []
 	if (findBlockingGaps(source).length !== 0) unready.push('specified')
 	if (
@@ -476,11 +476,11 @@ export function findBlockingGaps(source: Brief): readonly Gap[] {
  *
  * const draft = brief(task('debug', 'code', 'Fix the leak.'), {
  * 	manifest: manifest({
- * 		edit: [reference('src/core/Compiler.ts', 'implementation')],
- * 		locked: [reference('src/core/Compiler.ts', 'contract')],
+ * 		edit: [reference('src/core/BriefCompiler.ts', 'implementation')],
+ * 		locked: [reference('src/core/BriefCompiler.ts', 'contract')],
  * 	}),
  * })
- * findManifestOverlaps(draft) // ['src/core/Compiler.ts']
+ * findManifestOverlaps(draft) // ['src/core/BriefCompiler.ts']
  * ```
  */
 export function findManifestOverlaps(source: Brief): readonly string[] {
@@ -777,8 +777,14 @@ export function pinBrief(source: Brief): Brief {
  */
 export function exampleToLines(entry: Example): readonly string[] {
 	const note = entry.note === undefined ? '' : ` (${entry.note})`
-	const runs = Math.max(longestRun(entry.input), longestRun(entry.output))
-	if (!LINE_BREAK.test(entry.input) && !LINE_BREAK.test(entry.output)) {
+	// The longest unbroken backtick run across both sides, so the delimiter can outrun it.
+	let runs = 0
+	let current = 0
+	for (const character of `${entry.input} ${entry.output}`) {
+		current = character === '`' ? current + 1 : 0
+		if (current > runs) runs = current
+	}
+	if (!LINE_BREAK_PATTERN.test(entry.input) && !LINE_BREAK_PATTERN.test(entry.output)) {
 		// The inline delimiter outruns the content too. A fixed single backtick is closed by an
 		// exemplar containing one, which puts the rest of the value outside the code span.
 		// CommonMark strips one leading and trailing space, so a padded span survives content
@@ -797,37 +803,13 @@ export function exampleToLines(entry: Example): readonly string[] {
 		`- exemplar${note}`,
 		'',
 		`  ${fence}text`,
-		...entry.input.split(LINE_BREAK).map((line) => `  ${line}`),
+		...entry.input.split(LINE_BREAK_PATTERN).map((line) => `  ${line}`),
 		`  ${fence}`,
 		'',
 		`  ${fence}text`,
-		...entry.output.split(LINE_BREAK).map((line) => `  ${line}`),
+		...entry.output.split(LINE_BREAK_PATTERN).map((line) => `  ${line}`),
 		`  ${fence}`,
 	]
-}
-
-/**
- * The length of the longest unbroken backtick run in a string.
- *
- * @param text - The text to measure.
- * @returns The run length; `0` when the text holds no backtick.
- *
- * @example
- * ```ts
- * import { longestRun } from '@orkestrel/brief'
- *
- * longestRun('a ``` b') // 3
- * longestRun('plain') // 0
- * ```
- */
-export function longestRun(text: string): number {
-	let longest = 0
-	let current = 0
-	for (const character of text) {
-		current = character === '`' ? current + 1 : 0
-		if (current > longest) longest = current
-	}
-	return longest
 }
 
 /**

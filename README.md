@@ -14,7 +14,7 @@ npm install @orkestrel/brief
 
 ```ts
 import {
-	createCompiler,
+	createBriefCompiler,
 	briefToGoal,
 	briefToMarkdown,
 	outcome,
@@ -22,7 +22,7 @@ import {
 	task,
 } from '@orkestrel/brief'
 
-const compiler = createCompiler()
+const compiler = createBriefCompiler()
 const briefing = compiler.compile({
 	task: task('refactor', 'code', 'Refactor useForm to native browser form APIs.'),
 	outcomes: [outcome(1, 'useForm uses native FormData with no behavior change')],

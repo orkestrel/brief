@@ -20,7 +20,7 @@ import {
 	findBlockingGaps,
 	findManifestOverlaps,
 	findUnpairedGaps,
-	findUnready,
+	findUnmetRules,
 	gap,
 	gateDefinition,
 	given,
@@ -187,8 +187,8 @@ describe('gateDefinition', () => {
 		engine.destroy()
 	})
 
-	it('agrees with findUnready on every readiness case', () => {
-		// The gate states readiness as DATA for a reasoner to narrate; `findUnready` decides it
+	it('agrees with findUnmetRules on every readiness case', () => {
+		// The gate states readiness as DATA for a reasoner to narrate; `findUnmetRules` decides it
 		// in CODE because the reasoner is borrowed. Two mechanisms over one property, driven
 		// here over one value set so they cannot drift apart.
 		const engine = createReason({ reasoners: [createLogicalReasoner()] })
@@ -200,8 +200,8 @@ describe('gateDefinition', () => {
 			buildBrief({ gaps: [gap('output', 'Diff or files?', { blocking: true })] }),
 			buildBrief({
 				manifest: manifest({
-					edit: [reference('src/core/Compiler.ts', 'implementation')],
-					locked: [reference('src/core/Compiler.ts', 'contract')],
+					edit: [reference('src/core/BriefCompiler.ts', 'implementation')],
+					locked: [reference('src/core/BriefCompiler.ts', 'contract')],
 				}),
 			}),
 			brief(task('plan', 'ops', 'Do one thing. Then another.'), {
@@ -220,11 +220,14 @@ describe('gateDefinition', () => {
 							.filter((entry) => !entry.conclusion && entry.id !== 'ready')
 							.map((entry) => entry.id)
 					: []
-			expect([...findUnready(source)].sort()).toStrictEqual([...refused].sort())
+			expect([...findUnmetRules(source)].sort()).toStrictEqual([...refused].sort())
 		}
 		// The control: the comparison can report a difference, so it is not vacuously true.
-		expect(findUnready(buildBrief())).toStrictEqual([])
-		expect(findUnready(buildBrief({ proofs: [], outcomes: [] }))).toStrictEqual(['aimed', 'proven'])
+		expect(findUnmetRules(buildBrief())).toStrictEqual([])
+		expect(findUnmetRules(buildBrief({ proofs: [], outcomes: [] }))).toStrictEqual([
+			'aimed',
+			'proven',
+		])
 		engine.destroy()
 	})
 
@@ -248,8 +251,8 @@ describe('gateDefinition', () => {
 			}),
 			buildBrief({
 				manifest: manifest({
-					edit: [reference('src/core/Compiler.ts', 'implementation')],
-					locked: [reference('src/core/Compiler.ts', 'contract')],
+					edit: [reference('src/core/BriefCompiler.ts', 'implementation')],
+					locked: [reference('src/core/BriefCompiler.ts', 'contract')],
 				}),
 			}),
 		]
