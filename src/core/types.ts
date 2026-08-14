@@ -57,7 +57,8 @@ export type BriefStage = 'interpret' | 'draft' | 'gate' | 'pin'
  * throw, from methods outside that containment — `INVALID` from `assertBrief`,
  * `snapshotBrief`, and `pinBrief`; `DESTROYED` from any method after
  * `destroy()`; and `GATE_FAILED` from `BriefCompiler.gate` when a borrowed reasoner returns a
- * non-logical result.
+ * non-logical result OR throws its own error, which is translated rather than leaked so that
+ * every throw out of this module stays a `BriefError` an `isBriefError` catch can narrow.
  */
 export type BriefErrorCode =
 	| 'INTERPRET_FAILED'
@@ -222,7 +223,14 @@ export interface Proof {
  * The closed execution contract — a rough request with every implicit decision resolved.
  *
  * @remarks
- * `trace` and `hash` are DERIVED by `pinBrief`, never authored.
+ * `trace` and `hash` are DERIVED by `pinBrief`. The `brief` builder cannot set them, so
+ * nothing this package produces authors them.
+ *
+ * They are still SHAPE-checked rather than verified on the way in: `isBrief` and `parseBrief`
+ * accept any single-line string, because that is what lets a pinned brief round-trip through
+ * JSON and back. So an inbound brief's `hash` is not proof of its content — re-derive it with
+ * `briefToHash` if the source is untrusted. `BriefManager` does exactly that, and refuses a
+ * record whose stored hash contradicts its content.
  */
 export interface Brief {
 	readonly task: Task
@@ -247,8 +255,14 @@ export interface Brief {
  * One `compile()` input.
  *
  * @remarks
- * `text` selects the interpret stage; without it the pipeline skips straight to drafting.
- * Every other key is a caller-authored section merged OVER whatever the draft derived.
+ * THREE classes of input, not two. `text` selects the interpret stage. `interpretation`
+ * supplies that stage's result directly: with no `text` it drives `deriveTask`,
+ * `deriveGivens`, and `deriveGaps` without running the language pipeline at all, and with
+ * `text` present it is also the FALLBACK the draft uses when the interpret engine throws.
+ * Every remaining key is a caller-authored section merged OVER whatever the draft derived.
+ *
+ * Supplying both `text` and `interpretation` is therefore meaningful: the engine's result
+ * wins when it succeeds, and the supplied one carries the compile when it does not.
  */
 export interface BriefInput {
 	readonly text?: string
@@ -339,6 +353,12 @@ export interface BriefStageFailure {
  * path, and `interpretation.text` on the interpret path, so storing it here would be one
  * fact in two places. `interpretation` and `verdict` are the originating packages' own
  * types — import them from `@orkestrel/interpret` and `@orkestrel/reason`.
+ *
+ * `digest` identifies this OUTCOME — the brief, the questions, and the failures together — so
+ * two identical compiles share it and a refused compile has one just as a complete one does.
+ * It is not `Brief.hash`, which identifies the brief's content alone and exists only on an
+ * emitted brief. Key a cache of compile results by `digest`; key a registry of briefs by
+ * `hash`.
  */
 export interface Briefing {
 	readonly interpretation?: Interpretation

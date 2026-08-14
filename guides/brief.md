@@ -75,9 +75,11 @@ compiler.destroy()
 
 `compile()` is genuinely SYNCHRONOUS and runs the fixed four-stage pipeline
 `[interpret, draft, gate, pin]`. Blocking gaps, a refused gate, and a thrown stage all
-yield a visible INCOMPLETE `Briefing` — `brief` absent, `questions` populated — rather than
-a throw. The `interpret` stage is skipped entirely when the input carries no `text`, so a
-fully caller-authored `BriefInput` drafts, gates, and pins without touching the language
+yield a visible INCOMPLETE `Briefing` — `brief` absent and the cause recorded on `failures` —
+rather than a throw. `questions` carries the gaps when a BLOCKING GAP is the cause and is
+empty otherwise, so `brief !== undefined` is the completeness test rather than
+`questions.length`. The `interpret` stage is skipped entirely when the input carries no `text`,
+so a fully caller-authored `BriefInput` drafts, gates, and pins without touching the language
 pipeline at all.
 
 ### Types
@@ -138,6 +140,7 @@ check, met or missed, narrated by the reasoner.
 | `GATE_ID`             | const | `'gate'` — the id of the `gateDefinition()` logical definition.                                       |
 | `LINE_BREAK_PATTERN`  | const | The four ECMAScript line terminators a brief field refuses; unanchored and flagless-`g`.              |
 | `SINGLE_LINE_PATTERN` | const | The positive form of `LINE_BREAK_PATTERN`, for `stringShape`'s `pattern` — one class, two mechanisms. |
+| `BLANK_PATTERN`       | const | Empty or all spaces — the one exemplar side `exampleToLines` must not pad.                            |
 
 ```ts
 import {

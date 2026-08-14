@@ -6,6 +6,7 @@ import {
 	createBriefManager,
 	isBriefError,
 	outcome,
+	parseBrief,
 	pinBrief,
 	proof,
 	task,
@@ -237,6 +238,22 @@ describe('BriefManager remove', () => {
 		registry.add(buildBrief(), { id: 'a' })
 		expect(registry.remove(['a', 'absent'])).toBe(false)
 		expect(registry.has('a')).toBe(false)
+		registry.destroy()
+	})
+
+	it('refuses a brief whose own hash does not describe it', () => {
+		// `isBrief` shape-checks `hash` rather than verifying it, which is what lets a pinned
+		// brief round-trip through JSON. So a forged pair has to be caught at the identity
+		// boundary, or the manager stores it and a projection hands the executor a prompt
+		// carrying a hash that describes nothing.
+		const forged = parseBrief(JSON.stringify({ ...pinBrief(buildBrief()), hash: 'deadbeef' }))
+		expect(forged).toBeDefined()
+		const registry = createBriefManager()
+		const failure = captureError(() => registry.add(requireValue(forged, 'the forged brief')))
+		expect(readErrorCode(failure)).toBe('INVALID')
+		expect(registry.size).toBe(0)
+		// The control: the same brief with its real hash is accepted.
+		expect(registry.add(pinBrief(buildBrief())).version).toBe(1)
 		registry.destroy()
 	})
 

@@ -427,6 +427,39 @@ describe('BriefCompiler fail-closed paths', () => {
 		compiler.destroy()
 	})
 
+	it('owns the verdict it records, rather than aliasing the borrowed engine', () => {
+		// The verdict comes from a BORROWED engine, and nothing in `ReasonInterface` promises a
+		// fresh object per call. An engine pooling one mutable result rewrote the verdict of a
+		// briefing already returned, so the recorded value is cloned and sealed like the draft
+		// input — a `Briefing` is documented as replayable.
+		const compiler = createBriefCompiler()
+		const briefing = compiler.compile(buildReadyInput())
+		expect(briefing.verdict).toBeDefined()
+		expect(Object.isFrozen(briefing.verdict)).toBe(true)
+		expect(Object.isFrozen(briefing.verdict?.rules)).toBe(true)
+		expect(Object.isFrozen(briefing.verdict?.rules[0])).toBe(true)
+		const recorded = briefing.stages.find((entry) => entry.stage === 'gate')
+		expect(Object.isFrozen(recorded?.stage === 'gate' ? recorded.output : undefined)).toBe(true)
+		compiler.destroy()
+	})
+
+	it('translates a borrowed reasoner throwing into a BriefError', () => {
+		// Guide clause 7: every throw out of this module is a `BriefError` an `isBriefError`
+		// catch narrows. A borrowed engine the caller already destroyed throws its OWN error,
+		// which leaked straight through `gate`.
+		const borrowed = createReason({ reasoners: [createLogicalReasoner()] })
+		const compiler = createBriefCompiler({ reason: borrowed })
+		borrowed.destroy()
+		const failure = captureError(() => compiler.gate(buildBrief()))
+		expect(isBriefError(failure)).toBe(true)
+		expect(readErrorCode(failure)).toBe('GATE_FAILED')
+		// And `compile` still contains it rather than throwing.
+		const briefing = compiler.compile(buildReadyInput())
+		expect(briefing.brief).toBeUndefined()
+		expect(briefing.failures[0]?.code).toBe('GATE_FAILED')
+		compiler.destroy()
+	})
+
 	it('contains an interpret failure and still compiles from the caller-authored task', () => {
 		// The one contained stage code with no coverage. `@orkestrel/interpret` contains its own
 		// stage failures, so this needs a foreign engine — which is exactly what

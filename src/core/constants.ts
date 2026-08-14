@@ -73,3 +73,13 @@ export const LINE_BREAK_PATTERN = /\r\n|[\n\r\u2028\u2029]/
  * keeps the hand-composed guards and the compiled shapes refusing the same strings.
  */
 export const SINGLE_LINE_PATTERN = /^[^\n\r\u2028\u2029]*$/
+
+/**
+ * A string that is empty or entirely spaces.
+ *
+ * @remarks
+ * The one exemplar side `exampleToLines` must NOT pad. CommonMark strips a fully-blank code
+ * span to nothing rather than one space from each end, so padding inflates an all-space value
+ * while every other value needs the pad to keep its own boundary spaces.
+ */
+export const BLANK_PATTERN = /^ *$/

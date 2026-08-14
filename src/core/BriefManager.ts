@@ -131,6 +131,16 @@ export class BriefManager implements BriefManagerInterface {
 		// later push change content this hash already described.
 		const owned = snapshotBrief(source)
 		const hash = briefToHash(owned)
+		// An inbound brief's own `hash` is shape-checked, not verified — that is what lets a
+		// pinned brief round-trip through JSON. So a record arriving with a hash that
+		// contradicts its content is refused HERE, at the identity boundary, rather than
+		// stored and later projected into an executor's prompt as if it were pinned.
+		if (owned.hash !== undefined && owned.hash !== hash) {
+			throw new BriefError('INVALID', 'Brief carries a hash that does not describe it', {
+				field: 'hash',
+				hash: owned.hash,
+			})
+		}
 		const id = options?.id ?? hash
 		const previous = against.get(id)
 		return Object.freeze({

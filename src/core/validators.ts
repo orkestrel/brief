@@ -7,6 +7,8 @@ import {
 	isBoolean,
 	isInteger,
 	isNonEmptyString,
+	isNumber,
+	isRecord,
 	isString,
 	literalOf,
 	recordOf,
@@ -70,12 +72,12 @@ export const isRiskSeverity: Guard<RiskSeverity> = literalOf(RISK_SEVERITIES)
  * `@orkestrel/reason` publishes the type but no guard for it, and `BriefCompiler` reads these
  * off a BORROWED engine's return value, so the shape has to be checked rather than trusted.
  */
-export const isRuleVerdict: Guard<RuleResult> = recordOf({
-	id: isNonEmptyString,
-	applied: isBoolean,
-	premises: arrayOf(isBoolean),
-	conclusion: isBoolean,
-})
+export const isRuleVerdict: Guard<RuleResult> = (value: unknown): value is RuleResult =>
+	isRecord(value) &&
+	isNonEmptyString(value['id']) &&
+	isBoolean(value['applied']) &&
+	arrayOf(isBoolean)(value['premises']) &&
+	isBoolean(value['conclusion'])
 
 /**
  * `true` when the value is a well-formed reasons `LogicalResult`.
@@ -89,16 +91,26 @@ export const isRuleVerdict: Guard<RuleResult> = recordOf({
  *
  * Checks the WHOLE published shape rather than only the three members read today, because a
  * guard that narrows to `LogicalResult` while ignoring four of its members is unsound.
+ *
+ * OPEN on unknown keys, deliberately. The exact-record combinator this file uses elsewhere
+ * refuses a value a FOREIGN interface permits: `LogicalResult` is a TypeScript interface,
+ * so a conforming reasoner returning a richer result is still returning a `LogicalResult`. An
+ * exact check refused it and failed the gate closed on a valid engine — trading a loud crash
+ * for a wrong refusal, which is the worse of the two. Exactness belongs on records this
+ * package OWNS, where an extra key means the caller misunderstood the contract.
+ *
+ * `count` is checked as a number rather than an integer for the same reason: the published
+ * type says `number`, and narrowing past a foreign contract is the same mistake.
  */
-export const isLogicalVerdict: Guard<LogicalResult> = recordOf({
-	reasoning: literalOf(['logical']),
-	conclusion: isBoolean,
-	rules: arrayOf(isRuleVerdict),
-	count: isInteger,
-	success: isBoolean,
-	trace: arrayOf(isString),
-	errors: arrayOf(isString),
-})
+export const isLogicalVerdict: Guard<LogicalResult> = (value: unknown): value is LogicalResult =>
+	isRecord(value) &&
+	value['reasoning'] === 'logical' &&
+	isBoolean(value['conclusion']) &&
+	arrayOf(isRuleVerdict)(value['rules']) &&
+	isNumber(value['count']) &&
+	isBoolean(value['success']) &&
+	arrayOf(isString)(value['trace']) &&
+	arrayOf(isString)(value['errors'])
 
 /** `true` when the value is a well-formed `Task` — both vocabularies closed, statement one line. */
 export const isTask: Guard<Task> = recordOf({

@@ -219,8 +219,20 @@ describe('isLogicalVerdict', () => {
 		// Narrowing to `LogicalResult` while ignoring four of its members would be unsound, so
 		// every published member is checked — not only the three read today.
 		expect(isLogicalVerdict({ ...sound, trace: undefined })).toBe(false)
-		expect(isLogicalVerdict({ ...sound, count: 1.5 })).toBe(false)
 		expect(isLogicalVerdict({ ...sound, rules: [{ id: 'x' }] })).toBe(false)
+	})
+
+	it('accepts a richer result, because the foreign interface permits one', () => {
+		// An EXACT guard over a foreign interface refuses what that interface allows. A
+		// conforming reasoner returning extra members is still returning a `LogicalResult`, and
+		// refusing it failed the gate closed on a valid engine — a wrong refusal in place of a
+		// loud crash, which is worse. Exactness belongs on records this package owns.
+		expect(isLogicalVerdict({ ...sound, elapsed: 12 })).toBe(true)
+		expect(isRuleVerdict({ ...sound.rules[0], weight: 0.5 })).toBe(true)
+		// `count` follows the published type, which is `number` — not `integer`.
+		expect(isLogicalVerdict({ ...sound, count: 1.5 })).toBe(true)
+		// The control: an extra member does not excuse a missing or wrong one.
+		expect(isLogicalVerdict({ ...sound, elapsed: 12, conclusion: 'yes' })).toBe(false)
 	})
 
 	it('is total for adversarial input', () => {

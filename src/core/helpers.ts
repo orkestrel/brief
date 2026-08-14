@@ -5,7 +5,7 @@ import type { LogicalDefinition, ReasonValidationResult, Rule, Subject } from '@
 import { atom, compound, formatField, logicalDefinition, rule } from '@orkestrel/reason'
 import { snapshotBrief } from './cloners.js'
 import { BriefError } from './errors.js'
-import { DEFAULT_BRIEF_TURNS, GATE_ID, LINE_BREAK_PATTERN } from './constants.js'
+import { BLANK_PATTERN, DEFAULT_BRIEF_TURNS, GATE_ID, LINE_BREAK_PATTERN } from './constants.js'
 import type {
 	Brief,
 	Citation,
@@ -275,7 +275,10 @@ export function proof(text: string, command: string): Proof {
  * })
  * ```
  */
-export function brief(subject: Task, overrides?: Partial<Omit<Brief, 'task'>>): Brief {
+export function brief(
+	subject: Task,
+	overrides?: Partial<Omit<Brief, 'task' | 'trace' | 'hash'>>,
+): Brief {
 	return {
 		task: subject,
 		authority: overrides?.authority ?? [],
@@ -291,8 +294,6 @@ export function brief(subject: Task, overrides?: Partial<Omit<Brief, 'task'>>): 
 		risks: overrides?.risks ?? [],
 		output: overrides?.output ?? output('markdown'),
 		proofs: overrides?.proofs ?? [],
-		...(overrides?.trace === undefined ? {} : { trace: overrides.trace }),
-		...(overrides?.hash === undefined ? {} : { hash: overrides.hash }),
 	}
 }
 
@@ -421,7 +422,12 @@ export function countSentences(statement: string): number {
 	const text = collapseWhitespace(statement)
 	if (text.length === 0) return 0
 	const matches = text.match(/[.!?]+(?=\s|$)/gu)
-	return matches === null ? 1 : matches.length
+	if (matches === null) return 1
+	// A trailing run with no terminator is a sentence too. Counting terminators alone made
+	// "Do one thing. Then another" read as ONE, so a genuinely compound statement passed the
+	// `single` gate rule whenever its last sentence was unterminated — which is most of the
+	// time, because people drop the final period.
+	return /[.!?]$/u.test(text) ? matches.length : matches.length + 1
 }
 
 /**
@@ -726,6 +732,11 @@ export function briefToContent(source: Brief): string {
  * Cycles terminate: `structuredClone` preserves them, so a naive walk would not return.
  * Delegates each branch to `freezeBranch` with the shared visited set.
  *
+ * Reaches PLAIN objects and arrays, which is the whole of a `Brief` — it is JSON-serializable
+ * by contract. A `Map`, `Set`, or typed array is frozen as an object and its CONTENTS are left
+ * writable, and `Object.isFrozen` reports `true` for it either way. Nothing this package
+ * produces contains one; a caller freezing their own value should know the limit.
+ *
  * @param value - The value to freeze in place; returned for convenience.
  * @returns The same value, now deeply frozen.
  *
@@ -878,7 +889,7 @@ export function pinBrief(source: Brief): Brief {
  * ```ts
  * import { example, exampleToLines } from '@orkestrel/brief'
  *
- * exampleToLines(example('<input required>', 'el.validity')) // ['- `<input required>` → `el.validity`']
+ * exampleToLines(example('<input required>', 'el.validity')) // ['- ` <input required> ` → ` el.validity `']
  * ```
  */
 export function exampleToLines(entry: Example): readonly string[] {
@@ -896,15 +907,19 @@ export function exampleToLines(entry: Example): readonly string[] {
 		// CommonMark strips one leading and trailing space, so a padded span survives content
 		// that begins or ends with a backtick.
 		//
-		// ALWAYS padded, not only when the content carries a backtick. CommonMark strips exactly
-		// one space from each end of a code span, so padding is lossless — while withholding it
-		// deleted an exemplar's own boundary spaces, silently changing the value the executor
-		// reads. An all-spaces side is the one value no padding can preserve; it renders empty,
-		// and no fence choice fixes that.
+		// Padded, because CommonMark strips exactly one space from each end of a code span, so a
+		// padded span returns the exemplar's own boundary spaces — withholding the pad deleted
+		// them and silently changed the value the executor reads.
+		//
+		// The one exception is a side that is ENTIRELY spaces: CommonMark strips a fully-blank
+		// span to nothing rather than one space from each end, so padding inflates it while
+		// withholding the pad renders it exactly. Decided per side, since one side being blank
+		// says nothing about the other.
 		const tick = '`'.repeat(runs + 1)
-		const pad = ' '
+		const inputPad = BLANK_PATTERN.test(entry.input) ? '' : ' '
+		const outputPad = BLANK_PATTERN.test(entry.output) ? '' : ' '
 		return [
-			`- ${tick}${pad}${entry.input}${pad}${tick} → ${tick}${pad}${entry.output}${pad}${tick}${note}`,
+			`- ${tick}${inputPad}${entry.input}${inputPad}${tick} → ${tick}${outputPad}${entry.output}${outputPad}${tick}${note}`,
 		]
 	}
 	// The fence must outrun the content. A fixed three-backtick fence is closed by an

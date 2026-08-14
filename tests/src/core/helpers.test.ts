@@ -282,6 +282,27 @@ describe('countSentences', () => {
 		expect(countSentences('   ')).toBe(0)
 		expect(countSentences('')).toBe(0)
 	})
+
+	it('counts an unterminated final sentence, so a compound statement cannot slip the gate', () => {
+		// Counting terminators alone read this as ONE sentence, so the `single` rule passed a
+		// genuinely compound statement whenever its last sentence had no terminator — which is
+		// most of the time, because people drop the final period.
+		expect(countSentences('Do one thing. Then another')).toBe(2)
+		expect(countSentences('Refactor useForm. Then update the tests')).toBe(2)
+		expect(countSentences('Is it done? Yes')).toBe(2)
+		// And the gate refuses it, which is the property that actually matters.
+		const compound = brief(task('plan', 'ops', 'Do one thing. Then another'), {
+			outcomes: [outcome(1, 'x')],
+			proofs: [proof('x', 'npm test')],
+		})
+		expect(findUnmetRules(compound)).toContain('single')
+		expect(validateBrief(compound).errors).toContain(
+			'Statement holds 2 sentences — a compound statement is two briefs',
+		)
+		// The control: one unterminated sentence is still one, and passes.
+		expect(countSentences('Refactor useForm')).toBe(1)
+		expect(findUnmetRules(buildBrief())).toStrictEqual([])
+	})
 })
 
 describe('find leaves', () => {
@@ -690,6 +711,16 @@ describe('briefToMarkdown', () => {
 		expect(row).toBe('- `  leading and trailing  ` → `  out  `')
 		// The control: a value with no boundary space renders with exactly one pad each side.
 		expect(exampleToLines(example('tight', 'out'))[0]).toBe('- ` tight ` → ` out `')
+	})
+
+	it('leaves an all-space exemplar side unpadded, decided per side', () => {
+		// CommonMark strips a fully-blank span to nothing rather than one space from each end,
+		// so padding INFLATES an all-space value while every other value needs the pad. One
+		// side being blank says nothing about the other, so the choice is made per side.
+		expect(exampleToLines(example('  ', 'out'))[0]).toBe('- `  ` → ` out `')
+		expect(exampleToLines(example('in', ' '))[0]).toBe('- ` in ` → ` `')
+		// The control: neither side blank, both padded.
+		expect(exampleToLines(example('in', 'out'))[0]).toBe('- ` in ` → ` out `')
 	})
 
 	it('renders a CRLF exemplar losslessly, without inventing a blank line', () => {

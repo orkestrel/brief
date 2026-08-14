@@ -138,7 +138,13 @@ export class BriefCompiler implements BriefCompilerInterface {
 
 		const questions = findBlockingGaps(draft)
 		const subject = Object.freeze(briefToSubject(draft))
-		const ruled = attempt(() => this.gate(draft))
+		// The verdict is OWNED before it is recorded, for the reason the draft input is. It comes
+		// from a borrowed engine, and nothing in `ReasonInterface` promises a fresh object per
+		// call — an engine pooling one mutable result rewrote the verdict of a briefing already
+		// returned. Cloning breaks the alias; freezing alone would only have sealed the engine's
+		// own object. Contained, because a verdict carrying something unclonable is the engine's
+		// fault and must not throw out of `compile`.
+		const ruled = attempt(() => this.#own(this.gate(draft)))
 		if (ruled.success) {
 			stages.push(Object.freeze({ stage: 'gate', input: subject, output: ruled.value }))
 		} else {
@@ -186,7 +192,18 @@ export class BriefCompiler implements BriefCompilerInterface {
 
 	gate(source: Brief): LogicalResult {
 		this.#refuseDestroyed()
-		const verdict = this.#reason.reason(briefToSubject(source), gateDefinition())
+		// The reasoner is BORROWED, so it can throw its own foreign error — a `ReasonError` from
+		// an engine the caller already destroyed, for one. Every throw out of this module is a
+		// `BriefError` that `isBriefError` narrows, so a foreign throw is translated rather than
+		// leaked.
+		const ruled = attempt(() => this.#reason.reason(briefToSubject(source), gateDefinition()))
+		if (!ruled.success) {
+			throw new BriefError('GATE_FAILED', errorToMessage(ruled.error), {
+				stage: 'gate',
+				field: 'reason',
+			})
+		}
+		const verdict = ruled.value
 		// Guard the WHOLE value, not one field. The reasoner is borrowed, so its return is
 		// foreign data however well-typed the interface is: reading `.reasoning` off `undefined`
 		// threw a raw TypeError where the contract promises `GATE_FAILED`, and a result that
@@ -220,6 +237,13 @@ export class BriefCompiler implements BriefCompilerInterface {
 		return freezeDeep(structuredClone(input))
 	}
 
+	// The same ownership boundary for a value a BORROWED engine returned. `Briefing` is
+	// documented as replayable, and a foreign engine's object is neither ours nor stable — it
+	// may be pooled, mutated later, or handed to another caller.
+	#own<TValue>(value: TValue): TValue {
+		return freezeDeep(structuredClone(value))
+	}
+
 	// The interpret stage. Skipped entirely when the input carries no text, in which case
 	// a caller-supplied interpretation still reaches the draft.
 	#read(
@@ -229,7 +253,9 @@ export class BriefCompiler implements BriefCompilerInterface {
 	): Interpretation | undefined {
 		const text = input.text
 		if (text === undefined) return input.interpretation
-		const read = attempt(() => this.#interpret.interpret(text))
+		// Owned for the same reason the verdict is: the engine is borrowed and its
+		// `Interpretation` is foreign data the briefing then carries as a replay.
+		const read = attempt(() => this.#own(this.#interpret.interpret(text)))
 		if (read.success) {
 			stages.push(Object.freeze({ stage: 'interpret', input: text, output: read.value }))
 			return read.value
