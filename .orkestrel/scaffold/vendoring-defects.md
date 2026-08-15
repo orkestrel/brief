@@ -104,11 +104,6 @@ Defect 3's fix is kept alongside defect 1's: the vendored copy carries the full 
 omits the three `settings.local.json` deny lines, so an agent can still write that file where a
 target genuinely needs to override the fleet default.
 
-All four reach this checkout only on the next `@orkestrel/scaffold` release plus `repair`.
-
-## The drift standing in this checkout
-
-`npx scaffold audit` still reports `.claude/settings.json` drifted here, and no hand migration is
-needed any more: this checkout's copy is now what scaffold vendors, minus the three deny lines
-scaffold dropped and the allow entries scaffold added. Re-pinning a release carrying those commits
-and running `repair` closes the drift by overwriting this file with the canonical one.
+**All four ARRIVED** in this checkout: `@orkestrel/scaffold@0.0.35` re-pinned at `5a7a25e`,
+`repair` run, `scaffold audit` reporting 0 of 111 drifted. The `.claude/settings.json` drift this
+file was raised about is closed — the canonical vendored copy is the comprehensive one.

@@ -4,9 +4,9 @@ Fifteen refinements to the vendored instruction set, reconciled from two blind a
 (Opus 5 subjective, GPT-5.6 Sol objective) run on one identical brief. Convergent findings are
 marked; divergences carry the ruling and its reason.
 
-**Status: LANDED** in `scaffold` at `ad2136a`. Every refinement below is applied in that
-repository's host inventory and reaches `dist/host`. It arrives here on the next
-`@orkestrel/scaffold` release plus `repair`; until then this checkout still runs the old canon.
+**Status: LANDED and ARRIVED.** Landed in `scaffold` at `ad2136a`, published as
+`@orkestrel/scaffold@0.0.35`, re-pinned here at `5a7a25e` with `repair` run and `scaffold audit`
+reporting 0 of 111 drifted. This checkout runs the new canon.
 
 One item was recorded rather than taken — see `vendoring-defects.md` defect 1, which is a design
 decision about what `settings.json` should vendor.
