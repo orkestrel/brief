@@ -5,14 +5,14 @@ Verifier run at scaffold `8f1cd49`; final tree `8e5145f` (merge of the superviso
 
 ## The authoritative chain
 
-| Gate | Exit | Result |
-|---|---|---|
-| `npm run format:check` | 1 → 0 | FAIL on `.orkestrel/supervisor/REDESIGN.md` only — the other session's artifact arrived unformatted through merges; formatting-only fix at `8e5145f`; re-run green on 200 files |
-| `npm run lint:check` | 0 | PASS |
-| `npm run check` | 0 | PASS — core/server/bin tsc clean |
-| `npm run build` | 0 | PASS — `build-host: staged 106 file(s) into dist/host` |
-| `npm test` | 0 | PASS — core 293, server 352 (+4 skipped), bin 167, **policy 57**, config 10, guides 7 |
-| `npm run test:distribution -- --mode release` | 0 | PASS — 3/3, 48.56s |
+| Gate                                          | Exit  | Result                                                                                                                                                                          |
+| --------------------------------------------- | ----- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `npm run format:check`                        | 1 → 0 | FAIL on `.orkestrel/supervisor/REDESIGN.md` only — the other session's artifact arrived unformatted through merges; formatting-only fix at `8e5145f`; re-run green on 200 files |
+| `npm run lint:check`                          | 0     | PASS                                                                                                                                                                            |
+| `npm run check`                               | 0     | PASS — core/server/bin tsc clean                                                                                                                                                |
+| `npm run build`                               | 0     | PASS — `build-host: staged 106 file(s) into dist/host`                                                                                                                          |
+| `npm test`                                    | 0     | PASS — core 293, server 352 (+4 skipped), bin 167, **policy 57**, config 10, guides 7                                                                                           |
+| `npm run test:distribution -- --mode release` | 0     | PASS — 3/3, 48.56s                                                                                                                                                              |
 
 ## Propagation proof
 

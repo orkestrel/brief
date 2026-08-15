@@ -27,7 +27,7 @@ Unit W1 complete. All five owned files written; nothing else touched.
 
 ## Judgment calls on the flagged restatements
 
-1. **`SKILL.md:49` layer placement.** Kept: the journey layer *is* browser test infrastructure, it lives in the browser setup module, a journey helper is added only where `@orkestrel/test` publishes none, and never declare a resolver inside a test file. Pointed: the shared-infrastructure law itself (export-everything, no local fixture factories).
+1. **`SKILL.md:49` layer placement.** Kept: the journey layer _is_ browser test infrastructure, it lives in the browser setup module, a journey helper is added only where `@orkestrel/test` publishes none, and never declare a resolver inside a test file. Pointed: the shared-infrastructure law itself (export-everything, no local fixture factories).
 2. **`SKILL.md:32` internal state.** Kept: a state read may only corroborate a perception assertion, never replace it — that permission is journey-specific and `tests.md:217` does not grant it. Pointed: which state a test may read at all.
 3. **`SKILL.md:65` placement.** Kept: journeys go in the browser environment's `integration.test.ts`. Pointed: the reserved-filename and directory-scope law.
 4. **`SKILL.md:103` mock law.** Kept: the three store behaviours a transport family configures (stalls a read, fails a fixed number of reads, fails a write) as an inert configurable implementation of the published interface. Pointed: the ban itself.
@@ -38,7 +38,7 @@ Unit W1 complete. All five owned files written; nothing else touched.
 
 ## The `tests.md:214` question — composed, not a conflict
 
-The two laws compose. `layer.md` → *What it drives* now reads:
+The two laws compose. `layer.md` → _What it drives_ now reads:
 
 > Never dispatch a constructed event from the layer or from a journey. The centralized event factories `.claude/rules/tests.md` prescribes serve unit tests whose subject is the handler; a journey drives input through the provider verbs only.
 

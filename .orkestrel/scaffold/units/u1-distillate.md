@@ -2,18 +2,18 @@ Canon conflict recorded in **Structural findings**: the brief names `orkestrel-f
 
 ## 1. Conformance table
 
-| Path | Verdict | Defects |
-| --- | --- | --- |
-| `.agents/skills/orkestrel-human-journey/SKILL.md` | DEFECTS | 10 |
-| `.agents/skills/orkestrel-human-journey/references/captures.md` | DEFECTS | 1 |
-| `.agents/skills/orkestrel-human-journey/references/layer.md` | DEFECTS | 2 |
-| `.claude/skills/orkestrel-human-journey/SKILL.md` | DEFECTS | 1 |
-| `.agents/skills/enterprise-bootstrap/SKILL.md` | DEFECTS | 9 |
-| `.agents/skills/enterprise-bootstrap/references/bootstrap-reference.md` | DEFECTS | 3 |
-| `.agents/skills/enterprise-bootstrap/references/components.md` | DEFECTS | 3 |
-| `.agents/skills/enterprise-bootstrap/references/utilities.md` | DEFECTS | 1 |
-| `.agents/skills/orkestrel-build-application/references/application.md` | DEFECTS | 1 |
-| `.claude/rules/application.md` | DEFECTS | 1 |
+| Path                                                                    | Verdict | Defects |
+| ----------------------------------------------------------------------- | ------- | ------- |
+| `.agents/skills/orkestrel-human-journey/SKILL.md`                       | DEFECTS | 10      |
+| `.agents/skills/orkestrel-human-journey/references/captures.md`         | DEFECTS | 1       |
+| `.agents/skills/orkestrel-human-journey/references/layer.md`            | DEFECTS | 2       |
+| `.claude/skills/orkestrel-human-journey/SKILL.md`                       | DEFECTS | 1       |
+| `.agents/skills/enterprise-bootstrap/SKILL.md`                          | DEFECTS | 9       |
+| `.agents/skills/enterprise-bootstrap/references/bootstrap-reference.md` | DEFECTS | 3       |
+| `.agents/skills/enterprise-bootstrap/references/components.md`          | DEFECTS | 3       |
+| `.agents/skills/enterprise-bootstrap/references/utilities.md`           | DEFECTS | 1       |
+| `.agents/skills/orkestrel-build-application/references/application.md`  | DEFECTS | 1       |
+| `.claude/rules/application.md`                                          | DEFECTS | 1       |
 
 ## 2. Defects
 
@@ -119,11 +119,11 @@ Browser-drive / test-placement / real-implementation overlap:
 
 **Unknown 2 — `.claude/rules/application.md` and `orkestrel-build-application/references/application.md`.** The diffs do not mention journeys, captures, the browser test layer, or `orkestrel-human-journey`. Both edits relocate `startApplicationServer` from `handlers.ts` to `factories.ts` and drop the old reason (`factories.ts` admits only `create-prefixed construction`).
 
-Before (skill reference): ``startApplicationServer` in `handlers.ts`, because `factories.ts` admits only `create`-prefixed construction`
+Before (skill reference): ``startApplicationServer`in`handlers.ts`, because `factories.ts`admits only`create`-prefixed construction`
 
 After (skill reference, `.agents/skills/orkestrel-build-application/references/application.md:37`): ``startApplicationServer` in `factories.ts``
 
-Before (rule): ``startApplicationServer` belongs in `handlers.ts` beside the other process-lifecycle functions, because `factories.ts` admits only `create`-prefixed construction and this one starts a signal-owning resource.`
+Before (rule): ``startApplicationServer`belongs in`handlers.ts`beside the other process-lifecycle functions, because`factories.ts`admits only`create`-prefixed construction and this one starts a signal-owning resource.`
 
 After (rule, `.claude/rules/application.md:52`): `The startApplicationServer convenience factory belongs in factories.ts.`
 

@@ -33,4 +33,4 @@ VERDICT: 7 CONFIRMED, 1 BROKEN, 1 UNRESOLVED, 0 NOT-EVIDENCED
 
 ---
 
-*Orchestrator note: claim 9 settled CONFIRMED post-return — `git show bba41aa --stat` isolates `.orkestrel/supervisor/REDESIGN.md` (+288/−4) entirely to the merge, whose second parent is the other session's supervisor campaign.*
+_Orchestrator note: claim 9 settled CONFIRMED post-return — `git show bba41aa --stat` isolates `.orkestrel/supervisor/REDESIGN.md` (+288/−4) entirely to the merge, whose second parent is the other session's supervisor campaign._

@@ -6,16 +6,16 @@ Unit complete. Four owned files modified; `frontend-design.md` untouched (see de
 
 **`.agents/skills/enterprise-bootstrap/SKILL.md` — 303 → 236 lines (−67, −22%)**
 
-| Class | Count | Instances |
-| --- | --- | --- |
-| Marketing/persuasion register recast as directives | 5 | `:17` opening; `:29` reference-routing line; `:68` Rendered proof; `:117` rung-4 rationale; `:137` "which is what makes them the safe choice" |
-| Aphorism removed | 3 | `:64` "(Chanel)"; `:144` "decoration beside an encoding"; `:157` "the tell of per-element shrinking" |
-| Probe-history narration cut, rule kept | 1 | `:137` "the stock danger fill clears the bar by hundredths" → "Solid variants … carry no margin: re-measure whenever anything layers over one" |
-| Slogan sections deleted, content routed to owner | 2 | `## Design principles` (8 bullets → `frontend-design.md`); `### Writing (interface copy)` (8 bullets → `frontend-design.md` §More on writing in design) |
-| Summary section deleted | 1 | `## Key takeaways` (4 bullets, all second copies) |
-| Anti-pattern entries folded into the rule that makes them checkable | 22 → 2 | Deleted 20; kept "decoration with no subject reason" and "faux widget / hand-rolled complex widget" |
-| Sections deduplicated against the reference that owns them | 5 | `Portability` prose; `States & feedback` (7→3); `Views & navigation` (deleted, 5 bullets to their owners); `Forms` (7→4); `Density, layout, responsive` (11→5); `Component cheat sheet` table (14 lines → one routing sentence) |
-| Checklist rows restating other rows | 21 → 19 rows | Dropped "Remove one unnecessary accessory" (Process step 5) and merged the portability/keyboard rows |
+| Class                                                               | Count        | Instances                                                                                                                                                                                                                       |
+| ------------------------------------------------------------------- | ------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Marketing/persuasion register recast as directives                  | 5            | `:17` opening; `:29` reference-routing line; `:68` Rendered proof; `:117` rung-4 rationale; `:137` "which is what makes them the safe choice"                                                                                   |
+| Aphorism removed                                                    | 3            | `:64` "(Chanel)"; `:144` "decoration beside an encoding"; `:157` "the tell of per-element shrinking"                                                                                                                            |
+| Probe-history narration cut, rule kept                              | 1            | `:137` "the stock danger fill clears the bar by hundredths" → "Solid variants … carry no margin: re-measure whenever anything layers over one"                                                                                  |
+| Slogan sections deleted, content routed to owner                    | 2            | `## Design principles` (8 bullets → `frontend-design.md`); `### Writing (interface copy)` (8 bullets → `frontend-design.md` §More on writing in design)                                                                         |
+| Summary section deleted                                             | 1            | `## Key takeaways` (4 bullets, all second copies)                                                                                                                                                                               |
+| Anti-pattern entries folded into the rule that makes them checkable | 22 → 2       | Deleted 20; kept "decoration with no subject reason" and "faux widget / hand-rolled complex widget"                                                                                                                             |
+| Sections deduplicated against the reference that owns them          | 5            | `Portability` prose; `States & feedback` (7→3); `Views & navigation` (deleted, 5 bullets to their owners); `Forms` (7→4); `Density, layout, responsive` (11→5); `Component cheat sheet` table (14 lines → one routing sentence) |
+| Checklist rows restating other rows                                 | 21 → 19 rows | Dropped "Remove one unnecessary accessory" (Process step 5) and merged the portability/keyboard rows                                                                                                                            |
 
 **`references/bootstrap-reference.md` — 618 → 618 lines (+22/−22):** discovery narrative cut with the 3%-tint mechanism retained as the rule's condition; "Confident wrong verdicts…" explainer cut; "rehearsal" aphorism → "Wire the reader into the suite once it has settled a question"; five further unflagged aphorisms in the same class removed (`:93`, `:518`, `:525`, `:552`, `:582`); persuasion heading at `:554` → **Neutralize a disabled destructive control.**; three duplications removed toward one home; two details absorbed from SKILL.md's dedup.
 

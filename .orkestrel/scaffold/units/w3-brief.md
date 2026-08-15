@@ -117,7 +117,7 @@ Record in your report, in order, each with its exact command and the relevant ou
 2. Delete `.agents/skills/orkestrel-human-journey/agents/openai.yaml`. `npm run test:policy` —
    red, and the failure is exactly the new test naming that path. Nothing else red.
 3. `git checkout -- .agents/skills/orkestrel-human-journey/agents/openai.yaml`. `npm run
-   test:policy` — green, same counts as step 1.
+test:policy` — green, same counts as step 1.
 
 ## Output
 

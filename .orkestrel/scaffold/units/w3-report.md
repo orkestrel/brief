@@ -52,15 +52,15 @@ The harness’s read-only `.agents` policy prevented completion of the mandatory
 
 ## 3. Fixture-control matrix
 
-| Control | Population | Expected | Observed |
-|---|---|---|---|
-| Missing exact-case `SKILL.md` | In | One skill violation | One |
-| Missing exact-case `agents/openai.yaml` | In | One skill violation | One |
-| Non-regular `SKILL.md` | In | One skill violation | One |
-| Malformed YAML | In | One skill violation | One |
-| Wrong `$sample` token | In | One skill violation | One |
-| Dangling exact-case reference | In | One skill violation | One |
-| `.claude/skills/bridge` without YAML | Out | No violation | None |
+| Control                                 | Population | Expected            | Observed |
+| --------------------------------------- | ---------- | ------------------- | -------- |
+| Missing exact-case `SKILL.md`           | In         | One skill violation | One      |
+| Missing exact-case `agents/openai.yaml` | In         | One skill violation | One      |
+| Non-regular `SKILL.md`                  | In         | One skill violation | One      |
+| Malformed YAML                          | In         | One skill violation | One      |
+| Wrong `$sample` token                   | In         | One skill violation | One      |
+| Dangling exact-case reference           | In         | One skill violation | One      |
+| `.claude/skills/bridge` without YAML    | Out        | No violation        | None     |
 
 ## 4. Unknowns call
 

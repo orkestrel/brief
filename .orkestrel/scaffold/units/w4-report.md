@@ -35,13 +35,13 @@ directive), plus prose hard-wrapped at 100 columns.
 
 ## `test:policy` counts
 
-| Stage | Result |
-| --- | --- |
-| Baseline `f9a70eb` | 55 passed (55) |
-| After `family` removal only | 55 passed (55) |
+| Stage                                               | Result                                                       |
+| --------------------------------------------------- | ------------------------------------------------------------ |
+| Baseline `f9a70eb`                                  | 55 passed (55)                                               |
+| After `family` removal only                         | 55 passed (55)                                               |
 | **Failing proof** — new control, patterns unchanged | **1 failed \| 55 passed (56)** at `tests/policy.test.ts:319` |
-| After the pattern fix | 56 passed (56) |
-| Final (all six files) | **56 passed (56)** |
+| After the pattern fix                               | 56 passed (56)                                               |
+| Final (all six files)                               | **56 passed (56)**                                           |
 
 Malformed-YAML control still reports exactly one violation. `npx tsc --noEmit` clean. oxfmt:
 "All matched files use the correct format." (6 files.) Diff: 6 files, +157/−72.
@@ -53,7 +53,7 @@ Malformed-YAML control still reports exactly one violation. `npx tsc --noEmit` c
    this round, so oxfmt's exact output was applied. No behavior change.
 2. **`parseSkillPrompt` does not decode `''`.** The returned scalar carries the escape; harmless
    for the only consumer (token containment; a directory name cannot contain an apostrophe).
-   Flagged for a ruling. *Orchestrator ruling: leave as-is; recorded.*
+   Flagged for a ruling. _Orchestrator ruling: leave as-is; recorded._
 3. New exports `SKILL_APOSTROPHE_METADATA`, `SKILL_POLICY_APOSTROPHE` beside their siblings.
 
 ## Observations outside scope (for the next change)

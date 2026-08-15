@@ -65,5 +65,8 @@ Never use in-repository `@src/*` aliases in public guide examples; reserve them 
 - Keep `SKILL.md` concise and route conditional detail to one-level `references/`.
 - Frontmatter contains only `name` and a trigger-focused `description`.
 - Do not put model routing or package version catalogs in a skill.
-- Validate every referenced resource and `agents/openai.yaml`; do not leave template TODOs or auxiliary README/changelog files.
+- Validate every referenced resource; do not leave template TODOs or auxiliary README/changelog files.
+- Write `agents/openai.yaml` as one root `interface:` mapping over exactly `display_name`, `short_description`, and `default_prompt`, in that order, each on its own two-space-indented line.
+- Give every one of those keys a non-empty single-quoted scalar, and write an apostrophe inside it as `''`.
+- Name the skill's own `$<directory>` token in `default_prompt`.
 - Keep provider bridges minimal: they load one canonical workflow and add no competing instructions.
