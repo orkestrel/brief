@@ -1,0 +1,24 @@
+=== step 1: conforming tree ===
+
+·······················································
+
+ Test Files  1 passed (1)
+      Tests  55 passed (55)
+   Start at  02:23:35
+   Duration  1.13s (transform 208ms, setup 291ms, import 303ms, tests 385ms, environment 0ms)
+
+step1-exit=0
+=== step 2: yaml removed ===
+ FAIL  |policy| tests/policy.test.ts > skill family policy > requires every discovered skill file, metadata token, and reference
++     "message": "skill requires an exact-case regular agents/openai.yaml",
++     "path": ".agents/skills/orkestrel-human-journey/agents/openai.yaml",
+ Test Files  1 failed (1)
+      Tests  1 failed | 54 passed (55)
+=== step 3: restored ===
+
+ Test Files  1 passed (1)
+      Tests  55 passed (55)
+   Start at  02:23:39
+   Duration  1.14s (transform 220ms, setup 278ms, import 312ms, tests 400ms, environment 0ms)
+
+step3-exit=0
