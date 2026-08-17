@@ -1,6 +1,6 @@
 {
 	"name": "@orkestrel/brief",
-	"version": "0.0.2",
+	"version": "0.0.3",
 	"description": "A synchronous, deterministic specification compiler: a rough request becomes a closed, content-hashed execution contract another agent can run, gated by a traceable reasoner and projected into every downstream artifact.",
 	"keywords": [
 		"agent",
@@ -69,14 +69,14 @@
 	},
 	"dependencies": {
 		"@orkestrel/contract": "^0.0.12",
-		"@orkestrel/emitter": "^0.0.6",
-		"@orkestrel/interpret": "^0.0.9",
-		"@orkestrel/reason": "^0.0.6"
+		"@orkestrel/emitter": "^0.0.7",
+		"@orkestrel/interpret": "^0.0.10",
+		"@orkestrel/reason": "^0.0.7"
 	},
 	"devDependencies": {
 		"@microsoft/api-extractor": "^7.58.12",
-		"@orkestrel/guide": "^0.0.11",
-		"@orkestrel/scaffold": "^0.0.38",
+		"@orkestrel/guide": "^0.0.12",
+		"@orkestrel/scaffold": "^0.0.39",
 		"@orkestrel/test": "^0.0.6",
 		"@types/node": "^26.2.0",
 		"oxfmt": "^0.63.0",
