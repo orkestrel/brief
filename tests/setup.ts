@@ -1,6 +1,14 @@
 import type { Brief, BriefErrorCode, BriefInput, Manifest, Task } from '@src/core'
 import { brief, isBriefError, manifest, outcome, proof, reference, task } from '@src/core'
-import type { InterpretInterface } from '@orkestrel/interpret'
+import type {
+	Ambiguity,
+	Entity,
+	FieldMapping,
+	Intent,
+	InterpretInterface,
+	StageFailure,
+	StageRecord,
+} from '@orkestrel/interpret'
 import { createInterpret } from '@orkestrel/interpret'
 import type {
 	Check,
@@ -161,6 +169,88 @@ export function buildForeignInterpret(value: unknown): InterpretInterface {
 				{ field: 'output', question: 'Diff or files?', candidates: [], required: true },
 			],
 		}),
+		register: (template) => {
+			real.register(template)
+		},
+		unregister: (id) => real.unregister(id),
+		template: (id) => real.template(id),
+		templates: () => real.templates(),
+		describe: (definition) => real.describe(definition),
+		narrate: (result) => real.narrate(result),
+		destroy: () => {
+			real.destroy()
+		},
+	}
+}
+
+/**
+ * A conforming `Interpretation` carried entirely by prototype getters — the class satisfies
+ * the interface, and `structuredClone` keeps own members only, so the compiler's ownership
+ * copy arrives with every member missing. The vector the interpret-stage guard exists for:
+ * type-valid at the engine, malformed after the clone.
+ */
+export class AccessorInterpretation {
+	get text(): string {
+		return 'migrate the stores'
+	}
+
+	get normalized(): string {
+		return 'migrate the stores'
+	}
+
+	get intent(): Intent {
+		return { action: 'migrate', domain: 'code', confidence: 1 }
+	}
+
+	get entities(): readonly Entity[] {
+		return []
+	}
+
+	get mappings(): readonly FieldMapping[] {
+		return []
+	}
+
+	get ambiguities(): readonly Ambiguity[] {
+		return []
+	}
+
+	get prompt(): string {
+		return ''
+	}
+
+	get stages(): readonly StageRecord[] {
+		return []
+	}
+
+	get failures(): readonly StageFailure[] {
+		return []
+	}
+
+	get complete(): boolean {
+		return false
+	}
+
+	get confidence(): number {
+		return 1
+	}
+
+	get digest(): string {
+		return 'accessor'
+	}
+}
+
+/**
+ * A borrowed engine whose `interpret` returns a CONFORMING class-instance
+ * `Interpretation` that the ownership clone cannot carry — see
+ * {@link AccessorInterpretation}. Every other member delegates to a real engine.
+ */
+export function buildAccessorInterpret(): InterpretInterface {
+	const real = createInterpret()
+	return {
+		get emitter() {
+			return real.emitter
+		},
+		interpret: () => new AccessorInterpretation(),
 		register: (template) => {
 			real.register(template)
 		},

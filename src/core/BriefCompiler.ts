@@ -1,7 +1,7 @@
 import type { EmitterInterface } from '@orkestrel/emitter'
 import { Emitter } from '@orkestrel/emitter'
 import type { Interpretation, InterpretInterface } from '@orkestrel/interpret'
-import { createInterpret, digestValue } from '@orkestrel/interpret'
+import { createInterpret, digestValue, isInterpretation } from '@orkestrel/interpret'
 import { attempt } from '@orkestrel/contract'
 import type { LogicalResult, ReasonInterface } from '@orkestrel/reason'
 import { createLogicalReasoner, createReason, isLogicalResult } from '@orkestrel/reason'
@@ -262,26 +262,44 @@ export class BriefCompiler implements BriefCompilerInterface {
 	}
 
 	// The interpret stage. Skipped entirely when the input carries no text, in which case
-	// a caller-supplied interpretation still reaches the draft.
+	// a caller-supplied interpretation still reaches the draft. Both doors are guarded with
+	// interpret's published `isInterpretation` before anything dereferences `intent`,
+	// `entities`, or `ambiguities`: the engine is borrowed, and a malformed return threw a
+	// raw TypeError out of `compile` where the contract promises INTERPRET_FAILED. The
+	// supplied-interpretation door shares the guard for the caller a type system cannot
+	// see — a JS consumer or a replayed value — at the cost of one total check.
 	#read(
 		input: BriefInput,
 		stages: BriefStageRecord[],
 		failures: BriefStageFailure[],
 	): Interpretation | undefined {
 		const text = input.text
-		if (text === undefined) return input.interpretation
-		// Owned for the same reason the verdict is: the engine is borrowed and its
-		// `Interpretation` is foreign data the briefing then carries as a replay.
-		const read = attempt(() => this.#own(this.#interpret.interpret(text)))
-		if (read.success) {
-			stages.push(Object.freeze({ stage: 'interpret', input: text, output: read.value }))
-			return read.value
+		if (text !== undefined) {
+			// Owned for the same reason the verdict is: the engine is borrowed and its
+			// `Interpretation` is foreign data the briefing then carries as a replay.
+			const read = attempt(() => this.#own(this.#interpret.interpret(text)))
+			if (read.success && isInterpretation(read.value)) {
+				stages.push(Object.freeze({ stage: 'interpret', input: text, output: read.value }))
+				return read.value
+			}
+			const message = read.success
+				? 'The interpret engine returned a non-interpretation result'
+				: errorToMessage(read.error)
+			stages.push(Object.freeze({ stage: 'interpret', input: text, error: message }))
+			failures.push(Object.freeze({ stage: 'interpret', code: 'INTERPRET_FAILED', message }))
+			this.#emitter.emit(
+				'error',
+				read.success
+					? new BriefError('INTERPRET_FAILED', message, { stage: 'interpret' })
+					: read.error,
+			)
 		}
-		const message = errorToMessage(read.error)
-		stages.push(Object.freeze({ stage: 'interpret', input: text, error: message }))
+		const supplied = input.interpretation
+		if (supplied === undefined || isInterpretation(supplied)) return supplied
+		const message = 'The supplied interpretation does not satisfy the published shape'
+		stages.push(Object.freeze({ stage: 'interpret', input: 'interpretation', error: message }))
 		failures.push(Object.freeze({ stage: 'interpret', code: 'INTERPRET_FAILED', message }))
-		this.#emitter.emit('error', read.error)
-		return input.interpretation
+		return undefined
 	}
 
 	// The one place a refusal is coded. Blocking gaps ALWAYS produce `BLOCKED`, including

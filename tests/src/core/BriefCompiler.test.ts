@@ -21,6 +21,7 @@ import {
 	buildInterpret,
 	buildPermissiveEvaluator,
 	buildReadyInput,
+	buildAccessorInterpret,
 	buildCountingReason,
 	buildFailingInterpret,
 	buildForeignInterpret,
@@ -554,6 +555,35 @@ describe('BriefCompiler fail-closed paths', () => {
 			codes: ['BLOCKED'],
 		})
 		expect(readings[1]).toStrictEqual(readings[0])
+	})
+
+	it('refuses a conforming engine result the ownership clone cannot carry, with a coded failure', () => {
+		// A class instance satisfies `Interpretation` through prototype getters, and
+		// `structuredClone` keeps own members only, so the owned copy arrives with every member
+		// missing. Before the stage guarded with interprets' published `isInterpretation`, the
+		// draft dereferenced `intent` off that empty copy and threw a raw TypeError out of
+		// `compile`; now the stage records INTERPRET_FAILED and the refusal names the unread
+		// request.
+		const compiler = createBriefCompiler({
+			interpret: buildAccessorInterpret(),
+			actions: { migrate: 'migrate' },
+			domains: { code: 'code' },
+		})
+		const briefing = compiler.compile({
+			text: 'migrate the stores',
+			task: buildTask(),
+			outcomes: [outcome(1, 'x')],
+			proofs: [proof('x', 'npm test')],
+		})
+		compiler.destroy()
+		expect(briefing.failures[0]?.stage).toBe('interpret')
+		expect(briefing.failures[0]?.code).toBe('INTERPRET_FAILED')
+		const record = briefing.stages.find((entry) => entry.stage === 'interpret')
+		expect(record?.stage === 'interpret' ? record.error : undefined).toBe(
+			'The interpret engine returned a non-interpretation result',
+		)
+		expect(briefing.brief).toBeUndefined()
+		expect(briefing.questions[0]?.blocking).toBe(true)
 	})
 
 	it('contains an interpret failure and REFUSES, because the request went unread', () => {

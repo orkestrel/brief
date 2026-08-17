@@ -204,7 +204,10 @@ Exactness stops at this package's own records. The gate checks a BORROWED engine
 `@orkestrel/reason`'s published result guards — open on unknown keys, class instances accepted —
 imported rather than reimplemented here. reason deliberately accepts an empty rule id, because
 `RuleResult.id` is `string` and a non-empty check would narrow past the published contract; a
-consumer wanting that stricter reading asserts it at its own boundary.
+consumer wanting that stricter reading asserts it at its own boundary. The interpret stage
+guards the same way with `@orkestrel/interpret`'s published `isInterpretation`, at both of its
+doors: the borrowed engine's return and a caller-supplied `interpretation`. A malformed value at
+either door records `INTERPRET_FAILED` instead of throwing out of `compile`.
 
 | API               | Kind  | Narrows to                                                                        |
 | ----------------- | ----- | --------------------------------------------------------------------------------- |
