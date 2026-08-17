@@ -58,7 +58,15 @@ Adopt `isInterpretation` at both doors exactly as `e44b957` adopted `isLogicalRe
 gate checks: import, check the owned copy, map failure to the stage's contract error, delete
 nothing locally because nothing local exists, and record any deliberate widening interpret
 documents. Re-run the full gate chain; the compiler tests gain one malformed-interpretation
-control per door.
+control per door. **Done** at `ec9c466` plus the audit's seal fix at `3f705b5`.
+
+Follow-up, its own unit: the seal-on-clone-loss fallback landed at the supplied door only. The
+engine door and the gate's reason door share the seam — `structuredClone` in the ownership copy
+drops prototype-carried members of a CONFORMING engine return, so both doors currently refuse a
+valid engine with a coded failure instead of sealing the live value. Extending the seal there
+changes accepted gate behavior, so it takes the adversarial pass: one `#accept` ladder (clone →
+guard → seal live → guard → refuse) shared by all three doors, with the caller-freeze cost of
+sealing stated on the option that admits the engine.
 
 ## 4. `@orkestrel/qualifier`, `rater`, `program` — audit before consumption
 
