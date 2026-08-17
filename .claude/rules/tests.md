@@ -26,6 +26,7 @@ paths:
 - Use recorders for calls/events, temporary resources for stateful boundaries, protocol-faithful fixture servers for deterministic network peers, and the real external service when its behavior is the claim.
 - Prefer inert customizable data and input stubs.
 - Allow a scripted boundary stub only when it implements the real interface or protocol minimally, to drive the system under test. It never reimplements project-owned behavior and never stands in for the integration being claimed.
+- Bind a test fixture server to `127.0.0.1` on an ephemeral port (`listen(0)`), never to `::1` and never to a fixed port: a host without IPv6 fails `EAFNOSUPPORT`, and a fixed port flakes on occupancy.
 - Cover happy paths, error paths, empty input, boundary values, `NaN`, positive/negative zero, cycles, and Map/Set order where relevant.
 - Test observable behavior, not implementation details.
 - Assert the membership a discovered or globbed set should have, not a total that a partly empty population satisfies. A glob spanning two locations passes a size check while one of them matches nothing.

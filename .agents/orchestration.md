@@ -54,15 +54,16 @@ reasoning effort.
 
 ## The adversarial pass
 
-Two lanes run on every design round and every audit round.
+Two lanes run on every design round; an audit round runs the lanes the execution loop's step 5
+names, on the same clean-context terms.
 
 | Lane           | Argues                                                                      |
 | -------------- | --------------------------------------------------------------------------- |
 | **Subjective** | Shape, taste, naming, ergonomics, design fit, what the API should feel like |
 | **Objective**  | Correctness, constraints, and what the code and contracts actually permit   |
 
-**Both lanes always run.** Never collapse them into one. Never let an engine's absence stand in for
-a lane.
+**A required lane always runs.** Never collapse two required lanes into one. Never let an engine's
+absence stand in for a required lane.
 
 ### Clean contexts
 
@@ -162,6 +163,9 @@ when the role file already pins it.
   job to a bench means shipping that catalog across, which costs more than the bench saves.
 - `codex` is the shared Sol transport contract, not a route. `analyst` and `sol` are the named
   bridges; both bind that contract by reference and pin only their route and sandbox.
+- Mirroring is by work class, not filename. A transport contract is provider-specific:
+  `.claude/agents/codex.md` carries the Sol transport on the Claude side, `.codex/agents/claude.toml`
+  the Opus transport on the Codex side, and each side's bridges bind their own by reference.
 - Opus and Sol roles use high effort. Native cheap-tier roles use low or medium. Bridge drivers use
   the cheapest tier that can run a CLI.
 - Never route orchestration or acceptance across a bridge.
@@ -284,18 +288,23 @@ lane instead of re-dispatching against a session-start answer that no longer hol
    fully specified taste-free unit to `builder`. Never route implementation to an engine the unit's
    judgment load exceeds.
 4. **Integrate.** Evaluate each distillate against its acceptance criteria, apply shared-file
-   patches serially, and route cross-cutting findings.
-5. **Audit adversarially.** Run the two-lane adversarial pass on every nontrivial implementation:
-   `reviewer` for the subjective lane and `analyst` for the objective lane, plus `checker` for
-   mechanical conformance.
+   patches serially, and route cross-cutting findings. Integration applies exact returned patches
+   and mechanical conflict resolution only. A new type, mechanism, behavior, or acceptance
+   criterion discovered at integration is a successor brief routed to a writer, never an
+   integration edit.
+5. **Audit adversarially.** Audit every nontrivial implementation with at least one lane whose
+   engine did not write it. Run the second lane when the first returns FAIL, when the subject is a
+   rendered or externally driven surface, or when the unit's claims span both correctness and
+   shape. Dispatch `checker` when the acceptance criteria are mechanical — counts, paths, parity
+   rows, scope honesty. Record in the round's verdict file when a lane or the checker did not run.
    - State the audit's subject as numbered falsifiable claims and require per-claim verdicts with
-     evidence, per the Falsification law in `.claude/rules/quality.md` and the value set the
-     dispatch-named skill fixes.
+     evidence, per the Falsification law in `.claude/rules/quality.md` and the `orkestrel-falsify`
+     value set, unless the dispatch names a different skill that fixes another.
    - In a fix round, give the unit to an auditor engine that did not write it.
    - Run the `orkestrel-falsify` skill for multi-round audits. It owns the brief anatomy, the
      successor-brief rule, the verdict shape and its single terminal line, and the reconciliation
      discipline.
-   - Reconcile their evidence. Drop, on the record, any finding neither engine can substantiate.
+   - Reconcile the lanes that ran. Drop, on the record, any finding no lane can substantiate.
 6. **Verify.** Have one independent `verifier` run the authoritative gates.
 7. **Re-baseline.** Reconcile the remaining plan against what the phase revealed, before dispatching
    the next one.
@@ -369,11 +378,18 @@ The harness bridge names the concrete mechanism for each of these.
 - Send a decision taken mid-campaign to every unit already in flight whose brief it invalidates. An
   executor cannot see a change made after it was dispatched, so it writes the state its brief
   described and the defect surfaces as its own.
-- Treat the `tmp/` brief and report pair as ephemeral launch copies. **Bench laws** rule 4 owns
-  what is kept and what is swept; follow it there rather than deciding here.
+- Retention is uniform for every unit, whatever engine ran it, including an Orchestrator-owned
+  integration, fix, probe, or capture unit: copy the brief, the returned report or distillate, the
+  audit verdict, the exact executed script or instrument, and the acceptance evidence into
+  `.orkestrel/<package>/` as the unit is dispatched and as it returns, then sweep only the `tmp/`
+  launch copies. A capture claim's instrument is acceptance evidence; the frames may be swept once
+  the record transcribes them, because the committed instrument re-produces the film. **Bench
+  laws** rule 4 owns journals and points here for everything durable.
 - Promote anything that must outlive the campaign into a durable artifact before the sweep — a
   commit message, a guide, a rule, a retrospective. What is only in a swept file did not survive,
   and a debrief that must quote the record verbatim has nothing to quote.
+- Land a process rule stated as binding mid-campaign in the owning rule or contract file in the
+  same commit that states it. A campaign artifact is evidence, never a rule's home.
 
 ### Where campaign artifacts live
 
@@ -447,7 +463,8 @@ wrong is right to stop.
   fix the criterion to the property you want rather than to the number you saw.
 - Read the acceptance criteria against the off-limits list, line by line. Every criterion closes
   using owned files alone. A criterion that needs an off-limits file gets that file granted or gets
-  struck.
+  struck. A file the change will break that appears in neither list is an unscoped file; grant it or
+  strike the criterion.
 - Give a small unrelated obligation its own unit. Ride it along in a large one and its scope error
   blocks the primary work, which is a whole unit lost to a detail.
 - Ask what the change will do to the facts you just measured. A criterion fixed to a measured set is
@@ -471,9 +488,10 @@ wrong is right to stop.
   already settled. Where a read-only lane needs executed evidence, produce it separately and hand it
   over: the Orchestrator supplies the evidence and the lane rules on it.
 - Scope a fleet-wide refactor by the files that **consume** a symbol, not by the files that declare
-  it. A criterion to delete or rename anything closes only when every importer is owned, so a brief
-  scoped to the declaration alone sends the unit into a typecheck break in a file it cannot edit.
-  Count the importers before writing the owned list.
+  it. A criterion that removes a symbol, or that makes an existing state or fixture shape
+  unreachable, closes only when every consumer that exercises it is owned, so a brief scoped to the
+  declaration alone sends the unit into a typecheck break in a file it cannot edit. Count the
+  importers before writing the owned list.
 
 ### Carry every finding
 
@@ -513,8 +531,9 @@ command that outlives the turn that started it. Every law here binds all of them
   launch whose tail is the evidence.
 - Keep network-dependent work out of sandboxed bench execs. Bench sandboxes deny network, so
   lockfile generation, real installs, and live fetches belong to the Orchestrator's own tracked
-  commands or a network-capable native agent. A bench exec hanging on `npm` until its cap fires is
-  the signature of this misroute, not of a slow bench.
+  commands or to the native `implementer` or `builder` as an ordinary dispatched writing unit. A
+  bench exec hanging on `npm` until its cap fires is the signature of this misroute, not of a slow
+  bench.
 - A Workflow journals identically and dies identically, so give it the same watch — with one
   correction. A workflow journal writes only at agent start and result, so its mtime goes quiet for
   minutes during healthy work, and the liveness signal is the newest subagent transcript instead. A
@@ -546,6 +565,10 @@ nothing.
 - Kill by process id, never by pattern. `pkill -f` matches the relaunch that is already starting, so
   the pattern that cleans up the old run kills the new one and the cleanup reads as a launch
   failure.
+- A killed `codex exec` is dead only when its process tree is dead: walk the children with
+  `ps --ppid` and confirm the `codex-code-mode-host` child is gone. Before dispatching a substitute
+  writer, check the owned files' modification times against the baseline — a live orphan is still
+  writing the tree the substitute is about to own.
 - Read a failure against what was running when it happened, not against what you believe was
   running. The check costs one command and is the only thing that separates a real failure from
   self-inflicted contention.
@@ -584,12 +607,9 @@ transport.
    running" always has a first-class answer instead of a recollection of a command.
 4. **Ephemeral streams, durable records.** A journal proves a bench is alive and recovers an
    interrupted session. Keep journals under `tmp/`, never commit them, and sweep them at acceptance
-   after the final gate evidence is recorded. The **brief**, the returned **distillate**, the
-   **audit verdict**, and the **acceptance evidence** are not streams. Copy each into
-   `.orkestrel/<package>/` and commit it as its unit is dispatched and as it returns, then sweep
-   only the `tmp/` copy. None of it is reproducible from the diff, and a debrief has no primary
-   source without it. This rule owns retention for the whole contract; **Dispatch anatomy**
-   points here rather than answering it.
+   after the final gate evidence is recorded. Durable retention — brief, distillate, verdict,
+   instrument, acceptance evidence — is owned by **Dispatch anatomy**; this rule owns only the
+   journal stream.
 
 ### Recovering a dark bench
 
@@ -682,6 +702,9 @@ flag is what stops the gate chain running a second time inside the five minutes.
 
 ### Reaching the approval
 
+- Launch the login chain only when the user has signalled they are at the keyboard and will click
+  within ten minutes. An approval URL expires unclicked in about ten to fifteen minutes, and an
+  overnight gap expires the session credential with it.
 - Run `npm login` before any publish. `npm publish` does not open the browser flow: unauthenticated
   it returns `E404` on `PUT`, which reads as a missing package rather than a missing credential.
 - Pass `--browser=false` to `npm login` and to every `npm publish`. Without it npm prints
@@ -691,6 +714,8 @@ flag is what stops the gate chain running a second time inside the five minutes.
   untouched.
 - Hold stdin open and write nothing to it. Use a fifo held open by a long `sleep`. EOF drops npm to
   the same legacy prompt a stray newline does.
+- A login log showing the spinner and then a legacy `Username:` prompt is an expired attempt, not a
+  prompt to answer: kill it by process id and mint a fresh flow.
 - Run the login and every publish under `script -qfc '<command>' <log>`. npm offers the approval only
   when it sees a TTY; without one it fails `EOTP` with no way to answer.
 - Expect two approvals. `npmjs.com/login/cli/<id>` authenticates the session; `npmjs.com/auth/cli/<id>`
@@ -749,6 +774,8 @@ flag is what stops the gate chain running a second time inside the five minutes.
   implicit engines, fixed Claude model IDs, or verbose completed-work residue.
 - Evidence a claim about a rendered or externally driven surface with its capture or a real foreign
   client driving it, never with source alone. Where no such surface exists this law is inert.
+- When the Orchestrator writes any part of a unit, that part is briefed, owned, and audited like any
+  other part, and its auditor is an engine the Orchestrator does not share.
 - Final acceptance belongs only to the Orchestrator, after independent audit and gate evidence.
 - Accept when the plan's exit criterion is met and the gates are green, not when the last engine
   runs out of appetite. Reopening an accepted criterion is the user's instruction, not an auditor's

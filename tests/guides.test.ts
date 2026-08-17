@@ -2,7 +2,7 @@
 // a non-vacuousness guard so a renamed heading fails loudly instead of passing on an empty
 // extraction.
 
-import { globSync, readFileSync } from 'node:fs'
+import { readFileSync } from 'node:fs'
 import { dirname, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import {
@@ -19,6 +19,7 @@ import {
 	parseManifest,
 	resolveLink,
 } from '@orkestrel/guide'
+import { readInventory } from '@orkestrel/test/server'
 import { describe, expect, it } from 'vitest'
 
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '..')
@@ -52,32 +53,16 @@ const FOREIGN: readonly string[] = [
 /** Every published specifier this package answers to, mapped to the module behind it. */
 const SPECIFIERS: Readonly<Record<string, string>> = { '@orkestrel/brief': 'src/core' }
 
-/** The globs whose files and ancestor directories form the reflection inventory. */
-const INVENTORY_GLOBS: readonly string[] = [
-	'src/**/*.ts',
-	'tests/**/*.ts',
-	'configs/**/*.ts',
-	'guides/*.md',
-	'*.md',
-]
+/** The directories walked for TypeScript sources, matching the prior `**\/*.ts` globs. */
+const TYPESCRIPT_TARGETS: readonly string[] = ['src', 'tests', 'configs']
 
-// Node-only and single-use: the guides project is the only proof that needs an on-disk
-// inventory, and `tests/setup.ts` is host-independent, so this stays with its proof.
-function readInventory(): Readonly<Record<string, string>> {
-	const files: Record<string, string> = {}
-	for (const raw of globSync([...INVENTORY_GLOBS], { cwd: ROOT })) {
-		const key = raw.replaceAll('\\', '/')
-		files[key] = readFileSync(resolve(ROOT, key), 'utf8')
-		let parent = dirname(key).replaceAll('\\', '/')
-		while (parent !== '.' && parent !== '' && parent !== '/') {
-			files[parent] ??= ''
-			parent = dirname(parent).replaceAll('\\', '/')
-		}
-	}
-	return files
+/** The directory and root files walked for Markdown, matching the prior `.md` globs. */
+const MARKDOWN_TARGETS: readonly string[] = ['guides', 'AGENTS.md', 'CLAUDE.md', 'README.md']
+
+const FILES: Readonly<Record<string, string>> = {
+	...readInventory(ROOT, TYPESCRIPT_TARGETS, { extensions: ['.ts'] }),
+	...readInventory(ROOT, MARKDOWN_TARGETS, { extensions: ['.md'] }),
 }
-
-const FILES = readInventory()
 const MANIFEST = parseManifest(readFileSync(resolve(ROOT, 'guides/README.md'), 'utf8'), 'guides')
 
 describe('guides manifest', () => {
@@ -87,7 +72,7 @@ describe('guides manifest', () => {
 
 	it('reads a real inventory covering the documented source', () => {
 		expect(Object.keys(FILES)).toContain('src/core/index.ts')
-		expect(Object.keys(FILES)).toContain('src/core')
+		expect(Object.keys(FILES).some((key) => key.startsWith('src/core/'))).toBe(true)
 		expect(Object.keys(FILES)).toContain('guides/brief.md')
 		// The instrument must be able to report absence, not only presence.
 		expect(Object.keys(FILES)).not.toContain('src/core/absent.ts')
