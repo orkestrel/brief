@@ -200,29 +200,32 @@ extra key fails, which is why the builders below omit absent optional keys. A ke
 PRESENT but holds `undefined` also fails, matching this workspace's
 `exactOptionalPropertyTypes` contract.
 
-| API                | Kind  | Narrows to                                                                                                                        |
-| ------------------ | ----- | --------------------------------------------------------------------------------------------------------------------------------- |
-| `isText`           | const | A string carrying no line terminator, empty included.                                                                             |
-| `isLine`           | const | A NON-EMPTY string carrying no line terminator — the shape of nearly every field.                                                 |
-| `isTaskOperation`  | const | `TaskOperation`.                                                                                                                  |
-| `isTaskDomain`     | const | `TaskDomain`.                                                                                                                     |
-| `isOutputFormat`   | const | `OutputFormat`.                                                                                                                   |
-| `isRiskSeverity`   | const | `RiskSeverity`.                                                                                                                   |
-| `isTask`           | const | `Task` — `operation` and `domain` on-vocabulary, `statement` non-empty.                                                           |
-| `isReference`      | const | `Reference` — both `path` and `note` present and single-line.                                                                     |
-| `isObject`         | const | any non-null, non-array object, prototype or not — wider than a plain-record check, because an interface admits a class instance. |
-| `isRuleVerdict`    | const | a reasons `RuleResult` — reason publishes the type but no guard.                                                                  |
-| `isLogicalVerdict` | const | a reasons `LogicalResult`, whole shape — what the gate checks a BORROWED engine's return against.                                 |
-| `isManifest`       | const | `Manifest` — the four partitions present (disjointness is `validateBrief`'s job).                                                 |
-| `isOutcome`        | const | `Outcome` — `rank` a positive integer.                                                                                            |
-| `isGiven`          | const | `Given`.                                                                                                                          |
-| `isExample`        | const | `Example`.                                                                                                                        |
-| `isCitation`       | const | `Citation` — `name`, `url`, and `note` all present and single-line.                                                               |
-| `isGap`            | const | `Gap`.                                                                                                                            |
-| `isRisk`           | const | `Risk` — `severity` must be a `RiskSeverity`.                                                                                     |
-| `isOutput`         | const | `Output` — `format` must be an `OutputFormat`.                                                                                    |
-| `isProof`          | const | `Proof`.                                                                                                                          |
-| `isBrief`          | const | `Brief` — the whole exact-record contract, section guards composed.                                                               |
+Exactness stops at this package's own records. The gate checks a BORROWED engine's return with
+`@orkestrel/reason`'s published result guards — open on unknown keys, class instances accepted —
+imported rather than reimplemented here. reason deliberately accepts an empty rule id, because
+`RuleResult.id` is `string` and a non-empty check would narrow past the published contract; a
+consumer wanting that stricter reading asserts it at its own boundary.
+
+| API               | Kind  | Narrows to                                                                        |
+| ----------------- | ----- | --------------------------------------------------------------------------------- |
+| `isText`          | const | A string carrying no line terminator, empty included.                             |
+| `isLine`          | const | A NON-EMPTY string carrying no line terminator — the shape of nearly every field. |
+| `isTaskOperation` | const | `TaskOperation`.                                                                  |
+| `isTaskDomain`    | const | `TaskDomain`.                                                                     |
+| `isOutputFormat`  | const | `OutputFormat`.                                                                   |
+| `isRiskSeverity`  | const | `RiskSeverity`.                                                                   |
+| `isTask`          | const | `Task` — `operation` and `domain` on-vocabulary, `statement` non-empty.           |
+| `isReference`     | const | `Reference` — both `path` and `note` present and single-line.                     |
+| `isManifest`      | const | `Manifest` — the four partitions present (disjointness is `validateBrief`'s job). |
+| `isOutcome`       | const | `Outcome` — `rank` a positive integer.                                            |
+| `isGiven`         | const | `Given`.                                                                          |
+| `isExample`       | const | `Example`.                                                                        |
+| `isCitation`      | const | `Citation` — `name`, `url`, and `note` all present and single-line.               |
+| `isGap`           | const | `Gap`.                                                                            |
+| `isRisk`          | const | `Risk` — `severity` must be a `RiskSeverity`.                                     |
+| `isOutput`        | const | `Output` — `format` must be an `OutputFormat`.                                    |
+| `isProof`         | const | `Proof`.                                                                          |
+| `isBrief`         | const | `Brief` — the whole exact-record contract, section guards composed.               |
 
 ```ts
 import {
@@ -234,9 +237,6 @@ import {
 	isTaskOperation,
 	isCitation,
 	isExample,
-	isLogicalVerdict,
-	isObject,
-	isRuleVerdict,
 	isGiven,
 	isManifest,
 	isOutcome,
@@ -253,10 +253,6 @@ isTaskOperation('refactor') // true
 isTaskDomain('frontend') // false
 isReference({ path: 'AGENTS.md', note: 'project law' }) // true
 isReference({ path: 'AGENTS.md' }) // false — `note` is required
-isLogicalVerdict(undefined) // false — total, so a borrowed engine cannot crash the gate
-isRuleVerdict({ id: 'proven', applied: true, premises: [true], conclusion: true }) // true
-isObject(new Date()) // true — a prototype is not a disqualification
-isObject([]) // false — no interface these guards narrow is an array
 isManifest({ read: [], edit: [], locked: [], forbidden: [] }) // true
 isOutcome({ rank: 1, text: 'the tests pass', required: true }) // true
 isGiven({ category: 'convention', name: 'indentation', value: 'tabs' }) // true

@@ -4,7 +4,7 @@ import type { Interpretation, InterpretInterface } from '@orkestrel/interpret'
 import { createInterpret, digestValue } from '@orkestrel/interpret'
 import { attempt } from '@orkestrel/contract'
 import type { LogicalResult, ReasonInterface } from '@orkestrel/reason'
-import { createLogicalReasoner, createReason } from '@orkestrel/reason'
+import { createLogicalReasoner, createReason, isLogicalResult } from '@orkestrel/reason'
 import { snapshotBrief } from './cloners.js'
 import { BriefError } from './errors.js'
 import {
@@ -23,7 +23,6 @@ import {
 	manifest,
 	output,
 } from './helpers.js'
-import { isLogicalVerdict } from './validators.js'
 import type {
 	Brief,
 	BriefInput,
@@ -212,8 +211,9 @@ export class BriefCompiler implements BriefCompilerInterface {
 		// foreign data however well-typed the interface is: reading `.reasoning` off `undefined`
 		// threw a raw TypeError where the contract promises `GATE_FAILED`, and a result that
 		// claimed `reasoning: 'logical'` without a `rules` array crashed the caller of this
-		// method instead. `isLogicalVerdict` is total, so every malformed shape lands here.
-		if (!isLogicalVerdict(verdict)) {
+		// method instead. reason's published `isLogicalResult` is total, so every malformed
+		// shape lands here.
+		if (!isLogicalResult(verdict)) {
 			throw new BriefError('GATE_FAILED', 'The gate reasoner returned a non-logical result', {
 				stage: 'gate',
 				field: 'reasoning',
@@ -305,7 +305,7 @@ export class BriefCompiler implements BriefCompilerInterface {
 		// The same total guard `gate` applies. A borrowed engine can hand back a value that
 		// satisfies the compiler and not the contract, and reading `.rules.filter` off one threw
 		// out of `compile` — from the code whose whole job is containing a failure.
-		if (!isLogicalVerdict(verdict)) return undefined
+		if (!isLogicalResult(verdict)) return undefined
 		const refused = verdict.rules
 			.filter((entry) => !entry.conclusion)
 			.map((entry) => entry.id)
