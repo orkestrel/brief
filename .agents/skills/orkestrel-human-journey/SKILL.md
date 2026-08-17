@@ -40,6 +40,8 @@ Read the current files in this order:
 6. **Commit a value through an act a person performs:** Enter, Tab away, or a named button. Report a
    surface that commits on a timer, on an unpredictable event, or only after work the person cannot
    observe as a surface finding, and never work around it in the layer.
+7. **Type only what a person would.** Journeys carry trusted input; adversarial payloads belong to
+   the transport family and the parser suites.
 
 ## Build or verify the journey layer
 
@@ -66,7 +68,10 @@ placement and scope `.claude/rules/tests.md` fixes.
 - Type keystroke by keystroke where the keystrokes are the subject; fill in one operation where the
   text is only a payload the person pastes.
 - Poll every fact the application produces asynchronously until it converges. Never assert one from
-  a single read after the action.
+  a single read after the action. A poll's predicate must be able to go false-to-true after the
+  action it observes; a predicate already true when the poll starts binds nothing.
+- Assert the state the flow must reach, never the transient path taken to it. A criterion that bans
+  a harmless transient over-refuses and breaks on the next honest implementation.
 - Assert the negative beside the positive whenever a value replaces another: the new sentence is
   present **and** the old one is gone.
 - After a confirmed destructive action, assert through trusted input that focus landed on a visible,
@@ -103,6 +108,9 @@ placement and scope `.claude/rules/tests.md` fixes.
 Follow [captures.md](references/captures.md) for the state registry and its placement rules, the
 theme-and-viewport variant matrix, the always-on filename proof, the capture-run membership proof,
 and how a state that exists only during an activation is captured.
+
+When a capture and a green suite disagree, the capture is the evidence and the fixture is the
+defect.
 
 Route review of the portfolio to the `orkestrel-polish-surface` campaign. Do not judge it here.
 
