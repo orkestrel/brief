@@ -81,6 +81,29 @@ the consuming campaign's record:
 4. Consumers already hand-rolling a guard for the package's types are the proof the package owes
    it; the consumer deletes its copy when the package publishes, per the ecosystem-reuse law.
 
+**Done** across the wave: contract 0.0.12 (`objectOf`), reason 0.0.6, interpret 0.0.9, brief
+0.0.2, qualifier 0.0.9, rater 0.0.10, program 0.0.8 — every engine package publishes its result
+closure, and program both composes the L3 guards and adopts them at its four borrowed-engine
+doors.
+
+## 5. Successors the program audit named, and terrain's adoption
+
+- **Program, read-once ownership at the guarded doors.** The P1 guard proves the shape at one
+  instant and the class then re-reads the same foreign object (`qualification.success`,
+  `.scopes`, `rating.lines` through `buildProgramResult`), so a getter answering differently on
+  the second read defeats the containment — the read-once law. Same family as brief's three-door
+  seal item above: one ownership ladder (own → guard → seal live → refuse) at every borrowed
+  door, taken with the adversarial pass since it changes accepted pass-through-identity behavior.
+- **Program, the validate paths.** `helpers.ts` still dereferences `qualifier.validate(…)` and
+  `engine.validate(…)` returns raw at three sites reachable from public `validate()` and
+  construction; qualifier's `isQualificationValidationResult` and reason's
+  `isReasonValidationResult` are published for exactly these. A named unit, not a rider.
+- **Terrain adopts the wave.** Measured in T1: its worst raw risk is
+  `ProgramResult.qualification.findings.map` inside a Vue computed, and its one production
+  narrow is a discriminant check a malformed `rules` passes. Re-pin the seven releases, guard
+  the `EvaluationStore`/`Rater.#record` seam with program's published `isProgramResult`, and
+  replace the `windSubject` discriminant with reason's `isLogicalResult`.
+
 ## What to look out for, in any package
 
 The four defect classes this fleet has actually shipped, each found by an audit round:
