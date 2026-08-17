@@ -800,9 +800,11 @@ These invariants hold across `src/core` and this guide:
     produced came from narrowing it — an exact guard that failed the gate closed on a valid
     engine, and a JSON clone that turned a correct refusal into an emitted brief.
 
-    Only the verdict is shape-checked, because `ReasonInterface.reason` publishes a union that
-    must be narrowed; the `Interpretation` is owned and not validated. That asymmetry is
-    deliberate, and `BriefCompilerOptions` states the obligations it places on a caller's engine.
+    Both engines' returns are shape-checked with their packages' published guards: the verdict
+    with reasons' `isLogicalResult`, and the `Interpretation` with interprets'
+    `isInterpretation` at both of the stage's doors. A supplied interpretation whose snapshot
+    copy loses prototype-carried members is sealed live rather than refused, because the
+    published contract is wider than the copy mechanism.
 
 Deliberately absent: a relation or graph layer over briefs (a brief's links are one RANKED
 list and four DISJOINT partitions — order and set membership, fully served by the guards,

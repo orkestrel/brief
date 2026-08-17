@@ -21,6 +21,7 @@ import {
 	buildInterpret,
 	buildPermissiveEvaluator,
 	buildReadyInput,
+	AccessorInterpretation,
 	buildAccessorInterpret,
 	buildCountingReason,
 	buildFailingInterpret,
@@ -584,6 +585,41 @@ describe('BriefCompiler fail-closed paths', () => {
 		)
 		expect(briefing.brief).toBeUndefined()
 		expect(briefing.questions[0]?.blocking).toBe(true)
+	})
+
+	it('seals a supplied prototype-accessor interpretation live instead of refusing it', () => {
+		// The whole-input snapshot clone-drops prototype members before the supplied-door
+		// guard runs, so a CONFORMING class-instance interpretation arrived empty and was
+		// refused — a wrong refusal against a valid caller. The seal fallback guards the live
+		// value and freezes it in place: the published contract is wider than the copy
+		// mechanism.
+		const compiler = createBriefCompiler()
+		const briefing = compiler.compile({
+			interpretation: new AccessorInterpretation(),
+			task: buildTask(),
+			outcomes: [outcome(1, 'x')],
+			proofs: [proof('x', 'npm test')],
+		})
+		compiler.destroy()
+		expect(briefing.interpretation?.digest).toBe('accessor')
+		expect(briefing.failures.map((entry) => entry.code)).not.toContain('INTERPRET_FAILED')
+	})
+
+	it('refuses a supplied interpretation that is malformed live, with a coded failure', () => {
+		// `structuredClone(new AccessorInterpretation())` is still typed `Interpretation` and
+		// is empty at runtime — a type-admitted malformed supplied vector. The seal fallback
+		// must not rescue it: the live value fails the same guard the snapshot copy failed.
+		const compiler = createBriefCompiler()
+		const briefing = compiler.compile({
+			interpretation: structuredClone(new AccessorInterpretation()),
+			task: buildTask(),
+			outcomes: [outcome(1, 'x')],
+			proofs: [proof('x', 'npm test')],
+		})
+		compiler.destroy()
+		expect(briefing.interpretation).toBeUndefined()
+		expect(briefing.failures[0]?.code).toBe('INTERPRET_FAILED')
+		expect(briefing.brief).toBeUndefined()
 	})
 
 	it('contains an interpret failure and REFUSES, because the request went unread', () => {

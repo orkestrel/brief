@@ -433,11 +433,11 @@ export type BriefCompilerEventMap = {
  * - Every value a borrowed engine returns is OWNED AT ARRIVAL — copied where the value
  *   permits it, sealed in place where it does not — and then read exactly once. What the
  *   engine does with its own object afterwards cannot reach a `Briefing`.
- * - Only the VERDICT is shape-checked, because `ReasonInterface.reason` publishes a union
- *   this package must narrow. The `Interpretation` is owned and not validated: it is a
- *   14-member foreign interface with no published guard, and only four of its members are
- *   read, inside contained code. That asymmetry is deliberate — guarding it would trade a
- *   contained failure for a wrong refusal against a valid engine.
+ * - Both returns are shape-checked with their packages' published guards — reasons' logical
+ *   result guard for the verdict, interprets' interpretation guard at both of the interpret
+ *   stage's doors. A malformed value at either door records `INTERPRET_FAILED` instead of
+ *   escaping `compile` as a raw throw, and a supplied interpretation whose snapshot copy
+ *   loses prototype-carried members is sealed live rather than refused.
  * - Neither engine is narrowed past its published contract. `Entity.value` is `unknown` and
  *   `LogicalResult` is an interface a class instance satisfies, so a value JSON cannot
  *   express is on-contract and is sealed rather than refused.

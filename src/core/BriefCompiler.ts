@@ -123,7 +123,7 @@ export class BriefCompiler implements BriefCompilerInterface {
 		}
 		const owned = taken.value
 
-		const interpretation = this.#read(owned, stages, failures)
+		const interpretation = this.#read(owned, input, stages, failures)
 
 		const drafted = attempt(() =>
 			this.#draft(owned, interpretation, this.#unresolved(interpretation, failures)),
@@ -270,6 +270,7 @@ export class BriefCompiler implements BriefCompilerInterface {
 	// see — a JS consumer or a replayed value — at the cost of one total check.
 	#read(
 		input: BriefInput,
+		raw: BriefInput,
 		stages: BriefStageRecord[],
 		failures: BriefStageFailure[],
 	): Interpretation | undefined {
@@ -296,6 +297,12 @@ export class BriefCompiler implements BriefCompilerInterface {
 		}
 		const supplied = input.interpretation
 		if (supplied === undefined || isInterpretation(supplied)) return supplied
+		// The snapshot's clone keeps own members only, so a conforming interpretation carried
+		// by prototype accessors arrives here empty. The published contract is wider than the
+		// copy mechanism, and the sealing law says seal the live value in place rather than
+		// refuse it.
+		const live = raw.interpretation
+		if (live !== undefined && isInterpretation(live)) return freezeDeep(live)
 		const message = 'The supplied interpretation does not satisfy the published shape'
 		stages.push(Object.freeze({ stage: 'interpret', input: 'interpretation', error: message }))
 		failures.push(Object.freeze({ stage: 'interpret', code: 'INTERPRET_FAILED', message }))
