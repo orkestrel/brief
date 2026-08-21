@@ -80,7 +80,9 @@ beforeAll(() => {
 	if (!existsSync(`${ROOT}/dist/src/core/index.js`)) {
 		throw new Error('dist is absent: run `npm run build` before the distribution proof')
 	}
-	const report = readPackReport(npm(['pack', '--json', `--pack-destination=${scratch.path}`], ROOT))
+	const report = readPackReport(
+		npm(['pack', '--json', '--ignore-scripts', `--pack-destination=${scratch.path}`], ROOT),
+	)
 	const filename = resolveField(report, 'filename')
 	if (typeof filename !== 'string') throw new Error('npm pack reported no filename')
 	tarball = `${scratch.path}/${filename}`
@@ -106,7 +108,7 @@ afterAll(() => {
 
 describe('packed artifact', () => {
 	it('packs the published file set and nothing private', () => {
-		const paths = readPackedPaths(npm(['pack', '--dry-run', '--json'], ROOT))
+		const paths = readPackedPaths(npm(['pack', '--dry-run', '--json', '--ignore-scripts'], ROOT))
 
 		// Membership, not a count: a total passes while one half of the set is empty.
 		expect(paths).toContain('package.json')
