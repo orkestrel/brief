@@ -5,6 +5,7 @@ import type {
 	Entity,
 	FieldMapping,
 	Intent,
+	Interpretation,
 	InterpretInterface,
 	StageFailure,
 	StageRecord,
@@ -13,6 +14,7 @@ import { createInterpret } from '@orkestrel/interpret'
 import type {
 	Check,
 	EvaluatorInterface,
+	LogicalResult,
 	ReasonInterface,
 	ReasonResult,
 	RuleResult,
@@ -25,6 +27,14 @@ export const FIRST_RULE: RuleResult = Object.freeze({
 	applied: true,
 	premises: Object.freeze([true]),
 	conclusion: true,
+})
+
+/** The refused rule a captured shifting verdict must retain. */
+export const CAPTURED_RULE: RuleResult = Object.freeze({
+	id: 'captured',
+	applied: true,
+	premises: Object.freeze([false]),
+	conclusion: false,
 })
 
 /** The canonical valid task every fixture builds on. */
@@ -240,6 +250,167 @@ export class AccessorInterpretation {
 }
 
 /**
+ * A conforming supplied interpretation whose prototype getters change after their first read.
+ * The compiler must draft from one captured view rather than guard one reading and draft another.
+ */
+export class ShiftingAccessorInterpretation implements Interpretation {
+	#text = 0
+	#intent = 0
+	#entities = 0
+	#digest = 0
+
+	get text(): string {
+		this.#text += 1
+		return this.#text === 1 ? 'migrate the captured stores' : 'audit the forged stores'
+	}
+
+	get normalized(): string {
+		return 'migrate the captured stores'
+	}
+
+	get intent(): Intent {
+		this.#intent += 1
+		return this.#intent === 1
+			? { action: 'migrate', domain: 'code', confidence: 1 }
+			: { action: 'audit', domain: 'ops', confidence: 1 }
+	}
+
+	get entities(): readonly Entity[] {
+		this.#entities += 1
+		return [
+			{
+				name: 'reading',
+				value: this.#entities === 1 ? 'captured' : 'forged',
+				provenance: { category: 'computed' },
+				confidence: 1,
+			},
+		]
+	}
+
+	get mappings(): readonly FieldMapping[] {
+		return []
+	}
+
+	get ambiguities(): readonly Ambiguity[] {
+		return []
+	}
+
+	get prompt(): string {
+		return ''
+	}
+
+	get stages(): readonly StageRecord[] {
+		return []
+	}
+
+	get failures(): readonly StageFailure[] {
+		return []
+	}
+
+	get complete(): boolean {
+		return true
+	}
+
+	get confidence(): number {
+		return 1
+	}
+
+	get digest(): string {
+		this.#digest += 1
+		return this.#digest === 1 ? 'captured' : 'forged'
+	}
+}
+
+/**
+ * A conforming engine interpretation with shifting prototype getters and a function-valued
+ * `Entity.value`. The entity member forces the clone fallback and names the retained leaf.
+ */
+export class ShiftingForeignInterpretation implements Interpretation {
+	#text = 0
+	#intent = 0
+	#digest = 0
+	readonly entities: readonly Entity[] = Object.freeze([
+		Object.freeze({
+			name: 'callback',
+			value: Math.max,
+			provenance: Object.freeze({ category: 'computed' }),
+			confidence: 1,
+		}),
+	])
+
+	get text(): string {
+		this.#text += 1
+		return this.#text === 1 ? 'migrate the captured stores' : 'audit the forged stores'
+	}
+
+	get normalized(): string {
+		return 'migrate the captured stores'
+	}
+
+	get intent(): Intent {
+		this.#intent += 1
+		return this.#intent === 1
+			? { action: 'migrate', domain: 'code', confidence: 1 }
+			: { action: 'audit', domain: 'ops', confidence: 1 }
+	}
+
+	get mappings(): readonly FieldMapping[] {
+		return []
+	}
+
+	get ambiguities(): readonly Ambiguity[] {
+		return []
+	}
+
+	get prompt(): string {
+		return ''
+	}
+
+	get stages(): readonly StageRecord[] {
+		return []
+	}
+
+	get failures(): readonly StageFailure[] {
+		return []
+	}
+
+	get complete(): boolean {
+		return true
+	}
+
+	get confidence(): number {
+		return 1
+	}
+
+	get digest(): string {
+		this.#digest += 1
+		return this.#digest === 1 ? 'captured' : 'forged'
+	}
+}
+
+/** A borrowed engine that returns the shifting function-valued interpretation. */
+export function buildShiftingInterpret(): InterpretInterface {
+	const real = createInterpret()
+	return {
+		get emitter() {
+			return real.emitter
+		},
+		interpret: () => new ShiftingForeignInterpretation(),
+		register: (template) => {
+			real.register(template)
+		},
+		unregister: (id) => real.unregister(id),
+		template: (id) => real.template(id),
+		templates: () => real.templates(),
+		describe: (definition) => real.describe(definition),
+		narrate: (result) => real.narrate(result),
+		destroy: () => {
+			real.destroy()
+		},
+	}
+}
+
+/**
  * A borrowed engine whose `interpret` returns a CONFORMING class-instance
  * `Interpretation` that the ownership clone cannot carry — see
  * {@link AccessorInterpretation}. Every other member delegates to a real engine.
@@ -403,6 +574,58 @@ export function buildStableReason(): ReasonInterface {
 			},
 		],
 	})
+}
+
+/** A reasons engine whose uncloneable logical result shifts after its captured answers. */
+export function buildShiftingReason(): ReasonInterface {
+	return createReason({
+		reasoners: [
+			{
+				id: 'shifting',
+				reasoning: 'logical',
+				supports: () => true,
+				validate: () => ({ valid: true, errors: [], warnings: [] }),
+				reason: () => new ShiftingLogicalResult(),
+			},
+		],
+	})
+}
+
+/** A logical result whose function member forces capture and whose declared getters shift. */
+export class ShiftingLogicalResult implements LogicalResult {
+	#conclusion = 0
+	#rules = 0
+	readonly leaf = Math.max
+
+	get reasoning(): 'logical' {
+		return 'logical'
+	}
+
+	get conclusion(): boolean {
+		this.#conclusion += 1
+		return this.#conclusion >= 3
+	}
+
+	get rules(): readonly RuleResult[] {
+		this.#rules += 1
+		return this.#rules === 1 ? [CAPTURED_RULE] : []
+	}
+
+	get count(): number {
+		return 1
+	}
+
+	get success(): boolean {
+		return false
+	}
+
+	get trace(): readonly string[] {
+		return []
+	}
+
+	get errors(): readonly string[] {
+		return []
+	}
 }
 
 /** A reasons engine that refuses through `conclusion` alone and names no failing rule. */

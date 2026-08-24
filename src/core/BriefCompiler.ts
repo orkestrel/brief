@@ -5,7 +5,7 @@ import { createInterpret, digestValue, isInterpretation } from '@orkestrel/inter
 import { attempt } from '@orkestrel/contract'
 import type { LogicalResult, ReasonInterface } from '@orkestrel/reason'
 import { createLogicalReasoner, createReason, isLogicalResult } from '@orkestrel/reason'
-import { snapshotBrief } from './cloners.js'
+import { captureValue, snapshotBrief } from './cloners.js'
 import { BriefError } from './errors.js'
 import {
 	brief,
@@ -198,7 +198,15 @@ export class BriefCompiler implements BriefCompilerInterface {
 		// the law `compile` already applies to the caller's input. Validating one reading and
 		// recording another let a getter bless a shape the pipeline never saw.
 		const ruled = attempt(() =>
-			this.#own(this.#reason.reason(briefToSubject(source), gateDefinition())),
+			this.#own(this.#reason.reason(briefToSubject(source), gateDefinition()), [
+				'reasoning',
+				'conclusion',
+				'rules',
+				'count',
+				'success',
+				'trace',
+				'errors',
+			]),
 		)
 		if (!ruled.success) {
 			throw new BriefError('GATE_FAILED', errorToMessage(ruled.error), {
@@ -252,13 +260,12 @@ export class BriefCompiler implements BriefCompilerInterface {
 	// result, and for the interpret stage that failure deleted the derived blocking gaps and let
 	// an under-specified brief through the gate.
 	//
-	// So: clone when the value permits it, which also breaks the alias, and otherwise seal in
-	// place. Sealing alone is enough against the stated threat — a pooled engine rewriting a
-	// returned briefing — because the write throws in the engine instead of corrupting the
-	// record. What is never acceptable is refusing the value.
-	#own<TValue>(value: TValue): TValue {
+	// So: clone when the value permits it, which also breaks the alias, and otherwise capture a
+	// plain view that materializes the published members once while retaining uncloneable leaves.
+	// Every later read is of that frozen view. What is never acceptable is refusing the value.
+	#own(value: unknown, members: readonly string[]): unknown {
 		const cloned = attempt(() => structuredClone(value))
-		return freezeDeep(cloned.success ? cloned.value : value)
+		return cloned.success ? freezeDeep(cloned.value) : captureValue(value, members)
 	}
 
 	// The interpret stage. Skipped entirely when the input carries no text, in which case
@@ -274,11 +281,27 @@ export class BriefCompiler implements BriefCompilerInterface {
 		stages: BriefStageRecord[],
 		failures: BriefStageFailure[],
 	): Interpretation | undefined {
+		const members = [
+			'text',
+			'normalized',
+			'intent',
+			'entities',
+			'subject',
+			'definition',
+			'mappings',
+			'ambiguities',
+			'prompt',
+			'stages',
+			'failures',
+			'complete',
+			'confidence',
+			'digest',
+		]
 		const text = input.text
 		if (text !== undefined) {
 			// Owned for the same reason the verdict is: the engine is borrowed and its
 			// `Interpretation` is foreign data the briefing then carries as a replay.
-			const read = attempt(() => this.#own(this.#interpret.interpret(text)))
+			const read = attempt(() => this.#own(this.#interpret.interpret(text), members))
 			if (read.success && isInterpretation(read.value)) {
 				stages.push(Object.freeze({ stage: 'interpret', input: text, output: read.value }))
 				return read.value
@@ -298,11 +321,11 @@ export class BriefCompiler implements BriefCompilerInterface {
 		const supplied = input.interpretation
 		if (supplied === undefined || isInterpretation(supplied)) return supplied
 		// The snapshot's clone keeps own members only, so a conforming interpretation carried
-		// by prototype accessors arrives here empty. The published contract is wider than the
-		// copy mechanism, and the sealing law says seal the live value in place rather than
-		// refuse it.
+		// by prototype accessors arrives here empty. Capture the live value into a plain view;
+		// no later read remains attached to the caller's accessors.
 		const live = raw.interpretation
-		if (live !== undefined && isInterpretation(live)) return freezeDeep(live)
+		const captured = attempt(() => captureValue(live, members))
+		if (captured.success && isInterpretation(captured.value)) return captured.value
 		const message = 'The supplied interpretation does not satisfy the published shape'
 		stages.push(Object.freeze({ stage: 'interpret', input: 'interpretation', error: message }))
 		failures.push(Object.freeze({ stage: 'interpret', code: 'INTERPRET_FAILED', message }))
@@ -327,10 +350,7 @@ export class BriefCompiler implements BriefCompilerInterface {
 		if (unready.length > 0) {
 			return { stage: 'gate', code: 'BLOCKED', message: `Gate refused: ${unready.join(', ')}` }
 		}
-		// The same total guard `gate` applies. A borrowed engine can hand back a value that
-		// satisfies the compiler and not the contract, and reading `.rules.filter` off one threw
-		// out of `compile` — from the code whose whole job is containing a failure.
-		if (!isLogicalResult(verdict)) return undefined
+		if (verdict === undefined) return undefined
 		const refused = verdict.rules
 			.filter((entry) => !entry.conclusion)
 			.map((entry) => entry.id)

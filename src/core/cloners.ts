@@ -4,6 +4,89 @@ import type { Brief } from './types.js'
 import { isBrief } from './validators.js'
 
 /**
+ * Captures one stable, frozen view of a foreign contract value.
+ *
+ * @remarks
+ * Rebuilds the root and every reachable plain container from its own enumerable members.
+ * Unknown own members survive. Each published member absent from that copied own set is read
+ * once and materialized, which admits a class that supplies its contract through prototype
+ * accessors without leaving later reads attached to the live instance. Non-container leaves
+ * retain their identity, including functions that `structuredClone` cannot carry.
+ *
+ * @param source - The foreign value to capture.
+ * @param members - The published root member names to materialize when absent from its own set.
+ * @returns A deeply frozen plain view, or `source` itself when it is a primitive.
+ *
+ * @example
+ * ```ts
+ * import { captureValue } from '@orkestrel/brief'
+ *
+ * const leaf = () => 'ready'
+ * const owned = captureValue({ leaf }, ['leaf'])
+ * Reflect.get(owned, 'leaf') === leaf // true — an uncloneable leaf keeps its identity
+ * Object.isFrozen(owned) // true
+ * ```
+ */
+export function captureValue(source: unknown, members: readonly string[]): unknown {
+	if (source === null || (typeof source !== 'object' && typeof source !== 'function')) {
+		return source
+	}
+
+	const target: object = Array.isArray(source) ? [] : Object.create(null)
+	const seen = new WeakMap<object, object>([[source, target]])
+	const captured: object[] = [target]
+	const pending: Array<
+		readonly [source: object, target: object, members: readonly string[] | undefined]
+	> = [[source, target, members]]
+
+	while (pending.length > 0) {
+		const frame = pending.pop()
+		if (frame === undefined) continue
+		const [current, view, expected] = frame
+		const entries: Array<readonly [key: PropertyKey, value: unknown]> = []
+		const copied = new Set<PropertyKey>()
+
+		for (const key of Reflect.ownKeys(current)) {
+			const descriptor = Reflect.getOwnPropertyDescriptor(current, key)
+			if (descriptor === undefined || !descriptor.enumerable) continue
+			copied.add(key)
+			entries.push([key, 'value' in descriptor ? descriptor.value : Reflect.get(current, key)])
+		}
+		for (const key of expected ?? []) {
+			if (!copied.has(key)) entries.push([key, Reflect.get(current, key)])
+		}
+
+		for (const [key, value] of entries) {
+			let owned = value
+			if (value !== null && typeof value === 'object') {
+				const existing = seen.get(value)
+				if (existing !== undefined) {
+					owned = existing
+				} else {
+					const prototype = Reflect.getPrototypeOf(value)
+					if (Array.isArray(value) || prototype === null || prototype === Object.prototype) {
+						const branch: object = Array.isArray(value) ? [] : Object.create(null)
+						seen.set(value, branch)
+						captured.push(branch)
+						pending.push([value, branch, undefined])
+						owned = branch
+					}
+				}
+			}
+			Reflect.defineProperty(view, key, {
+				value: owned,
+				enumerable: true,
+				configurable: false,
+				writable: false,
+			})
+		}
+	}
+
+	for (const view of captured) Object.freeze(view)
+	return target
+}
+
+/**
  * Return a deeply owned, deeply frozen copy of a brief, refusing anything off-contract.
  *
  * @remarks

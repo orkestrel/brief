@@ -22,11 +22,14 @@ import {
 	buildPermissiveEvaluator,
 	buildReadyInput,
 	AccessorInterpretation,
+	ShiftingAccessorInterpretation,
 	buildAccessorInterpret,
 	buildCountingReason,
 	buildFailingInterpret,
 	buildForeignInterpret,
 	buildSilentReason,
+	buildShiftingInterpret,
+	buildShiftingReason,
 	buildStableReason,
 	buildTask,
 	readErrorCode,
@@ -436,7 +439,7 @@ describe('BriefCompiler fail-closed paths', () => {
 	it('owns the verdict it records, rather than aliasing the borrowed engine', () => {
 		// The verdict comes from a BORROWED engine, and nothing in `ReasonInterface` promises a
 		// fresh object per call. An engine pooling one mutable result rewrote the verdict of a
-		// briefing already returned, so the recorded value is cloned and sealed like the draft
+		// briefing already returned, so the recorded value is cloned and frozen like the draft
 		// input — a `Briefing` is documented as replayable.
 		const compiler = createBriefCompiler()
 		const briefing = compiler.compile(buildReadyInput())
@@ -485,6 +488,16 @@ describe('BriefCompiler fail-closed paths', () => {
 		expect(first.verdict).toStrictEqual(second.verdict)
 		expect(first.brief !== undefined).toBe(second.brief !== undefined)
 		expect(first.failures).toStrictEqual(second.failures)
+	})
+
+	it('uses one captured conclusion and rule set from an uncloneable shifting verdict', () => {
+		const compiler = createBriefCompiler({ reason: buildShiftingReason() })
+		const briefing = compiler.compile(buildReadyInput())
+		expect(briefing.brief).toBeUndefined()
+		expect(briefing.verdict?.conclusion).toBe(false)
+		expect(briefing.verdict?.rules.map((entry) => entry.id)).toStrictEqual(['captured'])
+		expect(briefing.failures[0]?.message).toBe('Gate refused: captured')
+		compiler.destroy()
 	})
 
 	it('names the cause when a borrowed reasoner refuses without naming a rule', () => {
@@ -587,12 +600,12 @@ describe('BriefCompiler fail-closed paths', () => {
 		expect(briefing.questions[0]?.blocking).toBe(true)
 	})
 
-	it('seals a supplied prototype-accessor interpretation live instead of refusing it', () => {
+	it('captures a supplied prototype-accessor interpretation instead of refusing it', () => {
 		// The whole-input snapshot clone-drops prototype members before the supplied-door
 		// guard runs, so a CONFORMING class-instance interpretation arrived empty and was
-		// refused — a wrong refusal against a valid caller. The seal fallback guards the live
-		// value and freezes it in place: the published contract is wider than the copy
-		// mechanism.
+		// refused — a wrong refusal against a valid caller. The capture fallback materializes
+		// the published members into a frozen view: the published contract is wider than the
+		// whole-input copy mechanism.
 		const compiler = createBriefCompiler()
 		const briefing = compiler.compile({
 			interpretation: new AccessorInterpretation(),
@@ -605,9 +618,53 @@ describe('BriefCompiler fail-closed paths', () => {
 		expect(briefing.failures.map((entry) => entry.code)).not.toContain('INTERPRET_FAILED')
 	})
 
+	it('drafts from the captured answers of a supplied prototype-accessor interpretation', () => {
+		const compiler = createBriefCompiler({
+			actions: { migrate: 'migrate', audit: 'audit' },
+			domains: { code: 'code', ops: 'ops' },
+		})
+		const briefing = compiler.compile({
+			interpretation: new ShiftingAccessorInterpretation(),
+			outcomes: [outcome(1, 'x')],
+			proofs: [proof('x', 'npm test')],
+		})
+		expect(briefing.interpretation?.digest).toBe('captured')
+		expect(briefing.brief?.task).toEqual({
+			operation: 'migrate',
+			domain: 'code',
+			statement: 'Migrate the captured stores.',
+		})
+		expect(briefing.brief?.givens).toEqual([
+			{ category: 'extracted', name: 'reading', value: 'captured' },
+		])
+		compiler.destroy()
+	})
+
+	it('captures shifting engine getters while carrying a function-valued entity by reference', () => {
+		const compiler = createBriefCompiler({
+			interpret: buildShiftingInterpret(),
+			actions: { migrate: 'migrate', audit: 'audit' },
+			domains: { code: 'code', ops: 'ops' },
+		})
+		const briefing = compiler.compile({
+			text: 'migrate the captured stores',
+			outcomes: [outcome(1, 'x')],
+			proofs: [proof('x', 'npm test')],
+		})
+		expect(briefing.interpretation?.digest).toBe('captured')
+		expect(briefing.interpretation?.entities[0]?.value).toBe(Math.max)
+		expect(briefing.failures).toStrictEqual([])
+		expect(briefing.brief?.task).toEqual({
+			operation: 'migrate',
+			domain: 'code',
+			statement: 'Migrate the captured stores.',
+		})
+		compiler.destroy()
+	})
+
 	it('refuses a supplied interpretation that is malformed live, with a coded failure', () => {
 		// `structuredClone(new AccessorInterpretation())` is still typed `Interpretation` and
-		// is empty at runtime — a type-admitted malformed supplied vector. The seal fallback
+		// is empty at runtime — a type-admitted malformed supplied vector. The capture fallback
 		// must not rescue it: the live value fails the same guard the snapshot copy failed.
 		const compiler = createBriefCompiler()
 		const briefing = compiler.compile({
