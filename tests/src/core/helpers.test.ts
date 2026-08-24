@@ -981,6 +981,73 @@ describe('derivations', () => {
 		expect(deriveTask(intent, '   ', { migrate: 'migrate' }, { code: 'code' })).toBeUndefined()
 	})
 
+	it('uses an own descriptor answer without invoking a disagreeing proxy get trap', () => {
+		const traps: string[] = []
+		const actions = new Proxy<Readonly<Record<string, 'migrate' | 'refactor'>>>(
+			{},
+			{
+				getOwnPropertyDescriptor: (_target, key) => {
+					traps.push(`descriptor:${String(key)}`)
+					return key === 'migrate'
+						? { configurable: true, enumerable: true, value: 'migrate', writable: true }
+						: undefined
+				},
+				get: (_target, key) => {
+					traps.push(`get:${String(key)}`)
+					return 'refactor'
+				},
+			},
+		)
+
+		expect(
+			deriveTask(
+				{ action: 'migrate', domain: 'code', confidence: 1 },
+				'migrate the stores',
+				actions,
+				{ code: 'code' },
+			),
+		).toStrictEqual({ operation: 'migrate', domain: 'code', statement: 'Migrate the stores.' })
+		expect(traps).toStrictEqual(['descriptor:migrate'])
+	})
+
+	it('evaluates each accessor-backed own mapping once', () => {
+		let actionReads = 0
+		let domainReads = 0
+		const actions: Readonly<Record<string, 'migrate'>> = {
+			get migrate() {
+				actionReads += 1
+				return 'migrate'
+			},
+		}
+		const domains: Readonly<Record<string, 'code'>> = {
+			get code() {
+				domainReads += 1
+				return 'code'
+			},
+		}
+
+		expect(
+			deriveTask(
+				{ action: 'migrate', domain: 'code', confidence: 1 },
+				'migrate the stores',
+				actions,
+				domains,
+			),
+		).toStrictEqual({ operation: 'migrate', domain: 'code', statement: 'Migrate the stores.' })
+		expect(actionReads).toBe(1)
+		expect(domainReads).toBe(1)
+	})
+
+	it('reads the live action mapping again for each derivation', () => {
+		const actions: Record<string, 'migrate' | 'refactor'> = { migrate: 'migrate' }
+		const intent = { action: 'migrate', domain: 'code', confidence: 1 }
+		const domains: Readonly<Record<string, 'code'>> = { code: 'code' }
+
+		expect(deriveTask(intent, 'migrate the stores', actions, domains)?.operation).toBe('migrate')
+		actions.migrate = 'refactor'
+		expect(deriveTask(intent, 'migrate the stores', actions, domains)?.operation).toBe('refactor')
+	})
+
 	it('refuses a mapping reached only through the prototype chain', () => {
 		const inherited = buildInheritedActions()
 		expect(inherited['migrate']).toBe('migrate')

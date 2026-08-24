@@ -1242,8 +1242,24 @@ export function deriveTask(
 	actions: Readonly<Record<string, TaskOperation>>,
 	domains: Readonly<Record<string, TaskDomain>>,
 ): Task | undefined {
-	const operation = Object.hasOwn(actions, intent.action) ? actions[intent.action] : undefined
-	const domain = Object.hasOwn(domains, intent.domain) ? domains[intent.domain] : undefined
+	const operationDescriptor = Object.getOwnPropertyDescriptor(actions, intent.action)
+	const domainDescriptor = Object.getOwnPropertyDescriptor(domains, intent.domain)
+	const operation: unknown =
+		operationDescriptor === undefined
+			? undefined
+			: 'value' in operationDescriptor
+				? operationDescriptor.value
+				: operationDescriptor.get === undefined
+					? undefined
+					: Reflect.apply(operationDescriptor.get, actions, [])
+	const domain: unknown =
+		domainDescriptor === undefined
+			? undefined
+			: 'value' in domainDescriptor
+				? domainDescriptor.value
+				: domainDescriptor.get === undefined
+					? undefined
+					: Reflect.apply(domainDescriptor.get, domains, [])
 	if (!isTaskOperation(operation) || !isTaskDomain(domain)) return undefined
 	const statement = deriveStatement(text)
 	return statement.length === 0 ? undefined : task(operation, domain, statement)
