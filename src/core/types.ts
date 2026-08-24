@@ -427,22 +427,31 @@ export type BriefCompilerEventMap = {
  * is FIXED: readiness is this package's contract, not a caller setting.
  *
  * A borrowed engine is the caller's own code, not an attacker, and this package does not
- * treat it as one. The line is OWNERSHIP, and it produces four obligations worth stating
- * because none of them is enforced in code:
+ * treat it as one. The line is OWNERSHIP, and it produces obligations worth stating because
+ * none of them is enforced in code:
  *
- * - Every value a borrowed engine returns is OWNED AT ARRIVAL — copied where the value
- *   permits it, sealed in place where it does not — and then read exactly once. What the
- *   engine does with its own object afterwards cannot reach a `Briefing`.
+ * - Every value a borrowed engine returns is OWNED AT ARRIVAL — copied where a structured
+ *   clone can carry it, captured into a frozen plain view where it cannot — and read once,
+ *   where that copy or capture takes the reading. The captured view is what the `Briefing`
+ *   replays, exactly as the clone arm always produced: a member the caller's prototype
+ *   carries, outside the published contract, does not survive capture, and it never survived
+ *   a structured clone either. What the engine does with its own object afterwards cannot
+ *   reach a `Briefing`.
  * - Both returns are shape-checked with their packages' published guards — reasons' logical
  *   result guard for the verdict, interprets' interpretation guard at both of the interpret
  *   stage's doors. A malformed value at either door records `INTERPRET_FAILED` instead of
  *   escaping `compile` as a raw throw, and a supplied interpretation whose snapshot copy
- *   loses prototype-carried members is sealed live rather than refused.
+ *   loses prototype-carried members is captured rather than refused.
  * - Neither engine is narrowed past its published contract. `Entity.value` is `unknown` and
  *   `LogicalResult` is an interface a class instance satisfies, so a value JSON cannot
- *   express is on-contract and is sealed rather than refused.
- * - `actions` and `domains` are read LIVE on every `compile`, not snapshotted at
- *   construction. Mutating them between calls changes what the next call derives.
+ *   express is on-contract: its uncloneable leaves keep their identity inside the captured
+ *   view rather than being refused.
+ * - `actions` and `domains` are read as option slots ONCE, at construction, so replacing
+ *   either property on the options object afterwards changes nothing. The map each slot
+ *   names is dereferenced on every `compile`, and each lookup captures its mapping once
+ *   through the own descriptor. Mutating a map between calls therefore changes what the next
+ *   call derives, while a mapping that answers differently on a second read cannot change
+ *   what one call already derived.
  *
  * Whether the engine is correct, and whether it answers the same way twice, remain the
  * caller's own problem.

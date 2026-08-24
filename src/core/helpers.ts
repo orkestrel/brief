@@ -828,6 +828,15 @@ export function errorToMessage(error: unknown): string {
  * nothing, so it is an assertion rather than a factory. Reserve it for programmer-error
  * contexts where invalidity is a bug.
  *
+ * Intake NARROWS, and transfers no ownership. What comes back is the caller's own object,
+ * so a member carried on an accessor can answer this guard one way and a later reader
+ * another. The division is deliberate: the borrowed-engine law governs values this package
+ * pulls across a seam it called, and a value handed in at the door stays the caller's.
+ * `snapshotBrief` is the ownership door, and `pinBrief`, `BriefManager`, `briefToMarkdown`,
+ * `briefToGoal`, and `briefToDispatch` take it. `briefToSubject`, `briefToContent`, and
+ * `briefToTrace` read the value they are handed instead, so a caller reaching one of those
+ * directly owns that reading. Pass `assertBrief` a value you already own.
+ *
  * @param data - The candidate brief data.
  * @returns The same value, now known to satisfy {@link Brief}.
  * @throws {@link BriefError} `INVALID` when `data` fails `isBrief`.

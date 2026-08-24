@@ -1014,13 +1014,13 @@ describe('derivations', () => {
 		let actionReads = 0
 		let domainReads = 0
 		const actions: Readonly<Record<string, 'migrate'>> = {
-			get migrate() {
+			get migrate(): 'migrate' {
 				actionReads += 1
 				return 'migrate'
 			},
 		}
 		const domains: Readonly<Record<string, 'code'>> = {
-			get code() {
+			get code(): 'code' {
 				domainReads += 1
 				return 'code'
 			},

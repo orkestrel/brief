@@ -11,6 +11,15 @@ import { isBrief } from './validators.js'
  * all fail the same way — `undefined`, never a throw. Coerce a bare vocabulary value with
  * `parseEnum` from `@orkestrel/contract` against the exported tuple instead.
  *
+ * The half of the intake pair that is OWNED BY CONSTRUCTION, which is what separates it from
+ * `assertBrief`. The argument is text, so the graph the guard reads is one `JSON.parse` built
+ * inside this call: it carries no caller identity, no accessor, and no alias back into anything
+ * the caller still holds, and the parse-and-guard primitive this file imports from
+ * `@orkestrel/contract` returns that same parsed graph rather than a second reading of it.
+ * Every member `isBrief` checked therefore answers a later reader identically. The value is
+ * fresh rather than frozen, so the caller owns it outright — reach for `snapshotBrief` when the
+ * value came from code instead of from text.
+ *
  * @param value - The JSON text to parse.
  * @returns The `Brief` when the parsed value satisfies `isBrief`, otherwise `undefined`.
  *
