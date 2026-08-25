@@ -19,6 +19,7 @@ import {
 	parseManifest,
 	resolveLink,
 } from '@orkestrel/guide'
+import { INTERPRETATION_MEMBERS } from '@src/core'
 import { readInventory } from '@orkestrel/test/server'
 import { describe, expect, it } from 'vitest'
 
@@ -276,6 +277,13 @@ describe.each(MANIFEST)('$concept', (entry) => {
 		// passes here and this one must not.
 		expect(/\bturns\b/u.test(consumers)).toBe(true)
 		expect(/\boptions\??\.turns\b/u.test(consumers)).toBe(false)
+	})
+
+	it('IC — the members fence returns what its comment claims', () => {
+		// Transcribes the guide's `INTERPRETATION_MEMBERS.includes('subject')` fence: the optional
+		// members are captured too, so the claim is executed here rather than merely printed there.
+		expect(INTERPRETATION_MEMBERS.includes('subject')).toBe(true)
+		expect(INTERPRETATION_MEMBERS.includes('definition')).toBe(true)
 	})
 
 	it('FI — every self import in a fence names a real export', () => {
