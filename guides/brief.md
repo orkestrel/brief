@@ -130,22 +130,30 @@ check, met or missed, narrated by the reasoner.
 
 ### Constants
 
-| API                   | Kind  | Summary                                                                                               |
-| --------------------- | ----- | ----------------------------------------------------------------------------------------------------- |
-| `TASK_OPERATIONS`     | const | The twelve `TaskOperation` values, frozen — compose with `literalOf(…)` / `parseEnum(…)`.             |
-| `TASK_DOMAINS`        | const | The eight `TaskDomain` values, frozen.                                                                |
-| `OUTPUT_FORMATS`      | const | The five `OutputFormat` values, frozen.                                                               |
-| `RISK_SEVERITIES`     | const | The three `RiskSeverity` values, frozen.                                                              |
-| `DEFAULT_BRIEF_TURNS` | const | `16` — the default turn cap `briefToGoal` renders; domain-qualified to keep the barrel clean.         |
-| `GATE_ID`             | const | `'gate'` — the id of the `gateDefinition()` logical definition.                                       |
-| `LINE_BREAK_PATTERN`  | const | The four ECMAScript line terminators a brief field refuses; unanchored and flagless-`g`.              |
-| `SINGLE_LINE_PATTERN` | const | The positive form of `LINE_BREAK_PATTERN`, for `stringShape`'s `pattern` — one class, two mechanisms. |
-| `BLANK_PATTERN`       | const | Empty or all spaces — the one exemplar side `exampleToLines` must not pad.                            |
+| API                      | Kind  | Summary                                                                                                    |
+| ------------------------ | ----- | ---------------------------------------------------------------------------------------------------------- |
+| `TASK_OPERATIONS`        | const | The twelve `TaskOperation` values, frozen — compose with `literalOf(…)` / `parseEnum(…)`.                  |
+| `TASK_DOMAINS`           | const | The eight `TaskDomain` values, frozen.                                                                     |
+| `OUTPUT_FORMATS`         | const | The five `OutputFormat` values, frozen.                                                                    |
+| `RISK_SEVERITIES`        | const | The three `RiskSeverity` values, frozen.                                                                   |
+| `INTERPRETATION_MEMBERS` | const | Every published `Interpretation` member name, frozen — the capture list, pinned to `keyof Interpretation`. |
+| `DEFAULT_BRIEF_TURNS`    | const | `16` — the default turn cap `briefToGoal` renders; domain-qualified to keep the barrel clean.              |
+| `GATE_ID`                | const | `'gate'` — the id of the `gateDefinition()` logical definition.                                            |
+| `LINE_BREAK_PATTERN`     | const | The four ECMAScript line terminators a brief field refuses; unanchored and flagless-`g`.                   |
+| `SINGLE_LINE_PATTERN`    | const | The positive form of `LINE_BREAK_PATTERN`, for `stringShape`'s `pattern` — one class, two mechanisms.      |
+| `BLANK_PATTERN`          | const | Empty or all spaces — the one exemplar side `exampleToLines` must not pad.                                 |
+
+An interpretation the compiler reads is foreign data, and a class instance carries its contract
+on the prototype, so `BriefCompiler` materializes the members `INTERPRETATION_MEMBERS` names into
+a frozen view of its own. The list is pinned to `keyof Interpretation`: a name
+`@orkestrel/interpret` does not publish fails the compile, and a member it adds fails the equality
+assertion in [`BriefCompiler.test.ts`](../tests/src/core/BriefCompiler.test.ts).
 
 ```ts
 import {
 	DEFAULT_BRIEF_TURNS,
 	GATE_ID,
+	INTERPRETATION_MEMBERS,
 	OUTPUT_FORMATS,
 	RISK_SEVERITIES,
 	TASK_DOMAINS,
@@ -158,6 +166,7 @@ OUTPUT_FORMATS // ['markdown', 'json', 'code', 'diff', 'prose']
 RISK_SEVERITIES // ['low', 'medium', 'high']
 DEFAULT_BRIEF_TURNS // 16
 GATE_ID // 'gate'
+INTERPRETATION_MEMBERS.includes('subject') // true — the optional members are captured too
 ```
 
 A closed-set field that does not fit a listed value is a signal the request is mis-scoped,

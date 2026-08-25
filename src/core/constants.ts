@@ -1,3 +1,4 @@
+import type { Interpretation } from '@orkestrel/interpret'
 import type { OutputFormat, RiskSeverity, TaskDomain, TaskOperation } from './types.js'
 
 /** The twelve `TaskOperation` values, frozen. */
@@ -39,6 +40,37 @@ export const OUTPUT_FORMATS: readonly OutputFormat[] = Object.freeze([
 
 /** The three `RiskSeverity` values, frozen. */
 export const RISK_SEVERITIES: readonly RiskSeverity[] = Object.freeze(['low', 'medium', 'high'])
+
+/**
+ * Every published `Interpretation` member name, frozen.
+ *
+ * @remarks
+ * The capture list `BriefCompiler` hands `captureValue` at each interpret door — the borrowed
+ * engine's return, and the caller's supplied interpretation. A class instance carries its
+ * contract on the prototype, so the captured view materializes exactly the members named here,
+ * and a name missing from the list is a member the view drops.
+ *
+ * The `satisfies` clause refuses a name `Interpretation` does not declare, and it holds the
+ * element type at the listed names rather than widening it to `string`. That is what lets the
+ * equality assertion beside the capture cases refuse a list that has fallen short of the
+ * published shape.
+ */
+export const INTERPRETATION_MEMBERS = Object.freeze([
+	'text',
+	'normalized',
+	'intent',
+	'entities',
+	'subject',
+	'definition',
+	'mappings',
+	'ambiguities',
+	'prompt',
+	'stages',
+	'failures',
+	'complete',
+	'confidence',
+	'digest',
+] satisfies ReadonlyArray<keyof Interpretation>)
 
 /**
  * `16` — the default turn cap `briefToGoal` renders.

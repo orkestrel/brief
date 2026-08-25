@@ -6,6 +6,7 @@ import { attempt } from '@orkestrel/contract'
 import type { LogicalResult, ReasonInterface } from '@orkestrel/reason'
 import { createLogicalReasoner, createReason, isLogicalResult } from '@orkestrel/reason'
 import { captureValue, snapshotBrief } from './cloners.js'
+import { INTERPRETATION_MEMBERS } from './constants.js'
 import { BriefError } from './errors.js'
 import {
 	brief,
@@ -281,27 +282,11 @@ export class BriefCompiler implements BriefCompilerInterface {
 		stages: BriefStageRecord[],
 		failures: BriefStageFailure[],
 	): Interpretation | undefined {
-		const members = [
-			'text',
-			'normalized',
-			'intent',
-			'entities',
-			'subject',
-			'definition',
-			'mappings',
-			'ambiguities',
-			'prompt',
-			'stages',
-			'failures',
-			'complete',
-			'confidence',
-			'digest',
-		]
 		const text = input.text
 		if (text !== undefined) {
 			// Owned for the same reason the verdict is: the engine is borrowed and its
 			// `Interpretation` is foreign data the briefing then carries as a replay.
-			const read = attempt(() => this.#own(this.#interpret.interpret(text), members))
+			const read = attempt(() => this.#own(this.#interpret.interpret(text), INTERPRETATION_MEMBERS))
 			if (read.success && isInterpretation(read.value)) {
 				stages.push(Object.freeze({ stage: 'interpret', input: text, output: read.value }))
 				return read.value
@@ -324,7 +309,7 @@ export class BriefCompiler implements BriefCompilerInterface {
 		// by prototype accessors arrives here empty. Capture the live value into a plain view;
 		// no later read remains attached to the caller's accessors.
 		const live = raw.interpretation
-		const captured = attempt(() => captureValue(live, members))
+		const captured = attempt(() => captureValue(live, INTERPRETATION_MEMBERS))
 		if (captured.success && isInterpretation(captured.value)) return captured.value
 		const message = 'The supplied interpretation does not satisfy the published shape'
 		stages.push(Object.freeze({ stage: 'interpret', input: 'interpretation', error: message }))

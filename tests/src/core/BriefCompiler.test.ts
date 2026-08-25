@@ -5,6 +5,7 @@ import {
 	createBriefCompiler,
 	gap,
 	gateDefinition,
+	INTERPRETATION_MEMBERS,
 	isBriefError,
 	manifest,
 	outcome,
@@ -12,10 +13,11 @@ import {
 	reference,
 	task,
 } from '@src/core'
+import type { Interpretation } from '@orkestrel/interpret'
 import { createInterpret } from '@orkestrel/interpret'
 import { createLogicalReasoner, createReason } from '@orkestrel/reason'
 import { captureError, createRecorder } from '@orkestrel/test'
-import { describe, expect, it } from 'vitest'
+import { describe, expect, expectTypeOf, it } from 'vitest'
 import {
 	buildBrief,
 	buildInterpret,
@@ -616,6 +618,34 @@ describe('BriefCompiler fail-closed paths', () => {
 		compiler.destroy()
 		expect(briefing.interpretation?.digest).toBe('accessor')
 		expect(briefing.failures.map((entry) => entry.code)).not.toContain('INTERPRET_FAILED')
+	})
+
+	it('materializes every published member of a captured interpretation', () => {
+		// The capture list decides what survives a prototype-accessor value, so a member missing
+		// from it is a member the captured view drops — silently, and past the guard that would
+		// have caught an empty copy. The equality assertion compares the list against interprets
+		// own declaration, so a member added upstream fails the typecheck rather than the guard.
+		// The engine reading is the second mechanism: a real interpretation must carry no member
+		// the list does not name.
+		const engine = createInterpret()
+		const live = engine.interpret('migrate the stores')
+		engine.destroy()
+		const compiler = createBriefCompiler()
+		const briefing = compiler.compile({
+			interpretation: new AccessorInterpretation(),
+			task: buildTask(),
+			outcomes: [outcome(1, 'x')],
+			proofs: [proof('x', 'npm test')],
+		})
+		compiler.destroy()
+		expectTypeOf<(typeof INTERPRETATION_MEMBERS)[number]>().toEqualTypeOf<keyof Interpretation>()
+		expect(
+			Object.keys(live).filter((key) => !INTERPRETATION_MEMBERS.some((member) => member === key)),
+		).toStrictEqual([])
+		const captured: object = briefing.interpretation ?? {}
+		expect(
+			INTERPRETATION_MEMBERS.filter((member) => !Object.hasOwn(captured, member)),
+		).toStrictEqual([])
 	})
 
 	it('drafts from the captured answers of a supplied prototype-accessor interpretation', () => {
