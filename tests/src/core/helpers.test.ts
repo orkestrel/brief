@@ -684,7 +684,12 @@ describe('briefToMarkdown', () => {
 		// Provenance, not line width: assert that no line of a real file's content appears.
 		// A width check passes for any file whose lines happen to be short. Node-only and
 		// single-use, so the read stays here rather than in the host-independent setup.
-		const body = readFileSync(new URL('../../../AGENTS.md', import.meta.url), 'utf8')
+		// The corpus is the installed canon AGENTS.md: since the canon split the repository's
+		// own copy is a pointer, too small to exercise the property.
+		const body = readFileSync(
+			new URL('../../../node_modules/@orkestrel/scaffold/dist/host/AGENTS.md', import.meta.url),
+			'utf8',
+		)
 		const substantial = body
 			.split('\n')
 			.map((line) => line.trim())
