@@ -9,13 +9,13 @@ import {
 	createGuide,
 	createSource,
 	createSourceManager,
-	declarationBody,
-	fenceImports,
+	extractDeclaration,
+	extractFenceImports,
 	findMissing,
+	findMissingSymbols,
 	findUnexampled,
 	findUnlisted,
 	isExternalLink,
-	missingSymbols,
 	parseManifest,
 	resolveLink,
 } from '@orkestrel/guide'
@@ -99,23 +99,23 @@ describe.each(MANIFEST)('$concept', (entry) => {
 	})
 
 	it('SB — direct declarations and the barrel surface agree', () => {
-		expect(missingSymbols(source.exports(), source.surface())).toStrictEqual([])
-		expect(missingSymbols(source.surface(), source.exports())).toStrictEqual([])
+		expect(findMissingSymbols(source.exports(), source.surface())).toStrictEqual([])
+		expect(findMissingSymbols(source.surface(), source.exports())).toStrictEqual([])
 	})
 
 	it('SB — the barrel surface and the guide surface agree', () => {
-		expect(missingSymbols(source.surface(), guide.surface())).toStrictEqual([])
-		expect(missingSymbols(guide.surface(), source.surface())).toStrictEqual([])
+		expect(findMissingSymbols(source.surface(), guide.surface())).toStrictEqual([])
+		expect(findMissingSymbols(guide.surface(), source.surface())).toStrictEqual([])
 	})
 
 	it('SB — the comparison can report a difference', () => {
-		expect(missingSymbols([{ name: 'Phantom', kind: 'class' }], source.surface())).toStrictEqual([
+		expect(findMissingSymbols([{ name: 'Phantom', kind: 'class' }], source.surface())).toStrictEqual([
 			'class Phantom',
 		])
 		const [first] = source.surface()
 		if (first === undefined) throw new Error('the barrel surface is empty')
 		expect(
-			missingSymbols(
+			findMissingSymbols(
 				[{ name: first.name, kind: first.kind === 'const' ? 'class' : 'const' }],
 				source.surface(),
 			),
@@ -204,7 +204,7 @@ describe.each(MANIFEST)('$concept', (entry) => {
 				owner,
 				found: true,
 			})
-			const members = declarationBody(types, 'interface', name)
+			const members = extractDeclaration(types, 'interface', name)?.body ?? []
 			expect(members.length).toBeGreaterThan(0)
 			for (const member of members) {
 				const match = /^\s*readonly\s+([A-Za-z_][A-Za-z0-9_]*)\??:/u.exec(member)
@@ -254,7 +254,7 @@ describe.each(MANIFEST)('$concept', (entry) => {
 		// The control: a member no source file mentions must be reported, or the check above
 		// is satisfied by every interface it will ever read.
 		const invented = 'export interface PhantomOptions {\n\treadonly neverReadAnywhere?: number\n}\n'
-		const members = declarationBody(invented, 'interface', 'PhantomOptions')
+		const members = extractDeclaration(invented, 'interface', 'PhantomOptions')?.body ?? []
 		expect(members).toHaveLength(1)
 
 		const consumers = Object.entries(FILES)
@@ -289,7 +289,7 @@ describe.each(MANIFEST)('$concept', (entry) => {
 	it('FI — every self import in a fence names a real export', () => {
 		let checked = 0
 		for (const code of fences) {
-			for (const statement of fenceImports(code)) {
+			for (const statement of extractFenceImports(code)) {
 				const local = sources.source(statement.specifier)
 				if (local === undefined) continue
 				checked += 1
