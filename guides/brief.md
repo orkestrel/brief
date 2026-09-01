@@ -102,7 +102,7 @@ pipeline at all.
 | `Gap`                    | interface | `{ field, question, blocking, candidates? }` — one unknown; `blocking: true` means no safe default exists and the gate must fail closed.                                                                                        |
 | `Risk`                   | interface | `{ severity, text, mitigation }` — one pre-empted risk.                                                                                                                                                                         |
 | `Output`                 | interface | `{ format, sections?, include?, exclude? }` — the closed shape of the deliverable.                                                                                                                                              |
-| `Proof`                  | interface | `{ text, command }` — one mechanical, transcript-provable check; `command` should carry a clear exit signal.                                                                                                                    |
+| `Proof`                  | interface | `{ text, command }` — one mechanical, transcript-provable check; give `command` a clear exit signal.                                                                                                                            |
 | `Brief`                  | interface | `{ task, authority, manifest, outcomes, rules, invariants, givens, examples, assumptions, citations, gaps, risks, output, proofs, trace?, hash? }` — the closed execution contract.                                             |
 | `BriefInput`             | interface | `{ text?, interpretation?, task?, … }` — one `compile()` input; every brief section is an optional caller-authored override.                                                                                                    |
 | `Briefing`               | interface | `{ interpretation?, brief?, questions, verdict?, stages, failures, digest }` — the full, replayable outcome of one `compile()` call; `brief` is present exactly when it completed, so it IS the completeness test.              |
@@ -741,8 +741,8 @@ These invariants hold across `src/core` and this guide:
 
    `BriefManager` therefore compares `briefToContent` before calling a re-add unchanged, and
    REFUSES a collision with `BriefError('INVALID', …)` rather than silently replacing the
-   record already stored. A registry expecting more than a few thousand distinct briefs should
-   name its own ids through `ManagerAddOptions.id` instead of letting the digest mint them.
+   record already stored. Give a registry expecting more than a few thousand distinct briefs
+   its own ids through `ManagerAddOptions.id` rather than letting the digest mint them.
 
 3. **Fail closed at the gate, and the gate is not delegable.** Readiness is decided by
    `findUnmetRules` — in code, from the brief's own measures — BEFORE any verdict is consulted.

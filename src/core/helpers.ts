@@ -68,7 +68,7 @@ export function reference(path: string, note: string): Reference {
  * Build a `Manifest`, defaulting every absent partition to an empty list.
  *
  * @param partitions - The partitions to fill; a partial literal is enough.
- * @returns A fresh `Manifest` with all four partitions present.
+ * @returns A fresh `Manifest` with every partition present.
  *
  * @example
  * ```ts
@@ -301,9 +301,9 @@ export function brief(
  * Build the fail-closed readiness gate as a reasons `LogicalDefinition`.
  *
  * @remarks
- * Six readiness rules each derive one named fact from `briefToSubject`'s measures, and a
- * final `ready` rule conjoins all six. Forward chaining reports the LAST rule's
- * conclusion, so `LogicalResult.conclusion` is exactly `ready`.
+ * Each readiness rule derives one named fact from `briefToSubject`'s measures, and a final
+ * `ready` rule conjoins them all. Forward chaining reports the LAST rule's conclusion, so
+ * `LogicalResult.conclusion` is exactly `ready`.
  *
  * The gate takes NO parameters, and that is deliberate rather than unfinished. The
  * reasoner overlays every derived fact into one flat namespace, so a caller rule named
@@ -357,14 +357,14 @@ export function gateDefinition(): LogicalDefinition {
  * The readiness rules a brief fails, computed directly from its own measures.
  *
  * @remarks
- * The gate's decision, in code. `gateDefinition()` states the same six rules as data for a
+ * The gate's decision, in code. `gateDefinition()` states the same rules as data for a
  * reasoner to narrate, and a narration is not a decision: `BriefCompilerOptions.reason` lets a
  * caller supply the engine, and an engine that answers "met" to everything would otherwise
  * emit a brief with no proofs. `compile` refuses on THIS and keeps the verdict for its
  * trace, so a supplied engine can add detail and never remove a refusal.
  *
- * The two must agree. `tests/src/core/helpers.test.ts` drives both over one value set, which
- * is what stops the data and the code from drifting apart.
+ * The data and the code must agree. `tests/src/core/helpers.test.ts` drives both over one
+ * value set, which is what stops them from drifting apart.
  *
  * @param source - The brief to measure.
  * @returns The unmet rule ids, in gate order; empty when the brief is ready.
@@ -465,14 +465,14 @@ export function findBlockingGaps(source: Brief): readonly Gap[] {
  *
  * @remarks
  * An authority the executor cannot open is an instruction it cannot follow, so every ranked
- * path must appear in `read`, `edit`, or `locked`. Those three are the grants: `locked` is a
+ * path must appear in `read`, `edit`, or `locked`. Those are the grants: `locked` is a
  * grant, because read-only is exactly what obeying a file requires.
  *
- * This subsumes the narrower question of an authority sitting in `forbidden`. The four
- * partitions are disjoint — `findManifestOverlaps` and the `disjoint` rule enforce it — so a
- * forbidden path is in none of the three grants and is reported here. An authority named in
- * NO partition at all is reported for the same reason, and that is the case a forbidden-only
- * check misses entirely: the brief simply never says the executor may open what it must obey.
+ * This subsumes the narrower question of an authority sitting in `forbidden`. The partitions
+ * are disjoint — `findManifestOverlaps` and the `disjoint` rule enforce it — so a forbidden
+ * path is in none of the grants and is reported here. An authority named in NO partition at
+ * all is reported for the same reason, and that is the case a forbidden-only check misses
+ * entirely: the brief simply never says the executor may open what it must obey.
  *
  * Paths are compared as EXACT strings, matching `findManifestOverlaps`. A glob is never
  * expanded, so `read: 'guides/**'` does not grant `authority: 'guides/brief.md'`. State a
@@ -509,7 +509,7 @@ export function findUngrantedAuthority(source: Brief): readonly string[] {
  * The paths appearing in more than one manifest partition.
  *
  * @remarks
- * Duplicates WITHIN one partition are not an overlap; the four partitions must be
+ * Duplicates WITHIN one partition are not an overlap; the partitions must be
  * mutually disjoint, which is what `validateBrief` errors on.
  *
  * Paths are compared as EXACT strings. A glob is never expanded, so `edit: 'app/file.ts'`
@@ -582,7 +582,7 @@ export function findUnpairedGaps(source: Brief): readonly Gap[] {
  * Project a brief into the reasons `Subject` of readiness measures the gate reads.
  *
  * @param source - The brief to measure.
- * @returns A flat record of counts plus the task's two vocabulary values.
+ * @returns A flat record of counts plus the task's vocabulary values.
  *
  * @example
  * ```ts
@@ -745,7 +745,7 @@ export function briefToContent(source: Brief): string {
  * Reaches PLAIN objects and arrays, which is the whole of a `Brief` — it is JSON-serializable
  * by contract. A `Map`, `Set`, or typed array is frozen as an object and its CONTENTS are left
  * writable, and `Object.isFrozen` reports `true` for it either way. Nothing this package
- * produces contains one; a caller freezing their own value should know the limit.
+ * produces contains one; the limit lands on a caller freezing their own value.
  *
  * @param value - The value to freeze in place; returned for convenience.
  * @returns The same value, now deeply frozen.
@@ -795,7 +795,7 @@ export function freezeBranch<T>(value: T, seen: WeakSet<object>): T {
  * falsifies the package's central promise that a failing stage yields an incomplete
  * `Briefing` rather than an exception.
  *
- * Three real inputs used to throw: an `Error` subclass whose `message` getter throws, a value
+ * Real inputs used to throw: an `Error` subclass whose `message` getter throws, a value
  * whose string conversion throws, and a null-prototype object, which has no inherited
  * conversion for String() to reach. Each is wrapped, and an unreadable value degrades to its
  * type rather than propagating.
@@ -987,7 +987,7 @@ export function exampleToLines(entry: Example): readonly string[] {
  * Paths are REFERENCED, never inlined — the executor retrieves them. An empty section is
  * omitted entirely, so the rendering carries no filler an executor must read past.
  *
- * @param source - The brief to render.
+ * @param input - The brief to render.
  * @returns The markdown prompt.
  *
  * @example
@@ -1129,7 +1129,7 @@ export function briefToMarkdown(input: Brief): string {
  * The proofs' commands VERBATIM plus a turn cap — the goal never adds a condition the
  * brief does not carry.
  *
- * @param source - The brief to render.
+ * @param input - The brief to render.
  * @param turns - The turn cap; defaults to `DEFAULT_BRIEF_TURNS`.
  * @returns The one-line completion condition.
  *
@@ -1160,12 +1160,12 @@ export function briefToGoal(input: Brief, turns: number = DEFAULT_BRIEF_TURNS): 
  * can run concurrently under the same brief without conflict.
  *
  * `authority` is exactly `brief.authority` in rank order, and it is a SEPARATE axis from the
- * four permission sets rather than a fifth partition — a ranked path normally also appears in
+ * permission sets rather than a further partition — a ranked path normally also appears in
  * `read` or `locked`, because the executor has to open what it obeys. It is projected as
  * paths so a machine consumer never has to parse `prompt`, which is written for a model.
  *
- * @param source - The brief to project.
- * @returns The dispatch — the rendered prompt, the ranked authority, and the four path sets.
+ * @param input - The brief to project.
+ * @returns The dispatch — the rendered prompt, the ranked authority, and the path sets.
  *
  * @example
  * ```ts

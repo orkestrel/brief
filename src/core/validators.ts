@@ -50,16 +50,16 @@ export const isText: Guard<string> = (value: unknown): value is string =>
 /** `true` when the value is a non-empty string holding no line terminator. */
 export const isLine: Guard<string> = andOf(isNonEmptyString, isText)
 
-/** `true` when the value is one of the twelve `TaskOperation` literals. */
+/** `true` when the value is one of the `TaskOperation` literals. */
 export const isTaskOperation: Guard<TaskOperation> = literalOf(TASK_OPERATIONS)
 
-/** `true` when the value is one of the eight `TaskDomain` literals. */
+/** `true` when the value is one of the `TaskDomain` literals. */
 export const isTaskDomain: Guard<TaskDomain> = literalOf(TASK_DOMAINS)
 
-/** `true` when the value is one of the five `OutputFormat` literals. */
+/** `true` when the value is one of the `OutputFormat` literals. */
 export const isOutputFormat: Guard<OutputFormat> = literalOf(OUTPUT_FORMATS)
 
-/** `true` when the value is one of the three `RiskSeverity` literals. */
+/** `true` when the value is one of the `RiskSeverity` literals. */
 export const isRiskSeverity: Guard<RiskSeverity> = literalOf(RISK_SEVERITIES)
 
 /** `true` when the value is a well-formed `Task` — both vocabularies closed, statement one line. */
@@ -118,7 +118,7 @@ export const isExample: Guard<Example> = recordOf(
 	['note'],
 )
 
-/** `true` when the value is a well-formed `Citation` — all three members single-line. */
+/** `true` when the value is a well-formed `Citation` — every member single-line. */
 export const isCitation: Guard<Citation> = recordOf({
 	name: isLine,
 	url: isLine,

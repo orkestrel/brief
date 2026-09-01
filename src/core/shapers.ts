@@ -41,7 +41,7 @@ export const referenceShape = objectShape(
 	{ description: 'One referenced path and why it is listed.' },
 )
 
-/** The `Manifest` shape — four disjoint reference partitions. */
+/** The `Manifest` shape — disjoint reference partitions. */
 export const manifestShape = objectShape(
 	{
 		read: arrayShape(referenceShape),
@@ -49,7 +49,7 @@ export const manifestShape = objectShape(
 		locked: arrayShape(referenceShape),
 		forbidden: arrayShape(referenceShape),
 	},
-	{ description: 'The four disjoint file partitions of a brief.' },
+	{ description: 'The disjoint file partitions of a brief.' },
 )
 
 /** The `Outcome` shape — a one-based rank, the result text, and whether it gates done. */

@@ -1,7 +1,7 @@
 import type { Interpretation } from '@orkestrel/interpret'
 import type { OutputFormat, RiskSeverity, TaskDomain, TaskOperation } from './types.js'
 
-/** The twelve `TaskOperation` values, frozen. */
+/** The `TaskOperation` values, frozen. */
 export const TASK_OPERATIONS: readonly TaskOperation[] = Object.freeze([
 	'create',
 	'refactor',
@@ -17,7 +17,7 @@ export const TASK_OPERATIONS: readonly TaskOperation[] = Object.freeze([
 	'plan',
 ])
 
-/** The eight `TaskDomain` values, frozen. */
+/** The `TaskDomain` values, frozen. */
 export const TASK_DOMAINS: readonly TaskDomain[] = Object.freeze([
 	'code',
 	'writing',
@@ -29,7 +29,7 @@ export const TASK_DOMAINS: readonly TaskDomain[] = Object.freeze([
 	'other',
 ])
 
-/** The five `OutputFormat` values, frozen. */
+/** The `OutputFormat` values, frozen. */
 export const OUTPUT_FORMATS: readonly OutputFormat[] = Object.freeze([
 	'markdown',
 	'json',
@@ -38,7 +38,7 @@ export const OUTPUT_FORMATS: readonly OutputFormat[] = Object.freeze([
 	'prose',
 ])
 
-/** The three `RiskSeverity` values, frozen. */
+/** The `RiskSeverity` values, frozen. */
 export const RISK_SEVERITIES: readonly RiskSeverity[] = Object.freeze(['low', 'medium', 'high'])
 
 /**
@@ -88,10 +88,10 @@ export const GATE_ID = 'gate'
  * Every line terminator a brief field refuses.
  *
  * @remarks
- * The four ECMAScript line terminators, not just `\n`: a renderer that splits on any of
- * them would let the other three forge a markdown row. CRLF leads the alternation so a
- * Windows exemplar splits as ONE break rather than two, which would insert a blank line the
- * caller never wrote. Kept unanchored and stateless — no `g` flag — so `test` never carries
+ * Every ECMAScript line terminator, not just `\n`: a renderer that splits on any of them
+ * would let the others forge a markdown row. CRLF leads the alternation so a Windows
+ * exemplar splits as ONE break rather than two, which would insert a blank line the caller
+ * never wrote. Kept unanchored and stateless — no `g` flag — so `test` never carries
  * `lastIndex` between calls.
  */
 export const LINE_BREAK_PATTERN = /\r\n|[\n\r\u2028\u2029]/

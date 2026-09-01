@@ -6,8 +6,8 @@ import type { LogicalResult, ReasonInterface, Subject } from '@orkestrel/reason'
  * The closed vocabulary of what a brief asks for.
  *
  * @remarks
- * A request that fits none of these twelve is mis-scoped rather than a missing
- * literal. Compose with `literalOf(TASK_OPERATIONS)` or `parseEnum(value, TASK_OPERATIONS)`.
+ * A request that fits none of these is mis-scoped rather than a missing literal. Compose
+ * with `literalOf(TASK_OPERATIONS)` or `parseEnum(value, TASK_OPERATIONS)`.
  */
 export type TaskOperation =
 	| 'create'
@@ -40,25 +40,25 @@ export type OutputFormat = 'markdown' | 'json' | 'code' | 'diff' | 'prose'
 /** The closed vocabulary of risk severities. */
 export type RiskSeverity = 'low' | 'medium' | 'high'
 
-/** The four fixed compilation phases, in pipeline order. */
+/** The fixed compilation phases, in pipeline order. */
 export type BriefStage = 'interpret' | 'draft' | 'gate' | 'pin'
 
 /**
  * The machine-readable reasons a {@link BriefError} carries.
  *
  * @remarks
- * Inside `compile` every stage failure is CONTAINED: the four `*_FAILED` codes and
- * `BLOCKED` mark it on the {@link Briefing} rather than throwing.
+ * Inside `compile` every stage failure is CONTAINED: the `*_FAILED` codes and `BLOCKED`
+ * mark it on the {@link Briefing} rather than throwing.
  *
  * `INTERPRET_FAILED` needs a FOREIGN `InterpretInterface`. `@orkestrel/interpret` contains
  * its own stage failures and returns a degraded `Interpretation` rather than throwing, so
  * the default engine never raises it; `BriefCompilerOptions.interpret` is the seam a caller
- * reaches it through. Three codes also reach a
- * throw, from methods outside that containment — `INVALID` from `assertBrief`,
- * `snapshotBrief`, and `pinBrief`; `DESTROYED` from any method after
- * `destroy()`; and `GATE_FAILED` from `BriefCompiler.gate` when a borrowed reasoner returns a
- * non-logical result OR throws its own error, which is translated rather than leaked so that
- * every throw out of this module stays a `BriefError` an `isBriefError` catch can narrow.
+ * reaches it through. Other codes also reach a throw, from methods outside that containment —
+ * `INVALID` from `assertBrief`, `snapshotBrief`, and `pinBrief`; `DESTROYED` from any method
+ * after `destroy()`; and `GATE_FAILED` from `BriefCompiler.gate` when a borrowed reasoner
+ * returns a non-logical result OR throws its own error, which is translated rather than
+ * leaked so that every throw out of this module stays a `BriefError` an `isBriefError` catch
+ * can narrow.
  */
 export type BriefErrorCode =
 	| 'INTERPRET_FAILED'
@@ -101,7 +101,7 @@ export interface Reference {
 }
 
 /**
- * The four disjoint file partitions of a brief.
+ * The disjoint file partitions of a brief.
  *
  * @remarks
  * `read` order is the reading order. A path in more than one partition is a
@@ -161,12 +161,14 @@ export interface Example {
  * and the shape DSL's seeded generator builds a random alphanumeric string and throws when it
  * fails the pattern — so any pattern requiring a scheme's colon makes `createBriefContract()`
  * ungeneratable for the whole brief. Constraining only the guard would leave the guard and the
- * compiled shape disagreeing, which is the parity this package holds in lockstep. Four working
- * mechanisms beat one stricter member.
+ * compiled shape disagreeing, which is the parity this package holds in lockstep. Keeping the
+ * guard, the compiled shape, the generator, and `createBriefContract()` working beats one
+ * stricter member.
  *
  * The cost lands on one migration: `citation` takes `(name, url, note)` where it once took
- * `(name, role, url)` — three strings either way, so a stale call still compiles and still
- * passes the guard, and only renders wrong. Nothing is published, so a version bump carries it.
+ * `(name, role, url)` — strings in the same positions either way, so a stale call still
+ * compiles and still passes the guard, and only renders wrong. Nothing is published, so a
+ * version bump carries it.
  */
 export interface Citation {
 	readonly name: string
@@ -212,7 +214,7 @@ export interface Output {
  * One mechanical, transcript-provable check.
  *
  * @remarks
- * `command` should carry a clear exit signal — it becomes the `/goal` condition verbatim.
+ * Give `command` a clear exit signal; it becomes the `/goal` condition verbatim.
  */
 export interface Proof {
 	readonly text: string
@@ -255,11 +257,12 @@ export interface Brief {
  * One `compile()` input.
  *
  * @remarks
- * THREE classes of input, not two. `text` selects the interpret stage. `interpretation`
- * supplies that stage's result directly: with no `text` it drives `deriveTask`,
- * `deriveGivens`, and `deriveGaps` without running the language pipeline at all, and with
- * `text` present it is also the FALLBACK the draft uses when the interpret engine throws.
- * Every remaining key is a caller-authored section merged OVER whatever the draft derived.
+ * `text`, `interpretation`, and the caller-authored sections are SEPARATE classes of input.
+ * `text` selects the interpret stage. `interpretation` supplies that stage's result
+ * directly: with no `text` it drives `deriveTask`, `deriveGivens`, and `deriveGaps` without
+ * running the language pipeline at all, and with `text` present it is also the FALLBACK the
+ * draft uses when the interpret engine throws. Every remaining key is a caller-authored
+ * section merged OVER whatever the draft derived.
  *
  * Supplying both `text` and `interpretation` is therefore meaningful: the engine's result
  * wins when it succeeds, and the supplied one carries the compile when it does not.
@@ -374,20 +377,21 @@ export interface Briefing {
  * The subagent projection of a brief.
  *
  * @remarks
- * Two orthogonal axes, not five partitions. PERMISSION is `read`, `edit`, `locked`, and
- * `forbidden`, with `edit` the owned set two concurrent dispatches must not intersect on and
- * `locked` and `forbidden` do-not-touch. PRECEDENCE is `authority`, in ranked order, index 0
- * winning every conflict.
+ * PERMISSION and PRECEDENCE are orthogonal axes rather than one flat partition set.
+ * PERMISSION is `read`, `edit`, `locked`, and `forbidden`, with `edit` the owned set two
+ * concurrent dispatches must not intersect on and `locked` and `forbidden` do-not-touch.
+ * PRECEDENCE is `authority`, in ranked order, index 0 winning every conflict.
  *
  * `authority` therefore OVERLAPS the permission arrays by design: a ranked path ALWAYS also
  * sits in `read`, `edit`, or `locked`, because the executor has to open what it obeys, and
- * the `granted` gate rule refuses a brief where it does not. Read the four to decide what may
- * be touched and `authority` to decide what wins. Never union all five — that was already
- * wrong before `authority` existed, because `forbidden` is an exclusion rather than a grant.
+ * the `granted` gate rule refuses a brief where it does not. Read the permission arrays to
+ * decide what may be touched and `authority` to decide what wins. Never union the permission
+ * arrays with `authority` — that was already wrong before `authority` existed, because
+ * `forbidden` is an exclusion rather than a grant.
  * `authority` is a path list rather than a rendered section because a machine consumer must
  * reach mandatory authority without parsing `prompt`, which is written for a model.
  *
- * The four permission arrays are mutually disjoint in a GATED brief — `findManifestOverlaps`
+ * The permission arrays are mutually disjoint in a GATED brief — `findManifestOverlaps`
  * measures it and the `disjoint` rule refuses on it. `briefToDispatch` is a pure projection
  * and runs no gate, so projecting an unvetted draft can produce arrays that intersect. Gate
  * before you dispatch, or treat disjointness as unproven.
@@ -411,10 +415,10 @@ export interface BriefRecord {
 
 /** The `BriefCompiler`'s push observation surface. */
 export type BriefCompilerEventMap = {
-	compile: readonly [briefing: Briefing]
-	block: readonly [questions: readonly Gap[]]
-	error: readonly [error: unknown]
-	destroy: readonly []
+	readonly compile: readonly [briefing: Briefing]
+	readonly block: readonly [questions: readonly Gap[]]
+	readonly error: readonly [error: unknown]
+	readonly destroy: readonly []
 }
 
 /**
@@ -477,9 +481,9 @@ export interface BriefCompilerInterface {
 
 /** The `BriefManager`'s push observation surface. */
 export type BriefManagerEventMap = {
-	add: readonly [id: string]
-	remove: readonly [id: string]
-	destroy: readonly []
+	readonly add: readonly [id: string]
+	readonly remove: readonly [id: string]
+	readonly destroy: readonly []
 }
 
 /** Input to `createBriefManager`. */
