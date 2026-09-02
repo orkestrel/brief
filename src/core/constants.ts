@@ -1,7 +1,7 @@
 import type { Interpretation } from '@orkestrel/interpret'
 import type { OutputFormat, RiskSeverity, TaskDomain, TaskOperation } from './types.js'
 
-/** The `TaskOperation` values, frozen. */
+/** Lists the `TaskOperation` values, frozen. */
 export const TASK_OPERATIONS: readonly TaskOperation[] = Object.freeze([
 	'create',
 	'refactor',
@@ -17,7 +17,7 @@ export const TASK_OPERATIONS: readonly TaskOperation[] = Object.freeze([
 	'plan',
 ])
 
-/** The `TaskDomain` values, frozen. */
+/** Lists the `TaskDomain` values, frozen. */
 export const TASK_DOMAINS: readonly TaskDomain[] = Object.freeze([
 	'code',
 	'writing',
@@ -29,7 +29,7 @@ export const TASK_DOMAINS: readonly TaskDomain[] = Object.freeze([
 	'other',
 ])
 
-/** The `OutputFormat` values, frozen. */
+/** Lists the `OutputFormat` values, frozen. */
 export const OUTPUT_FORMATS: readonly OutputFormat[] = Object.freeze([
 	'markdown',
 	'json',
@@ -38,11 +38,11 @@ export const OUTPUT_FORMATS: readonly OutputFormat[] = Object.freeze([
 	'prose',
 ])
 
-/** The `RiskSeverity` values, frozen. */
+/** Lists the `RiskSeverity` values, frozen. */
 export const RISK_SEVERITIES: readonly RiskSeverity[] = Object.freeze(['low', 'medium', 'high'])
 
 /**
- * Every published `Interpretation` member name, frozen.
+ * Lists every published `Interpretation` member name, frozen.
  *
  * @remarks
  * The capture list `BriefCompiler` hands `captureValue` at each interpret door — the borrowed
@@ -73,7 +73,7 @@ export const INTERPRETATION_MEMBERS = Object.freeze([
 ] satisfies ReadonlyArray<keyof Interpretation>)
 
 /**
- * `16` — the default turn cap `briefToGoal` renders.
+ * Holds `16` — the default turn cap `briefToGoal` renders.
  *
  * @remarks
  * Domain-qualified so the barrel stays collision-free as sibling modules add their own
@@ -81,11 +81,11 @@ export const INTERPRETATION_MEMBERS = Object.freeze([
  */
 export const DEFAULT_BRIEF_TURNS = 16
 
-/** `'gate'` — the id of the `gateDefinition()` logical definition. */
+/** Holds `'gate'` — the id of the `gateDefinition()` logical definition. */
 export const GATE_ID = 'gate'
 
 /**
- * Every line terminator a brief field refuses.
+ * Matches every line terminator a brief field refuses.
  *
  * @remarks
  * Every ECMAScript line terminator, not just `\n`: a renderer that splits on any of them
@@ -97,7 +97,7 @@ export const GATE_ID = 'gate'
 export const LINE_BREAK_PATTERN = /\r\n|[\n\r\u2028\u2029]/
 
 /**
- * The positive form of {@link LINE_BREAK_PATTERN}, for the shape DSL.
+ * Holds the positive form of {@link LINE_BREAK_PATTERN}, for the shape DSL.
  *
  * @remarks
  * `stringShape`'s `pattern` must MATCH an accepted value, so the guard's refusal regex
@@ -107,7 +107,7 @@ export const LINE_BREAK_PATTERN = /\r\n|[\n\r\u2028\u2029]/
 export const SINGLE_LINE_PATTERN = /^[^\n\r\u2028\u2029]*$/
 
 /**
- * A string of one or more spaces and nothing else.
+ * Matches a string of one or more spaces and nothing else.
  *
  * @remarks
  * The one exemplar side `exampleToLines` must NOT pad. CommonMark strips a fully-blank code

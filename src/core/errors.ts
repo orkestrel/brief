@@ -1,7 +1,7 @@
 import type { BriefErrorCode } from './types.js'
 
 /**
- * The one error class this package throws.
+ * Represents the one error class this package throws.
  *
  * @remarks
  * Throws are reserved for caller misuse: `assertBrief`, `snapshotBrief`, and `pinBrief` on
@@ -33,10 +33,10 @@ export class BriefError extends Error {
 }
 
 /**
- * Narrow a caught value to a {@link BriefError}.
+ * Narrows a caught value to a {@link BriefError}.
  *
  * @param value - The caught value to inspect.
- * @returns `true` when `value` is a `BriefError`.
+ * @returns True if `value` is a `BriefError`; false otherwise.
  *
  * @example
  * ```ts

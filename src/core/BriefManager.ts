@@ -13,7 +13,7 @@ import type {
 } from './types.js'
 
 /**
- * The self-owning, versioned and content-hashed brief registry.
+ * Implements the self-owning, versioned and content-hashed brief registry.
  *
  * @remarks
  * Record ids are MINTED from each brief's own content hash unless the caller names one,

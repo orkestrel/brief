@@ -16,13 +16,13 @@ import {
 	SINGLE_LINE_PATTERN,
 } from './constants.js'
 
-/** A single-line string of any length, including empty. */
+/** Describes a single-line string of any length, including empty. */
 export const textShape: StringShape = stringShape({ pattern: SINGLE_LINE_PATTERN })
 
-/** A non-empty single-line string — the shape mirror of `isLine`. */
+/** Describes a non-empty single-line string — the shape mirror of `isLine`. */
 export const lineShape: StringShape = stringShape({ min: 1, pattern: SINGLE_LINE_PATTERN })
 
-/** The `Task` shape — closed operation and domain vocabularies plus a non-empty statement. */
+/** Describes the `Task` shape — closed operation and domain vocabularies plus a non-empty statement. */
 export const taskShape = objectShape(
 	{
 		operation: literalShape(TASK_OPERATIONS),
@@ -32,7 +32,7 @@ export const taskShape = objectShape(
 	{ description: 'What the brief asks for, in one imperative sentence.' },
 )
 
-/** The `Reference` shape — a path and the note that justifies listing it. */
+/** Describes the `Reference` shape — a path and the note that justifies listing it. */
 export const referenceShape = objectShape(
 	{
 		path: lineShape,
@@ -41,7 +41,7 @@ export const referenceShape = objectShape(
 	{ description: 'One referenced path and why it is listed.' },
 )
 
-/** The `Manifest` shape — disjoint reference partitions. */
+/** Describes the `Manifest` shape — disjoint reference partitions. */
 export const manifestShape = objectShape(
 	{
 		read: arrayShape(referenceShape),
@@ -52,7 +52,7 @@ export const manifestShape = objectShape(
 	{ description: 'The disjoint file partitions of a brief.' },
 )
 
-/** The `Outcome` shape — a one-based rank, the result text, and whether it gates done. */
+/** Describes the `Outcome` shape — a one-based rank, the result text, and whether it gates done. */
 export const outcomeShape = objectShape(
 	{
 		rank: integerShape({ min: 1 }),
@@ -62,7 +62,7 @@ export const outcomeShape = objectShape(
 	{ description: 'One ranked outcome — a result, never a step.' },
 )
 
-/** The `Given` shape — one categorized context fact. */
+/** Describes the `Given` shape — one categorized context fact. */
 export const givenShape = objectShape(
 	{
 		category: lineShape,
@@ -72,7 +72,7 @@ export const givenShape = objectShape(
 	{ description: 'One context fact handed to the executor.' },
 )
 
-/** The `Example` shape — one input to output exemplar. */
+/** Describes the `Example` shape — one input to output exemplar. */
 export const exampleShape = objectShape(
 	{
 		input: stringShape({ min: 1 }),
@@ -82,7 +82,7 @@ export const exampleShape = objectShape(
 	{ description: 'One input to output exemplar.' },
 )
 
-/** The `Citation` shape — a name, a locator, and why the source is cited. */
+/** Describes the `Citation` shape — a name, a locator, and why the source is cited. */
 export const citationShape = objectShape(
 	{
 		name: lineShape,
@@ -92,7 +92,7 @@ export const citationShape = objectShape(
 	{ description: 'One external source; list order is the trust order.' },
 )
 
-/** The `Gap` shape — an unknown, whether it blocks, and the candidates that would close it. */
+/** Describes the `Gap` shape — an unknown, whether it blocks, and the candidates that would close it. */
 export const gapShape = objectShape(
 	{
 		field: lineShape,
@@ -103,7 +103,7 @@ export const gapShape = objectShape(
 	{ description: 'One unresolved decision; blocking means the gate fails closed.' },
 )
 
-/** The `Risk` shape — a closed severity, the risk, and its mitigation. */
+/** Describes the `Risk` shape — a closed severity, the risk, and its mitigation. */
 export const riskShape = objectShape(
 	{
 		severity: literalShape(RISK_SEVERITIES),
@@ -113,7 +113,7 @@ export const riskShape = objectShape(
 	{ description: 'One pre-empted risk and the mitigation that answers it.' },
 )
 
-/** The `Output` shape — a closed format plus its optional refinements. */
+/** Describes the `Output` shape — a closed format plus its optional refinements. */
 export const outputShape = objectShape(
 	{
 		format: literalShape(OUTPUT_FORMATS),
@@ -124,7 +124,7 @@ export const outputShape = objectShape(
 	{ description: 'The closed shape of the deliverable.' },
 )
 
-/** The `Proof` shape — the claim and the command that settles it. */
+/** Describes the `Proof` shape — the claim and the command that settles it. */
 export const proofShape = objectShape(
 	{
 		text: lineShape,
@@ -134,7 +134,7 @@ export const proofShape = objectShape(
 )
 
 /**
- * The whole `Brief` shape, section shapes composed.
+ * Describes the whole `Brief` shape, section shapes composed.
  *
  * @remarks
  * `trace` and `hash` are optional because `pinBrief` fills them; an unpinned draft is

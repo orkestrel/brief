@@ -12,7 +12,7 @@ import type {
 } from './types.js'
 
 /**
- * Create a compilation orchestrator.
+ * Creates a compilation orchestrator.
  *
  * @remarks
  * With no engines supplied the compiler wires its own: a default `createInterpret()`
@@ -37,7 +37,7 @@ export function createBriefCompiler(options?: BriefCompilerOptions): BriefCompil
 }
 
 /**
- * Create a brief registry.
+ * Creates a brief registry.
  *
  * @param options - An optional seed collection plus emitter hooks.
  * @returns A working {@link BriefManagerInterface}.
@@ -56,7 +56,7 @@ export function createBriefManager(options?: BriefManagerOptions): BriefManagerI
 }
 
 /**
- * Compile `briefShape` into a guard, parser, JSON Schema, and seeded generator bundle.
+ * Compiles `briefShape` into a guard, parser, JSON Schema, and seeded generator bundle.
  *
  * @remarks
  * The schema is what a tool boundary needs — hand it to `schemaToParameters` — and

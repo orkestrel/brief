@@ -87,7 +87,7 @@ export function captureValue(source: unknown, members: readonly string[]): unkno
 }
 
 /**
- * Return a deeply owned, deeply frozen copy of a brief, refusing anything off-contract.
+ * Returns a deeply owned, deeply frozen copy of a brief, refusing anything off-contract.
  *
  * @remarks
  * The one reading boundary this package has, used by the pin, the registry, and every

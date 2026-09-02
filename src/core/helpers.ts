@@ -34,7 +34,7 @@ import type {
 import { isBrief, isTaskDomain, isTaskOperation } from './validators.js'
 
 /**
- * Build a `Task`.
+ * Builds a `Task`.
  *
  * @param operation - What the brief asks for, from the closed operation vocabulary.
  * @param domain - The subject matter, from the closed domain vocabulary.
@@ -53,7 +53,7 @@ export function task(operation: TaskOperation, domain: TaskDomain, statement: st
 }
 
 /**
- * Build a `Reference`.
+ * Builds a `Reference`.
  *
  * @param path - The referenced path or glob.
  * @param note - Why the path is listed.
@@ -71,7 +71,7 @@ export function reference(path: string, note: string): Reference {
 }
 
 /**
- * Build a `Manifest`, defaulting every absent partition to an empty list.
+ * Builds a `Manifest`, defaulting every absent partition to an empty list.
  *
  * @param partitions - The partitions to fill; a partial literal is enough.
  * @returns A fresh `Manifest` with every partition present.
@@ -93,7 +93,7 @@ export function manifest(partitions?: Partial<Manifest>): Manifest {
 }
 
 /**
- * Build an `Outcome`.
+ * Builds an `Outcome`.
  *
  * @param rank - The one-based rank; lower ranks matter more.
  * @param text - The result, never a step.
@@ -113,7 +113,7 @@ export function outcome(rank: number, text: string, required = true): Outcome {
 }
 
 /**
- * Build a `Given`.
+ * Builds a `Given`.
  *
  * @param category - The kind of fact — a convention, a version, a constraint.
  * @param name - The fact's name.
@@ -132,7 +132,7 @@ export function given(category: string, name: string, value: string): Given {
 }
 
 /**
- * Build an `Example`.
+ * Builds an `Example`.
  *
  * @param input - The exemplar input.
  * @param result - The expected output for that input.
@@ -151,7 +151,7 @@ export function example(input: string, result: string, note?: string): Example {
 }
 
 /**
- * Build a `Citation`.
+ * Builds a `Citation`.
  *
  * @param name - The source's display name.
  * @param url - Where the source lives.
@@ -174,7 +174,7 @@ export function citation(name: string, url: string, note: string): Citation {
 }
 
 /**
- * Build a `Gap`.
+ * Builds a `Gap`.
  *
  * @param field - The brief section the unknown belongs to.
  * @param question - The question that would close it.
@@ -202,7 +202,7 @@ export function gap(
 }
 
 /**
- * Build a `Risk`.
+ * Builds a `Risk`.
  *
  * @param severity - The closed severity.
  * @param text - What could go wrong.
@@ -221,7 +221,7 @@ export function risk(severity: RiskSeverity, text: string, mitigation: string): 
 }
 
 /**
- * Build an `Output`.
+ * Builds an `Output`.
  *
  * @param format - The closed deliverable format.
  * @param overrides - Optional `sections` / `include` / `exclude`; absent keys are OMITTED.
@@ -245,7 +245,7 @@ export function output(format: OutputFormat, overrides?: Partial<Omit<Output, 'f
 }
 
 /**
- * Build a `Proof`.
+ * Builds a `Proof`.
  *
  * @param text - What the check settles.
  * @param command - The command whose exit signal settles it.
@@ -263,7 +263,7 @@ export function proof(text: string, command: string): Proof {
 }
 
 /**
- * Build a `Brief` from a `Task` plus section overrides.
+ * Builds a `Brief` from a `Task` plus section overrides.
  *
  * @param subject - The task the brief is about.
  * @param overrides - Any sections to fill; every absent collection defaults to `[]`,
@@ -304,7 +304,7 @@ export function brief(
 }
 
 /**
- * Build the fail-closed readiness gate as a reasons `LogicalDefinition`.
+ * Builds the fail-closed readiness gate as a reasons `LogicalDefinition`.
  *
  * @remarks
  * Each readiness rule derives one named fact from `briefToSubject`'s measures, and a final
@@ -381,7 +381,7 @@ export function gateDefinition(): LogicalDefinition {
 }
 
 /**
- * The readiness rules a brief fails, computed directly from its own measures.
+ * Lists the readiness rules a brief fails, computed directly from its own measures.
  *
  * @remarks
  * The gate's decision, in code. `gateDefinition()` states the same rules as data for a
@@ -425,7 +425,7 @@ export function findUnmetRules(source: Brief): readonly string[] {
 }
 
 /**
- * Count the sentences a statement holds.
+ * Counts the sentences a statement holds.
  *
  * @remarks
  * A terminator run (`.`, `!`, `?`) followed by whitespace or the end of the text closes one
@@ -468,7 +468,7 @@ export function countSentences(statement: string): number {
 }
 
 /**
- * The gaps that block emission.
+ * Lists the gaps that block emission.
  *
  * @param source - The brief to inspect.
  * @returns Every gap carrying `blocking: true`, in declaration order.
@@ -488,7 +488,7 @@ export function findBlockingGaps(source: Brief): readonly Gap[] {
 }
 
 /**
- * The authority paths the manifest never grants access to.
+ * Lists the authority paths the manifest never grants access to.
  *
  * @remarks
  * An authority the executor cannot open is an instruction it cannot follow, so every ranked
@@ -533,7 +533,7 @@ export function findUngrantedAuthority(source: Brief): readonly string[] {
 }
 
 /**
- * The paths appearing in more than one manifest partition.
+ * Lists the paths appearing in more than one manifest partition.
  *
  * @remarks
  * Duplicates WITHIN one partition are not an overlap; the partitions must be
@@ -580,7 +580,7 @@ export function findManifestOverlaps(source: Brief): readonly string[] {
 }
 
 /**
- * The open gaps with no assumption to stand on.
+ * Lists the open gaps with no assumption to stand on.
  *
  * @remarks
  * The discipline is exactly one recorded assumption per open gap, so the open gaps past
@@ -606,7 +606,7 @@ export function findUnpairedGaps(source: Brief): readonly Gap[] {
 }
 
 /**
- * Project a brief into the reasons `Subject` of readiness measures the gate reads.
+ * Projects a brief into the reasons `Subject` of readiness measures the gate reads.
  *
  * @param source - The brief to measure.
  * @returns A flat record of counts plus the task's vocabulary values.
@@ -643,7 +643,7 @@ export function briefToSubject(source: Brief): Subject {
 }
 
 /**
- * The semantic pass over an already-shape-valid brief.
+ * Runs the semantic pass over an already-shape-valid brief.
  *
  * @remarks
  * ERRORS are the structural violations no assumption can paper over: a manifest
@@ -711,7 +711,7 @@ export function validateBrief(source: Brief): ReasonValidationResult {
 }
 
 /**
- * The canonical structural digest of a brief's content.
+ * Computes the canonical structural digest of a brief's content.
  *
  * @remarks
  * `trace` and `hash` are stripped before digesting, so the value is the identity of what
@@ -734,7 +734,7 @@ export function briefToHash(source: Brief): string {
 }
 
 /**
- * The canonical text of exactly what a brief's hash describes.
+ * Renders the canonical text of exactly what a brief's hash describes.
  *
  * @remarks
  * `trace` and `hash` are stripped, then interprets `canonicalize` renders the rest in a
@@ -758,7 +758,7 @@ export function briefToContent(source: Brief): string {
 }
 
 /**
- * Freeze a value and everything reachable from it.
+ * Freezes a value and everything reachable from it.
  *
  * @remarks
  * `Object.freeze` is SHALLOW, so freezing a record leaves every nested array and object
@@ -790,7 +790,7 @@ export function freezeDeep<T>(value: T): T {
 }
 
 /**
- * Freeze one branch of a value graph, skipping what the visited set already holds.
+ * Freezes one branch of a value graph, skipping what the visited set already holds.
  *
  * @param value - The branch to freeze.
  * @param seen - The objects already frozen on this walk; what makes a cycle terminate.
@@ -813,7 +813,7 @@ export function freezeBranch<T>(value: T, seen: WeakSet<object>): T {
 }
 
 /**
- * Render a value thrown by a stage into a message.
+ * Renders a value thrown by a stage into a message.
  *
  * @remarks
  * TOTAL: it never throws, for any input. That is load-bearing rather than tidy, because this
@@ -847,7 +847,7 @@ export function errorToMessage(error: unknown): string {
 }
 
 /**
- * Narrow unknown data to a `Brief`, throwing when it is off-contract.
+ * Narrows unknown data to a `Brief`, throwing when it is off-contract.
  *
  * @remarks
  * The throwing half of the intake pair: this returns its argument by IDENTITY once the
@@ -884,7 +884,7 @@ export function assertBrief(data: unknown): Brief {
 }
 
 /**
- * Return a fresh brief with `trace` and `hash` derived from its own content.
+ * Returns a fresh brief with `trace` and `hash` derived from its own content.
  *
  * @remarks
  * Deterministic: no clock, no randomness, no run-specific data. Any existing `trace` /
@@ -914,7 +914,7 @@ export function pinBrief(source: Brief): Brief {
 }
 
 /**
- * The one-line census `pinBrief` stamps onto a brief.
+ * Renders the one-line census `pinBrief` stamps onto a brief.
  *
  * @remarks
  * Extracted so it has ONE implementation. `pinBrief` derives it and `BriefManager` re-derives
@@ -943,7 +943,7 @@ export function briefToTrace(source: Brief): string {
 }
 
 /**
- * Render one exemplar as markdown lines.
+ * Renders one exemplar as markdown lines.
  *
  * @remarks
  * An `Example`'s two sides are the only brief members permitted to span lines, so a
@@ -1008,7 +1008,7 @@ export function exampleToLines(entry: Example): readonly string[] {
 }
 
 /**
- * Project a brief into the copy-ready agent prompt.
+ * Projects a brief into the copy-ready agent prompt.
  *
  * @remarks
  * Paths are REFERENCED, never inlined — the executor retrieves them. An empty section is
@@ -1150,7 +1150,7 @@ export function briefToMarkdown(input: Brief): string {
 }
 
 /**
- * Project a brief into a `/goal` completion condition.
+ * Projects a brief into a `/goal` completion condition.
  *
  * @remarks
  * The proofs' commands VERBATIM plus a turn cap — the goal never adds a condition the
@@ -1180,7 +1180,7 @@ export function briefToGoal(input: Brief, turns: number = DEFAULT_BRIEF_TURNS): 
 }
 
 /**
- * Project a brief into a subagent `Dispatch`.
+ * Projects a brief into a subagent `Dispatch`.
  *
  * @remarks
  * `edit` is exactly `manifest.edit`, so two dispatches whose `edit` sets do not intersect
@@ -1224,7 +1224,7 @@ export function briefToDispatch(input: Brief): Dispatch {
 }
 
 /**
- * Derive one imperative statement from free text.
+ * Derives one imperative statement from free text.
  *
  * @remarks
  * Whitespace collapses, the first character uppercases, and a terminator is appended
@@ -1306,7 +1306,7 @@ export function deriveTask(
 }
 
 /**
- * Derive `Given[]` from an interprets `Entity[]`.
+ * Derives `Given[]` from an interprets `Entity[]`.
  *
  * @remarks
  * Every extracted entity becomes one `extracted` fact. A nameless entity is dropped; an
@@ -1341,7 +1341,7 @@ export function deriveGivens(entities: readonly Entity[]): readonly Given[] {
 }
 
 /**
- * Derive `Gap[]` from an interprets `Ambiguity[]`.
+ * Derives `Gap[]` from an interprets `Ambiguity[]`.
  *
  * @remarks
  * A REQUIRED ambiguity becomes a BLOCKING gap — the gate must fail closed on it. The

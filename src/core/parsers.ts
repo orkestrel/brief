@@ -3,7 +3,7 @@ import type { Brief } from './types.js'
 import { isBrief } from './validators.js'
 
 /**
- * Parse a JSON string into a `Brief`.
+ * Parses a JSON string into a `Brief`.
  *
  * @remarks
  * The parse-then-trust boundary for a stored brief, a tool argument, or an agent's

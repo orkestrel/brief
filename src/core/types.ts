@@ -3,7 +3,7 @@ import type { Interpretation, InterpretInterface, RecordOptions } from '@orkestr
 import type { LogicalResult, ReasonInterface, Subject } from '@orkestrel/reason'
 
 /**
- * The closed vocabulary of what a brief asks for.
+ * Names the closed vocabulary of what a brief asks for.
  *
  * @remarks
  * A request that fits none of these is mis-scoped rather than a missing literal. Compose
@@ -23,7 +23,7 @@ export type TaskOperation =
 	| 'document'
 	| 'plan'
 
-/** The closed vocabulary of the subject matter a brief operates on. */
+/** Names the closed vocabulary of the subject matter a brief operates on. */
 export type TaskDomain =
 	| 'code'
 	| 'writing'
@@ -34,17 +34,17 @@ export type TaskDomain =
 	| 'ops'
 	| 'other'
 
-/** The closed vocabulary of deliverable shapes. */
+/** Names the closed vocabulary of deliverable shapes. */
 export type OutputFormat = 'markdown' | 'json' | 'code' | 'diff' | 'prose'
 
-/** The closed vocabulary of risk severities. */
+/** Names the closed vocabulary of risk severities. */
 export type RiskSeverity = 'low' | 'medium' | 'high'
 
-/** The fixed compilation phases, in pipeline order. */
+/** Names the fixed compilation phases, in pipeline order. */
 export type BriefStage = 'interpret' | 'draft' | 'gate' | 'pin'
 
 /**
- * The machine-readable reasons a {@link BriefError} carries.
+ * Names the machine-readable reasons a {@link BriefError} carries.
  *
  * @remarks
  * Inside `compile` every stage failure is CONTAINED: the `*_FAILED` codes and `BLOCKED`
@@ -70,7 +70,7 @@ export type BriefErrorCode =
 	| 'DESTROYED'
 
 /**
- * What the brief asks for, in one imperative sentence.
+ * States what the brief asks for, in one imperative sentence.
  *
  * @remarks
  * A compound `statement` is two briefs — `validateBrief` errors on more than one sentence.
@@ -82,7 +82,7 @@ export interface Task {
 }
 
 /**
- * One referenced path and why it is listed.
+ * Represents one referenced path and why it is listed.
  *
  * @remarks
  * The ONE path record. A reference means different things in different containers, and the
@@ -101,7 +101,7 @@ export interface Reference {
 }
 
 /**
- * The disjoint file partitions of a brief.
+ * Represents the disjoint file partitions of a brief.
  *
  * @remarks
  * `read` order is the reading order. A path in more than one partition is a
@@ -115,7 +115,7 @@ export interface Manifest {
 }
 
 /**
- * One ranked outcome — a result, never a step.
+ * Represents one ranked outcome — a result, never a step.
  *
  * @remarks
  * `required: true` gates "done"; a demoted outcome is desirable but not blocking.
@@ -126,14 +126,14 @@ export interface Outcome {
 	readonly required: boolean
 }
 
-/** One context fact handed to the executor — a convention, a version, a constraint value. */
+/** Represents one context fact handed to the executor — a convention, a version, a constraint value. */
 export interface Given {
 	readonly category: string
 	readonly name: string
 	readonly value: string
 }
 
-/** One input to output exemplar — the highest-leverage ambiguity remover. */
+/** Represents one input to output exemplar — the highest-leverage ambiguity remover. */
 export interface Example {
 	readonly input: string
 	readonly output: string
@@ -141,7 +141,7 @@ export interface Example {
 }
 
 /**
- * One external source — what it is called, where it lives, and why it is cited.
+ * Represents one external source — what it is called, where it lives, and why it is cited.
  *
  * @remarks
  * List ORDER is the trust order; there is no per-entry weight.
@@ -177,7 +177,7 @@ export interface Citation {
 }
 
 /**
- * One unknown the brief has not resolved.
+ * Represents one unknown the brief has not resolved.
  *
  * @remarks
  * `blocking: true` means no safe default exists and the gate must fail closed. An
@@ -190,7 +190,7 @@ export interface Gap {
 	readonly candidates?: readonly string[]
 }
 
-/** One pre-empted risk and the mitigation that answers it. */
+/** Represents one pre-empted risk and the mitigation that answers it. */
 export interface Risk {
 	readonly severity: RiskSeverity
 	readonly text: string
@@ -198,7 +198,7 @@ export interface Risk {
 }
 
 /**
- * The closed shape of the deliverable.
+ * Represents the closed shape of the deliverable.
  *
  * @remarks
  * `format` is required; `sections` / `include` / `exclude` refine it.
@@ -211,7 +211,7 @@ export interface Output {
 }
 
 /**
- * One mechanical, transcript-provable check.
+ * Represents one mechanical, transcript-provable check.
  *
  * @remarks
  * Give `command` a clear exit signal; it becomes the `/goal` condition verbatim.
@@ -222,7 +222,7 @@ export interface Proof {
 }
 
 /**
- * The closed execution contract — a rough request with every implicit decision resolved.
+ * Represents the closed execution contract — a rough request with every implicit decision resolved.
  *
  * @remarks
  * `trace` and `hash` are DERIVED by `pinBrief`. The `brief` builder cannot set them, so
@@ -254,7 +254,7 @@ export interface Brief {
 }
 
 /**
- * One `compile()` input.
+ * Represents one `compile()` input.
  *
  * @remarks
  * `text`, `interpretation`, and the caller-authored sections are SEPARATE classes of input.
@@ -287,7 +287,7 @@ export interface BriefInput {
 }
 
 /**
- * The `interpret` phase snapshot — raw text in, an `Interpretation` out.
+ * Records the `interpret` phase snapshot — raw text in, an `Interpretation` out.
  *
  * @remarks
  * `output` is absent exactly when `error` is present, which is what makes the phase
@@ -300,7 +300,7 @@ export interface InterpretStageRecord {
 	readonly error?: string
 }
 
-/** The `draft` phase snapshot — the caller's input in, an unpinned `Brief` out. */
+/** Records the `draft` phase snapshot — the caller's input in, an unpinned `Brief` out. */
 export interface DraftStageRecord {
 	readonly stage: 'draft'
 	readonly input: BriefInput
@@ -308,7 +308,7 @@ export interface DraftStageRecord {
 	readonly error?: string
 }
 
-/** The `gate` phase snapshot — the readiness `Subject` in, the reasoner's verdict out. */
+/** Records the `gate` phase snapshot — the readiness `Subject` in, the reasoner's verdict out. */
 export interface GateStageRecord {
 	readonly stage: 'gate'
 	readonly input: Subject
@@ -316,7 +316,7 @@ export interface GateStageRecord {
 	readonly error?: string
 }
 
-/** The `pin` phase snapshot — the drafted `Brief` in, the pinned `Brief` out. */
+/** Records the `pin` phase snapshot — the drafted `Brief` in, the pinned `Brief` out. */
 export interface PinStageRecord {
 	readonly stage: 'pin'
 	readonly input: Brief
@@ -325,7 +325,7 @@ export interface PinStageRecord {
 }
 
 /**
- * One pipeline phase, discriminated by `stage`.
+ * Represents one pipeline phase, discriminated by `stage`.
  *
  * @remarks
  * Narrowing on `stage` types both payloads exactly, so a consumer reads a replay without
@@ -337,7 +337,7 @@ export type BriefStageRecord =
 	| GateStageRecord
 	| PinStageRecord
 
-/** A visible marker for a phase that failed. */
+/** Represents a visible marker for a phase that failed. */
 export interface BriefStageFailure {
 	readonly stage: BriefStage
 	readonly code: BriefErrorCode
@@ -345,7 +345,7 @@ export interface BriefStageFailure {
 }
 
 /**
- * The full, replayable outcome of one `compile()` call.
+ * Represents the full, replayable outcome of one `compile()` call.
  *
  * @remarks
  * `brief` is present exactly when the compile completed, so it is ALSO the completeness
@@ -374,7 +374,7 @@ export interface Briefing {
 }
 
 /**
- * The subagent projection of a brief.
+ * Represents the subagent projection of a brief.
  *
  * @remarks
  * PERMISSION and PRECEDENCE are orthogonal axes rather than one flat partition set.
@@ -405,7 +405,7 @@ export interface Dispatch {
 	readonly forbidden: readonly string[]
 }
 
-/** A versioned, content-hashed `Brief` inside a {@link BriefManagerInterface}. */
+/** Represents a versioned, content-hashed `Brief` inside a {@link BriefManagerInterface}. */
 export interface BriefRecord {
 	readonly id: string
 	readonly brief: Brief
@@ -413,7 +413,7 @@ export interface BriefRecord {
 	readonly hash: string
 }
 
-/** The `BriefCompiler`'s push observation surface. */
+/** Declares the `BriefCompiler`'s push observation surface. */
 export type BriefCompilerEventMap = {
 	readonly compile: readonly [briefing: Briefing]
 	readonly block: readonly [questions: readonly Gap[]]
@@ -422,7 +422,7 @@ export type BriefCompilerEventMap = {
 }
 
 /**
- * Input to `createBriefCompiler`.
+ * Represents the input to `createBriefCompiler`.
  *
  * @remarks
  * `interpret` and `reason` are BORROWED when supplied — the compiler destroys only
@@ -469,7 +469,7 @@ export interface BriefCompilerOptions {
 	readonly error?: EmitterErrorHandler
 }
 
-/** The compilation orchestrator contract. */
+/** Declares the compilation orchestrator contract. */
 export interface BriefCompilerInterface {
 	readonly emitter: EmitterInterface<BriefCompilerEventMap>
 	readonly interpret: InterpretInterface
@@ -479,14 +479,14 @@ export interface BriefCompilerInterface {
 	destroy(): void
 }
 
-/** The `BriefManager`'s push observation surface. */
+/** Declares the `BriefManager`'s push observation surface. */
 export type BriefManagerEventMap = {
 	readonly add: readonly [id: string]
 	readonly remove: readonly [id: string]
 	readonly destroy: readonly []
 }
 
-/** Input to `createBriefManager`. */
+/** Represents the input to `createBriefManager`. */
 export interface BriefManagerOptions {
 	readonly briefs?: readonly Brief[]
 	readonly on?: EmitterHooks<BriefManagerEventMap>
@@ -494,7 +494,7 @@ export interface BriefManagerOptions {
 }
 
 /**
- * The brief registry contract.
+ * Declares the brief registry contract.
  *
  * @remarks
  * The array overload of `remove` is declared FIRST so an id list resolves to the batch

@@ -39,7 +39,7 @@ import type {
 } from './types.js'
 
 /**
- * The compilation orchestrator — the `[interpret, draft, gate, pin]` pipeline.
+ * Implements the compilation orchestrator — the `[interpret, draft, gate, pin]` pipeline.
  *
  * @remarks
  * `compile` is genuinely SYNCHRONOUS and never throws for a brief it cannot emit: a
