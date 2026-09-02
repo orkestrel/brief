@@ -2,7 +2,13 @@ import { attempt } from '@orkestrel/contract'
 import type { Ambiguity, Entity, Intent } from '@orkestrel/interpret'
 import { canonicalize, collapseWhitespace, digestValue } from '@orkestrel/interpret'
 import type { LogicalDefinition, ReasonValidationResult, Rule, Subject } from '@orkestrel/reason'
-import { atom, compound, formatField, logicalDefinition, rule } from '@orkestrel/reason'
+import {
+	createAtom,
+	createCompound,
+	createLogicalDefinition,
+	createRule,
+	formatField,
+} from '@orkestrel/reason'
 import { snapshotBrief } from './cloners.js'
 import { BriefError } from './errors.js'
 import { BLANK_PATTERN, DEFAULT_BRIEF_TURNS, GATE_ID, LINE_BREAK_PATTERN } from './constants.js'
@@ -327,28 +333,49 @@ export function brief(
  */
 export function gateDefinition(): LogicalDefinition {
 	const readiness: readonly Rule[] = [
-		rule('specified', [atom('blocking', 'equals', 0)], atom('specified', 'equals', true)),
-		rule(
-			'aimed',
-			[compound('and', [atom('outcomes', 'above', 0), atom('required', 'above', 0)])],
-			atom('aimed', 'equals', true),
+		createRule(
+			'specified',
+			[createAtom('blocking', 'equals', 0)],
+			createAtom('specified', 'equals', true),
 		),
-		rule('proven', [atom('proofs', 'above', 0)], atom('proven', 'equals', true)),
-		rule('disjoint', [atom('overlaps', 'equals', 0)], atom('disjoint', 'equals', true)),
-		rule('granted', [atom('ungranted', 'equals', 0)], atom('granted', 'equals', true)),
-		rule('single', [atom('sentences', 'equals', 1)], atom('single', 'equals', true)),
+		createRule(
+			'aimed',
+			[
+				createCompound('and', [
+					createAtom('outcomes', 'above', 0),
+					createAtom('required', 'above', 0),
+				]),
+			],
+			createAtom('aimed', 'equals', true),
+		),
+		createRule('proven', [createAtom('proofs', 'above', 0)], createAtom('proven', 'equals', true)),
+		createRule(
+			'disjoint',
+			[createAtom('overlaps', 'equals', 0)],
+			createAtom('disjoint', 'equals', true),
+		),
+		createRule(
+			'granted',
+			[createAtom('ungranted', 'equals', 0)],
+			createAtom('granted', 'equals', true),
+		),
+		createRule(
+			'single',
+			[createAtom('sentences', 'equals', 1)],
+			createAtom('single', 'equals', true),
+		),
 	]
-	return logicalDefinition(GATE_ID, 'Brief readiness', [
+	return createLogicalDefinition(GATE_ID, 'Brief readiness', [
 		...readiness,
-		rule(
+		createRule(
 			'ready',
 			[
-				compound(
+				createCompound(
 					'and',
-					readiness.map((entry) => atom(entry.id, 'equals', true)),
+					readiness.map((entry) => createAtom(entry.id, 'equals', true)),
 				),
 			],
-			atom('ready', 'equals', true),
+			createAtom('ready', 'equals', true),
 		),
 	])
 }
@@ -1222,12 +1249,15 @@ export function deriveStatement(text: string): string {
 }
 
 /**
- * Derive a `Task` from an interprets `Intent` through the caller's vocabularies.
+ * Derives a `Task` from an interprets `Intent` through the caller's vocabularies.
  *
  * @remarks
  * The vocabularies are the CALLER's policy: this maps and never guesses. An action or
  * domain the caller did not map — or mapped to an off-vocabulary value — yields
- * `undefined` rather than an invented task. Inherited keys never resolve.
+ * `undefined` rather than an invented task. Inherited keys never resolve. `Intent.action`
+ * and `Intent.domain` are optional, because `classifyIntent` leaves an unmatched axis
+ * absent, and an absent axis is unmapped by definition: it yields `undefined` before
+ * either vocabulary is read.
  *
  * @param intent - The classified intent from an interpret pipeline.
  * @param text - The text the statement derives from.
@@ -1251,6 +1281,7 @@ export function deriveTask(
 	actions: Readonly<Record<string, TaskOperation>>,
 	domains: Readonly<Record<string, TaskDomain>>,
 ): Task | undefined {
+	if (intent.action === undefined || intent.domain === undefined) return undefined
 	const operationDescriptor = Object.getOwnPropertyDescriptor(actions, intent.action)
 	const domainDescriptor = Object.getOwnPropertyDescriptor(domains, intent.domain)
 	const operation: unknown =

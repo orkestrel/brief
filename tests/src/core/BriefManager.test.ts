@@ -54,13 +54,13 @@ describe('BriefManager records', () => {
 
 	it('registers a seed collection at construction', () => {
 		const registry = createBriefManager({ briefs: [buildBrief(), buildBrief({ rules: ['a'] })] })
-		expect(registry.size).toBe(2)
+		expect(registry.count).toBe(2)
 		registry.destroy()
 	})
 
 	it('collapses two identical seeds onto one record', () => {
 		const registry = createBriefManager({ briefs: [buildBrief(), buildBrief()] })
-		expect(registry.size).toBe(1)
+		expect(registry.count).toBe(1)
 		registry.destroy()
 	})
 })
@@ -110,7 +110,7 @@ describe('BriefManager accessors', () => {
 		const record = registry.add(first)
 		const error = captureError(() => registry.add(second))
 		expect(readErrorCode(error)).toBe('INVALID')
-		expect(registry.size).toBe(1)
+		expect(registry.count).toBe(1)
 		expect(briefToContent(requireValue(registry.brief(record.id), 'the first record').brief)).toBe(
 			briefToContent(first),
 		)
@@ -124,7 +124,7 @@ describe('BriefManager accessors', () => {
 		const first = registry.add(source)
 		const again = registry.add(source)
 		expect(again.version).toBe(first.version)
-		expect(registry.size).toBe(1)
+		expect(registry.count).toBe(1)
 		// And a pinned form of the same content shares the hash without colliding.
 		expect(registry.add(pinBrief(source), { id: first.id }).version).toBe(first.version)
 		registry.destroy()
@@ -197,7 +197,7 @@ describe('BriefManager seeding', () => {
 				},
 			},
 		})
-		expect(registry.size).toBe(1)
+		expect(registry.count).toBe(1)
 		expect(heard).toHaveLength(1)
 		registry.destroy()
 	})
@@ -213,7 +213,7 @@ describe('BriefManager seeding', () => {
 		// proves the seeding path registers more than one entry at all.
 		expect(failure).toBeUndefined()
 		const registry = new BriefManager({ briefs: [first, second] })
-		expect(registry.size).toBe(2)
+		expect(registry.count).toBe(2)
 		registry.destroy()
 	})
 })
@@ -224,7 +224,7 @@ describe('BriefManager remove', () => {
 		const record = registry.add(buildBrief())
 		expect(registry.remove(record.id)).toBe(true)
 		expect(registry.remove(record.id)).toBe(false)
-		expect(registry.size).toBe(0)
+		expect(registry.count).toBe(0)
 		registry.destroy()
 	})
 
@@ -233,7 +233,7 @@ describe('BriefManager remove', () => {
 		const first = registry.add(buildBrief(), { id: 'a' })
 		const second = registry.add(buildBrief({ rules: ['x'] }), { id: 'b' })
 		expect(registry.remove([first.id, second.id])).toBe(true)
-		expect(registry.size).toBe(0)
+		expect(registry.count).toBe(0)
 
 		registry.add(buildBrief(), { id: 'a' })
 		expect(registry.remove(['a', 'absent'])).toBe(false)
@@ -251,7 +251,7 @@ describe('BriefManager remove', () => {
 		const registry = createBriefManager()
 		const failure = captureError(() => registry.add(requireValue(forged, 'the forged brief')))
 		expect(readErrorCode(failure)).toBe('INVALID')
-		expect(registry.size).toBe(0)
+		expect(registry.count).toBe(0)
 		// The control: the same brief with its real hash is accepted.
 		expect(registry.add(pinBrief(buildBrief())).version).toBe(1)
 		registry.destroy()
@@ -271,7 +271,7 @@ describe('BriefManager remove', () => {
 		const registry = createBriefManager()
 		const failure = captureError(() => registry.add(requireValue(forged, 'the forged brief')))
 		expect(readErrorCode(failure)).toBe('INVALID')
-		expect(registry.size).toBe(0)
+		expect(registry.count).toBe(0)
 		// The control: the same brief with the trace its own content derives is accepted.
 		expect(registry.add(pinBrief(buildBrief())).version).toBe(1)
 		registry.destroy()
@@ -295,7 +295,7 @@ describe('BriefManager remove', () => {
 	it('removes every brief when called with no argument', () => {
 		const registry = createBriefManager({ briefs: [buildBrief(), buildBrief({ rules: ['x'] })] })
 		expect(registry.remove()).toBeUndefined()
-		expect(registry.size).toBe(0)
+		expect(registry.count).toBe(0)
 		registry.destroy()
 	})
 })
@@ -355,7 +355,7 @@ describe('BriefManager teardown', () => {
 	it('refuses every method except the getters and destroy', () => {
 		const registry = createBriefManager()
 		registry.destroy()
-		expect(registry.size).toBe(0)
+		expect(registry.count).toBe(0)
 		expect(registry.emitter.destroyed).toBe(true)
 		for (const call of [
 			() => registry.has('x'),

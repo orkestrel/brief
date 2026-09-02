@@ -1,6 +1,6 @@
 import type { EmitterInterface } from '@orkestrel/emitter'
 import { Emitter } from '@orkestrel/emitter'
-import type { ManagerAddOptions } from '@orkestrel/interpret'
+import type { RecordOptions } from '@orkestrel/interpret'
 import { snapshotBrief } from './cloners.js'
 import { BriefError } from './errors.js'
 import { briefToContent, briefToHash, briefToTrace } from './helpers.js'
@@ -62,7 +62,7 @@ export class BriefManager implements BriefManagerInterface {
 		return this.#emitter
 	}
 
-	get size(): number {
+	get count(): number {
 		return this.#records.size
 	}
 
@@ -81,7 +81,7 @@ export class BriefManager implements BriefManagerInterface {
 		return [...this.#records.values()]
 	}
 
-	add(source: Brief, options?: ManagerAddOptions): BriefRecord {
+	add(source: Brief, options?: RecordOptions): BriefRecord {
 		this.#refuseDestroyed()
 		const record = this.#stage(source, this.#records, options)
 		this.#commit(record)
@@ -125,7 +125,7 @@ export class BriefManager implements BriefManagerInterface {
 	#stage(
 		source: Brief,
 		against: ReadonlyMap<string, BriefRecord>,
-		options?: ManagerAddOptions,
+		options?: RecordOptions,
 	): BriefRecord {
 		// Snapshot first: a record whose brief still aliases the caller's arrays would let a
 		// later push change content this hash already described.

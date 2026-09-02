@@ -19,7 +19,7 @@ import type {
 	ReasonResult,
 	RuleResult,
 } from '@orkestrel/reason'
-import { createReason, quantitativeDefinition } from '@orkestrel/reason'
+import { createQuantitativeDefinition, createReason } from '@orkestrel/reason'
 
 /** The single rule result the counting and stable engines agree on for a first read. */
 export const FIRST_RULE: RuleResult = Object.freeze({
@@ -102,7 +102,7 @@ export function buildInterpret(
 						mappings: [{ entity: 'count', aliases: [], field: 'count' }],
 						defaults: [],
 						computations: [],
-						definition: quantitativeDefinition('migration', 'Migration', []),
+						definition: createQuantitativeDefinition('migration', 'Migration', []),
 					},
 				]
 			: [],
@@ -131,10 +131,13 @@ export function buildFailingInterpret(): InterpretInterface {
 		interpret: () => {
 			throw new Error('the interpret engine failed')
 		},
-		register: (template) => {
-			real.register(template)
+		add: (template) => {
+			real.add(template)
 		},
-		unregister: (id) => real.unregister(id),
+		// `remove` is an overload set, which an object literal cannot restate: an arrow
+		// delegating to all three arms returns `boolean | void` and matches no arm. A bound
+		// reference carries the whole set and keeps the real engine as its receiver.
+		remove: real.remove.bind(real),
 		template: (id) => real.template(id),
 		templates: () => real.templates(),
 		describe: (definition) => real.describe(definition),
@@ -179,10 +182,13 @@ export function buildForeignInterpret(value: unknown): InterpretInterface {
 				{ field: 'output', question: 'Diff or files?', candidates: [], required: true },
 			],
 		}),
-		register: (template) => {
-			real.register(template)
+		add: (template) => {
+			real.add(template)
 		},
-		unregister: (id) => real.unregister(id),
+		// `remove` is an overload set, which an object literal cannot restate: an arrow
+		// delegating to all three arms returns `boolean | void` and matches no arm. A bound
+		// reference carries the whole set and keeps the real engine as its receiver.
+		remove: real.remove.bind(real),
 		template: (id) => real.template(id),
 		templates: () => real.templates(),
 		describe: (definition) => real.describe(definition),
@@ -396,10 +402,13 @@ export function buildShiftingInterpret(): InterpretInterface {
 			return real.emitter
 		},
 		interpret: () => new ShiftingForeignInterpretation(),
-		register: (template) => {
-			real.register(template)
+		add: (template) => {
+			real.add(template)
 		},
-		unregister: (id) => real.unregister(id),
+		// `remove` is an overload set, which an object literal cannot restate: an arrow
+		// delegating to all three arms returns `boolean | void` and matches no arm. A bound
+		// reference carries the whole set and keeps the real engine as its receiver.
+		remove: real.remove.bind(real),
 		template: (id) => real.template(id),
 		templates: () => real.templates(),
 		describe: (definition) => real.describe(definition),
@@ -422,10 +431,13 @@ export function buildAccessorInterpret(): InterpretInterface {
 			return real.emitter
 		},
 		interpret: () => new AccessorInterpretation(),
-		register: (template) => {
-			real.register(template)
+		add: (template) => {
+			real.add(template)
 		},
-		unregister: (id) => real.unregister(id),
+		// `remove` is an overload set, which an object literal cannot restate: an arrow
+		// delegating to all three arms returns `boolean | void` and matches no arm. A bound
+		// reference carries the whole set and keeps the real engine as its receiver.
+		remove: real.remove.bind(real),
 		template: (id) => real.template(id),
 		templates: () => real.templates(),
 		describe: (definition) => real.describe(definition),

@@ -22,14 +22,14 @@ describe('createBriefCompiler', () => {
 describe('createBriefManager', () => {
 	it('creates an empty registry', () => {
 		const registry = createBriefManager()
-		expect(registry.size).toBe(0)
+		expect(registry.count).toBe(0)
 		expect(registry.briefs()).toStrictEqual([])
 		registry.destroy()
 	})
 
 	it('seeds from the supplied briefs', () => {
 		const registry = createBriefManager({ briefs: [buildBrief()] })
-		expect(registry.size).toBe(1)
+		expect(registry.count).toBe(1)
 		registry.destroy()
 	})
 })

@@ -20,7 +20,8 @@ import type {
  * `createReason` carrying one `LogicalReasoner` for the gate. Pass your own to share
  * instances or observe their emitters — the compiler destroys ONLY what it created.
  *
- * @param options - Engines to borrow, the two intent vocabularies, and emitter hooks.
+ * @param options - Engines to borrow, the `actions` and `domains` intent vocabularies, and
+ * emitter hooks.
  * @returns A working {@link BriefCompilerInterface}.
  *
  * @example
@@ -46,7 +47,7 @@ export function createBriefCompiler(options?: BriefCompilerOptions): BriefCompil
  * import { createBriefManager } from '@orkestrel/brief'
  *
  * const briefs = createBriefManager()
- * briefs.size // 0
+ * briefs.count // 0
  * briefs.destroy()
  * ```
  */

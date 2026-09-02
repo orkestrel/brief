@@ -1,5 +1,5 @@
 import type { EmitterErrorHandler, EmitterHooks, EmitterInterface } from '@orkestrel/emitter'
-import type { Interpretation, InterpretInterface, ManagerAddOptions } from '@orkestrel/interpret'
+import type { Interpretation, InterpretInterface, RecordOptions } from '@orkestrel/interpret'
 import type { LogicalResult, ReasonInterface, Subject } from '@orkestrel/reason'
 
 /**
@@ -498,17 +498,17 @@ export interface BriefManagerOptions {
  *
  * @remarks
  * The array overload of `remove` is declared FIRST so an id list resolves to the batch
- * form. `add` takes the fleet's own `ManagerAddOptions` from `@orkestrel/interpret`;
+ * form. `add` takes the fleet's own `RecordOptions` from `@orkestrel/interpret`;
  * omit its `id` and the record is keyed by the brief's own content hash, so re-adding
  * unchanged content is a version no-op.
  */
 export interface BriefManagerInterface {
 	readonly emitter: EmitterInterface<BriefManagerEventMap>
-	readonly size: number
+	readonly count: number
 	has(id: string): boolean
 	brief(id: string): BriefRecord | undefined
 	briefs(): readonly BriefRecord[]
-	add(brief: Brief, options?: ManagerAddOptions): BriefRecord
+	add(brief: Brief, options?: RecordOptions): BriefRecord
 	remove(ids: readonly string[]): boolean
 	remove(id: string): boolean
 	remove(): void

@@ -1,3 +1,4 @@
+import type { Intent } from '@orkestrel/interpret'
 import type { Brief } from '@src/core'
 import {
 	assertBrief,
@@ -984,6 +985,21 @@ describe('derivations', () => {
 		expect(deriveTask(intent, 'migrate the stores', {}, { code: 'code' })).toBeUndefined()
 		expect(deriveTask(intent, 'migrate the stores', { migrate: 'migrate' }, {})).toBeUndefined()
 		expect(deriveTask(intent, '   ', { migrate: 'migrate' }, { code: 'code' })).toBeUndefined()
+	})
+
+	it('refuses an intent that classified neither axis, rather than reading an undefined-named key', () => {
+		// `classifyIntent` leaves an unmatched axis ABSENT, so both axes reach this leaf as
+		// `undefined`. A descriptor lookup coerces that to the STRING 'undefined', so a
+		// vocabulary carrying that key would answer for an intent that named nothing at all.
+		const unclassified: Intent = { confidence: 0 }
+		expect(
+			deriveTask(
+				unclassified,
+				'migrate the stores',
+				{ undefined: 'migrate' },
+				{ undefined: 'code' },
+			),
+		).toBeUndefined()
 	})
 
 	it('uses an own descriptor answer without invoking a disagreeing proxy get trap', () => {

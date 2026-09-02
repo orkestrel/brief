@@ -41,6 +41,7 @@ const FOREIGN: readonly string[] = [
 	'schemaToParameters',
 	'stringShape',
 	// @orkestrel/interpret
+	'classifyIntent',
 	'createInterpret',
 	'digestValue',
 	// @orkestrel/reason
@@ -109,9 +110,9 @@ describe.each(MANIFEST)('$concept', (entry) => {
 	})
 
 	it('SB — the comparison can report a difference', () => {
-		expect(findMissingSymbols([{ name: 'Phantom', kind: 'class' }], source.surface())).toStrictEqual([
-			'class Phantom',
-		])
+		expect(
+			findMissingSymbols([{ name: 'Phantom', kind: 'class' }], source.surface()),
+		).toStrictEqual(['class Phantom'])
 		const [first] = source.surface()
 		if (first === undefined) throw new Error('the barrel surface is empty')
 		expect(

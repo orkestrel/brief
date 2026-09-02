@@ -120,7 +120,7 @@ describe('interpret fixtures', () => {
 		const interpret = buildFailingInterpret()
 		expect(() => interpret.interpret('x')).toThrow('the interpret engine failed')
 		// A real, unregistered template is rejected identically to how the real engine rejects it,
-		// proving `register`/`unregister`/`template` truly delegate rather than stub a fixed reply.
+		// proving `add`/`remove`/`template` truly delegate rather than stub a fixed reply.
 		expect(interpret.template('missing')).toBeUndefined()
 	})
 

@@ -73,7 +73,7 @@ compiler.emitter.on('block', (questions) => questions.length)
 compiler.destroy()
 ```
 
-`compile()` is genuinely SYNCHRONOUS and runs the fixed four-stage pipeline
+`compile()` is genuinely SYNCHRONOUS and runs the fixed pipeline
 `[interpret, draft, gate, pin]`. Blocking gaps, a refused gate, and a thrown stage all
 yield a visible INCOMPLETE `Briefing` — `brief` absent and the cause recorded on `failures` —
 rather than a throw. `questions` carries the gaps when a BLOCKING GAP is the cause and is
@@ -84,47 +84,47 @@ pipeline at all.
 
 ### Types
 
-| Type                     | Kind      | Shape                                                                                                                                                                                                                           |
-| ------------------------ | --------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `TaskOperation`          | type      | `'create' \| 'refactor' \| 'debug' \| 'extract' \| 'migrate' \| 'explain' \| 'review' \| 'optimize' \| 'audit' \| 'test' \| 'document' \| 'plan'` — the closed operation vocabulary.                                            |
-| `TaskDomain`             | type      | `'code' \| 'writing' \| 'research' \| 'analysis' \| 'design' \| 'data' \| 'ops' \| 'other'` — the closed domain vocabulary.                                                                                                     |
-| `OutputFormat`           | type      | `'markdown' \| 'json' \| 'code' \| 'diff' \| 'prose'` — the closed deliverable-format vocabulary.                                                                                                                               |
-| `RiskSeverity`           | type      | `'low' \| 'medium' \| 'high'` — the closed severity vocabulary.                                                                                                                                                                 |
-| `BriefStage`             | type      | `'interpret' \| 'draft' \| 'gate' \| 'pin'` — the four fixed pipeline phases, in order.                                                                                                                                         |
-| `BriefErrorCode`         | type      | `'INTERPRET_FAILED' \| 'DRAFT_FAILED' \| 'GATE_FAILED' \| 'PIN_FAILED' \| 'BLOCKED' \| 'INVALID' \| 'DESTROYED'` — coded `BriefError` reasons.                                                                                  |
-| `Task`                   | interface | `{ operation, domain, statement }` — ONE imperative sentence naming the object; a compound statement is two briefs.                                                                                                             |
-| `Reference`              | interface | `{ path, note }` — one referenced path and why it is listed; the ONE path record, carrying no classifier because its container supplies the meaning.                                                                            |
-| `Manifest`               | interface | `{ read, edit, locked, forbidden }` — the four DISJOINT file partitions, each `readonly Reference[]`; `read` order is the reading order.                                                                                        |
-| `Outcome`                | interface | `{ rank, text, required }` — one ranked outcome, not a step; `required: true` gates "done".                                                                                                                                     |
-| `Given`                  | interface | `{ category, name, value }` — one context fact handed to the executor.                                                                                                                                                          |
-| `Example`                | interface | `{ input, output, note? }` — one input-to-output exemplar; the highest-leverage ambiguity remover.                                                                                                                              |
-| `Citation`               | interface | `{ name, url, note }` — one external source and why it is cited; the off-repository twin of `Reference`. List ORDER is the trust order.                                                                                         |
-| `Gap`                    | interface | `{ field, question, blocking, candidates? }` — one unknown; `blocking: true` means no safe default exists and the gate must fail closed.                                                                                        |
-| `Risk`                   | interface | `{ severity, text, mitigation }` — one pre-empted risk.                                                                                                                                                                         |
-| `Output`                 | interface | `{ format, sections?, include?, exclude? }` — the closed shape of the deliverable.                                                                                                                                              |
-| `Proof`                  | interface | `{ text, command }` — one mechanical, transcript-provable check; give `command` a clear exit signal.                                                                                                                            |
-| `Brief`                  | interface | `{ task, authority, manifest, outcomes, rules, invariants, givens, examples, assumptions, citations, gaps, risks, output, proofs, trace?, hash? }` — the closed execution contract.                                             |
-| `BriefInput`             | interface | `{ text?, interpretation?, task?, … }` — one `compile()` input; every brief section is an optional caller-authored override.                                                                                                    |
-| `Briefing`               | interface | `{ interpretation?, brief?, questions, verdict?, stages, failures, digest }` — the full, replayable outcome of one `compile()` call; `brief` is present exactly when it completed, so it IS the completeness test.              |
-| `Dispatch`               | interface | `{ prompt, authority, read, edit, locked, forbidden }` — the subagent projection on TWO axes: `authority` is precedence, the four path sets are permission. `edit` is the owned set; `locked` and `forbidden` are do-not-touch. |
-| `InterpretStageRecord`   | interface | `{ stage: 'interpret', input: string, output?: Interpretation, error? }` — the interpret phase snapshot.                                                                                                                        |
-| `DraftStageRecord`       | interface | `{ stage: 'draft', input: BriefInput, output?: Brief, error? }` — the draft phase snapshot.                                                                                                                                     |
-| `GateStageRecord`        | interface | `{ stage: 'gate', input: Subject, output?: LogicalResult, error? }` — the gate phase snapshot.                                                                                                                                  |
-| `PinStageRecord`         | interface | `{ stage: 'pin', input: Brief, output?: Brief, error? }` — the pin phase snapshot.                                                                                                                                              |
-| `BriefStageRecord`       | type      | `InterpretStageRecord \| DraftStageRecord \| GateStageRecord \| PinStageRecord` — one phase, discriminated by `stage`, so narrowing types BOTH payloads with no assertion.                                                      |
-| `BriefStageFailure`      | interface | `{ stage, code, message }` — a visible marker for a stage that failed.                                                                                                                                                          |
-| `BriefRecord`            | interface | `{ id, brief, version, hash }` — a versioned, content-hashed `Brief` inside a `BriefManager`.                                                                                                                                   |
-| `BriefCompilerEventMap`  | type      | `BriefCompiler`'s push observation surface — `compile(briefing)` · `block(questions)` · `error(error)` · `destroy()`.                                                                                                           |
-| `BriefCompilerOptions`   | interface | `{ interpret?, reason?, actions?, domains?, on?, error? }` — input to `createBriefCompiler`; the gate is FIXED and no option reaches it.                                                                                        |
-| `BriefCompilerInterface` | interface | The compilation orchestrator contract — `emitter` / `interpret` / `reason` plus `compile` / `gate` / `destroy`.                                                                                                                 |
-| `BriefManagerEventMap`   | type      | `BriefManager`'s push observation surface — `add(id)` · `remove(id)` · `destroy()`.                                                                                                                                             |
-| `BriefManagerOptions`    | interface | `{ briefs?, on?, error? }` — input to `createBriefManager`.                                                                                                                                                                     |
-| `BriefManagerInterface`  | interface | The brief registry contract — `emitter` / `size` plus `has` / `brief` / `briefs` / `add` / `remove` / `destroy`.                                                                                                                |
+| Type                     | Kind      | Shape                                                                                                                                                                                                                      |
+| ------------------------ | --------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `TaskOperation`          | type      | `'create' \| 'refactor' \| 'debug' \| 'extract' \| 'migrate' \| 'explain' \| 'review' \| 'optimize' \| 'audit' \| 'test' \| 'document' \| 'plan'` — the closed operation vocabulary.                                       |
+| `TaskDomain`             | type      | `'code' \| 'writing' \| 'research' \| 'analysis' \| 'design' \| 'data' \| 'ops' \| 'other'` — the closed domain vocabulary.                                                                                                |
+| `OutputFormat`           | type      | `'markdown' \| 'json' \| 'code' \| 'diff' \| 'prose'` — the closed deliverable-format vocabulary.                                                                                                                          |
+| `RiskSeverity`           | type      | `'low' \| 'medium' \| 'high'` — the closed severity vocabulary.                                                                                                                                                            |
+| `BriefStage`             | type      | `'interpret' \| 'draft' \| 'gate' \| 'pin'` — the four fixed pipeline phases, in order.                                                                                                                                    |
+| `BriefErrorCode`         | type      | `'INTERPRET_FAILED' \| 'DRAFT_FAILED' \| 'GATE_FAILED' \| 'PIN_FAILED' \| 'BLOCKED' \| 'INVALID' \| 'DESTROYED'` — coded `BriefError` reasons.                                                                             |
+| `Task`                   | interface | `{ operation, domain, statement }` — ONE imperative sentence naming the object; a compound statement is two briefs.                                                                                                        |
+| `Reference`              | interface | `{ path, note }` — one referenced path and why it is listed; the ONE path record, carrying no classifier because its container supplies the meaning.                                                                       |
+| `Manifest`               | interface | `{ read, edit, locked, forbidden }` — the four DISJOINT file partitions, each `readonly Reference[]`; `read` order is the reading order.                                                                                   |
+| `Outcome`                | interface | `{ rank, text, required }` — one ranked outcome, not a step; `required: true` gates "done".                                                                                                                                |
+| `Given`                  | interface | `{ category, name, value }` — one context fact handed to the executor.                                                                                                                                                     |
+| `Example`                | interface | `{ input, output, note? }` — one input-to-output exemplar; the highest-leverage ambiguity remover.                                                                                                                         |
+| `Citation`               | interface | `{ name, url, note }` — one external source and why it is cited; the off-repository twin of `Reference`. List ORDER is the trust order.                                                                                    |
+| `Gap`                    | interface | `{ field, question, blocking, candidates? }` — one unknown; `blocking: true` means no safe default exists and the gate must fail closed.                                                                                   |
+| `Risk`                   | interface | `{ severity, text, mitigation }` — one pre-empted risk.                                                                                                                                                                    |
+| `Output`                 | interface | `{ format, sections?, include?, exclude? }` — the closed shape of the deliverable.                                                                                                                                         |
+| `Proof`                  | interface | `{ text, command }` — one mechanical, transcript-provable check; give `command` a clear exit signal.                                                                                                                       |
+| `Brief`                  | interface | `{ task, authority, manifest, outcomes, rules, invariants, givens, examples, assumptions, citations, gaps, risks, output, proofs, trace?, hash? }` — the closed execution contract.                                        |
+| `BriefInput`             | interface | `{ text?, interpretation?, task?, … }` — one `compile()` input; every brief section is an optional caller-authored override.                                                                                               |
+| `Briefing`               | interface | `{ interpretation?, brief?, questions, verdict?, stages, failures, digest }` — the full, replayable outcome of one `compile()` call; `brief` is present exactly when it completed, so it IS the completeness test.         |
+| `Dispatch`               | interface | `{ prompt, authority, read, edit, locked, forbidden }` — the subagent projection on TWO axes: `authority` is precedence, the path sets are permission. `edit` is the owned set; `locked` and `forbidden` are do-not-touch. |
+| `InterpretStageRecord`   | interface | `{ stage: 'interpret', input: string, output?: Interpretation, error? }` — the interpret phase snapshot.                                                                                                                   |
+| `DraftStageRecord`       | interface | `{ stage: 'draft', input: BriefInput, output?: Brief, error? }` — the draft phase snapshot.                                                                                                                                |
+| `GateStageRecord`        | interface | `{ stage: 'gate', input: Subject, output?: LogicalResult, error? }` — the gate phase snapshot.                                                                                                                             |
+| `PinStageRecord`         | interface | `{ stage: 'pin', input: Brief, output?: Brief, error? }` — the pin phase snapshot.                                                                                                                                         |
+| `BriefStageRecord`       | type      | `InterpretStageRecord \| DraftStageRecord \| GateStageRecord \| PinStageRecord` — one phase, discriminated by `stage`, so narrowing types BOTH payloads with no assertion.                                                 |
+| `BriefStageFailure`      | interface | `{ stage, code, message }` — a visible marker for a stage that failed.                                                                                                                                                     |
+| `BriefRecord`            | interface | `{ id, brief, version, hash }` — a versioned, content-hashed `Brief` inside a `BriefManager`.                                                                                                                              |
+| `BriefCompilerEventMap`  | type      | `BriefCompiler`'s push observation surface — `compile(briefing)` · `block(questions)` · `error(error)` · `destroy()`.                                                                                                      |
+| `BriefCompilerOptions`   | interface | `{ interpret?, reason?, actions?, domains?, on?, error? }` — input to `createBriefCompiler`; the gate is FIXED and no option reaches it.                                                                                   |
+| `BriefCompilerInterface` | interface | The compilation orchestrator contract — `emitter` / `interpret` / `reason` plus `compile` / `gate` / `destroy`.                                                                                                            |
+| `BriefManagerEventMap`   | type      | `BriefManager`'s push observation surface — `add(id)` · `remove(id)` · `destroy()`.                                                                                                                                        |
+| `BriefManagerOptions`    | interface | `{ briefs?, on?, error? }` — input to `createBriefManager`.                                                                                                                                                                |
+| `BriefManagerInterface`  | interface | The brief registry contract — `emitter` / `count` plus `has` / `brief` / `briefs` / `add` / `remove` / `destroy`.                                                                                                          |
 
 The `Briefing` deliberately carries CROSS-PACKAGE payloads by their originating types:
 `interpretation` is an `@orkestrel/interpret` `Interpretation`, `verdict` is an
 `@orkestrel/reason` `LogicalResult`, and `BriefManagerInterface.add` takes interprets
-`ManagerAddOptions`. Each is imported at the consumer site from the package that owns it,
+`RecordOptions`. Each is imported at the consumer site from the package that owns it,
 never re-exported here. The verdict is the gate's own traceable account: every readiness
 check, met or missed, narrated by the reasoner.
 
@@ -299,7 +299,7 @@ is exactly `Brief`.
 | `lineShape`      | const | a NON-EMPTY single-line string — the shape mirror of `isLine`.                                     |
 | `taskShape`      | const | the `Task` object shape — `literalShape(TASK_OPERATIONS)`, `literalShape(TASK_DOMAINS)`, `min: 1`. |
 | `referenceShape` | const | the `Reference` object shape.                                                                      |
-| `manifestShape`  | const | the `Manifest` object shape — four `arrayShape(referenceShape)` partitions.                        |
+| `manifestShape`  | const | the `Manifest` object shape — an `arrayShape(referenceShape)` per disjoint partition.              |
 | `outcomeShape`   | const | the `Outcome` object shape — `rank` an `integerShape({ min: 1 })`.                                 |
 | `givenShape`     | const | the `Given` object shape.                                                                          |
 | `exampleShape`   | const | the `Example` object shape.                                                                        |
@@ -597,7 +597,7 @@ const compiler = createBriefCompiler() // owns a default interpret pipeline and 
 compiler.destroy()
 
 const briefs = createBriefManager()
-briefs.size // 0
+briefs.count // 0
 briefs.destroy()
 
 createBriefContract().is(pinned) // true
@@ -613,16 +613,16 @@ created.
 
 ### Entities
 
-| API             | Kind  | Summary                                                                                                                         |
-| --------------- | ----- | ------------------------------------------------------------------------------------------------------------------------------- |
-| `BriefCompiler` | class | The compilation orchestrator — runs the four-stage pipeline and owns or borrows the interpret pipeline and the gate's `Reason`. |
-| `BriefManager`  | class | The self-owning, versioned and content-hashed brief registry — record ids default to each brief's own content hash.             |
+| API             | Kind  | Summary                                                                                                                                                     |
+| --------------- | ----- | ----------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `BriefCompiler` | class | The compilation orchestrator — runs the `interpret` → `draft` → `gate` → `pin` pipeline and owns or borrows the interpret pipeline and the gate's `Reason`. |
+| `BriefManager`  | class | The self-owning, versioned and content-hashed brief registry — record ids default to each brief's own content hash.                                         |
 
 ## Methods
 
 The public methods of each behavioral interface — one table per type, keyed by its
 backticked name, every call-signature member listed. The `readonly` data members
-(`emitter` / `interpret` / `reason` on `BriefCompiler`; `emitter` / `size` on `BriefManager`)
+(`emitter` / `interpret` / `reason` on `BriefCompiler`; `emitter` / `count` on `BriefManager`)
 stay in the Surface rows above. Each implementing class exposes exactly its interface's
 methods, so this doubles as the per-instance method surface.
 
@@ -632,11 +632,11 @@ methods, so this doubles as the per-instance method surface.
 `destroy` itself throws `BriefError('DESTROYED', …)`; `destroy()` is idempotent, cascades to
 the OWNED engines first — never a borrowed one — and tears the emitter down LAST.
 
-| Method    | Returns         | Behavior                                                                                               |
-| --------- | --------------- | ------------------------------------------------------------------------------------------------------ |
-| `compile` | `Briefing`      | Run the four-stage pipeline over a `BriefInput`, returning a complete or visible-incomplete result.    |
-| `gate`    | `LogicalResult` | Evaluate ONE brief's readiness through the reasons gate — `briefToSubject` against `gateDefinition()`. |
-| `destroy` | `void`          | Idempotent teardown — owned engines first, emits `destroy`, then destroys the emitter LAST.            |
+| Method    | Returns         | Behavior                                                                                                                        |
+| --------- | --------------- | ------------------------------------------------------------------------------------------------------------------------------- |
+| `compile` | `Briefing`      | Run the `interpret` → `draft` → `gate` → `pin` pipeline over a `BriefInput`, returning a complete or visible-incomplete result. |
+| `gate`    | `LogicalResult` | Evaluate ONE brief's readiness through the reasons gate — `briefToSubject` against `gateDefinition()`.                          |
+| `destroy` | `void`          | Idempotent teardown — owned engines first, emits `destroy`, then destroys the emitter LAST.                                     |
 
 ```ts
 import { BriefCompiler, brief, createBriefCompiler, outcome, proof, task } from '@orkestrel/brief'
@@ -742,7 +742,7 @@ These invariants hold across `src/core` and this guide:
    `BriefManager` therefore compares `briefToContent` before calling a re-add unchanged, and
    REFUSES a collision with `BriefError('INVALID', …)` rather than silently replacing the
    record already stored. Give a registry expecting more than a few thousand distinct briefs
-   its own ids through `ManagerAddOptions.id` rather than letting the digest mint them.
+   its own ids through `RecordOptions.id` rather than letting the digest mint them.
 
 3. **Fail closed at the gate, and the gate is not delegable.** Readiness is decided by
    `findUnmetRules` — in code, from the brief's own measures — BEFORE any verdict is consulted.
@@ -889,7 +889,7 @@ needs an interpret pipeline that can actually match the request:
 ```ts
 import { createBriefCompiler, outcome, output, proof } from '@orkestrel/brief'
 import { createInterpret } from '@orkestrel/interpret'
-import { quantitativeDefinition } from '@orkestrel/reason'
+import { createQuantitativeDefinition } from '@orkestrel/reason'
 
 const migrations = createBriefCompiler({
 	interpret: createInterpret({
@@ -908,7 +908,7 @@ const migrations = createBriefCompiler({
 				mappings: [{ entity: 'count', aliases: [], field: 'count' }],
 				defaults: [],
 				computations: [],
-				definition: quantitativeDefinition('migration', 'Migration', []),
+				definition: createQuantitativeDefinition('migration', 'Migration', []),
 			},
 		],
 	}),
@@ -998,12 +998,12 @@ build your own beside it. `briefToSubject` projects the brief into a flat measur
 ```ts
 import { briefToSubject, gateDefinition } from '@orkestrel/brief'
 import {
-	atom,
-	compound,
+	createAtom,
+	createCompound,
+	createLogicalDefinition,
 	createLogicalReasoner,
 	createReason,
-	logicalDefinition,
-	rule,
+	createRule,
 } from '@orkestrel/reason'
 
 const engine = createReason({ reasoners: [createLogicalReasoner()] })
@@ -1018,13 +1018,22 @@ if (ruling.reasoning === 'logical') {
 engine.destroy()
 
 // A house gate: this package's readiness UNCHANGED, plus one rule of your own, on your engine.
-const house = logicalDefinition('house', 'House readiness', [
+const house = createLogicalDefinition('house', 'House readiness', [
 	...gateDefinition().rules,
-	rule('anchored', [atom('authority', 'above', 0)], atom('anchored', 'equals', true)),
-	rule(
+	createRule(
+		'anchored',
+		[createAtom('authority', 'above', 0)],
+		createAtom('anchored', 'equals', true),
+	),
+	createRule(
 		'fit',
-		[compound('and', [atom('ready', 'equals', true), atom('anchored', 'equals', true)])],
-		atom('fit', 'equals', true),
+		[
+			createCompound('and', [
+				createAtom('ready', 'equals', true),
+				createAtom('anchored', 'equals', true),
+			]),
+		],
+		createAtom('fit', 'equals', true),
 	),
 ])
 engine.reason(measures, house) // conclusion is `fit` — base readiness AND anchored
@@ -1145,7 +1154,7 @@ const first = store.add(
 	}),
 )
 store.add(first.brief).version // 1 — unchanged content is a version no-op
-store.size // 1 — the same content minted the same id
+store.count // 1 — the same content minted the same id
 store.destroy()
 ```
 
@@ -1190,7 +1199,7 @@ store.destroy()
 ## Tests
 
 - [`tests/guides.test.ts`](../tests/guides.test.ts) — the `## Surface` to `src/core` bijection (value and type exports), the `## Methods` to interface-method bijection, link integrity, fence languages, example presence, and fence-import reality.
-- [`tests/src/core/BriefCompiler.test.ts`](../tests/src/core/BriefCompiler.test.ts) — the four-stage pipeline, stage order and records, the interpret-skip path, caller-over-derived merging, fail-closed blocking (questions, the `BLOCKED` failure, the absent brief), `gate` verdict tracing, event sequences (`compile` versus `block`), owned-versus-borrowed engine teardown, idempotent `destroy`, and `DESTROYED` throws.
+- [`tests/src/core/BriefCompiler.test.ts`](../tests/src/core/BriefCompiler.test.ts) — the `interpret` → `draft` → `gate` → `pin` pipeline, stage order and records, the interpret-skip path, caller-over-derived merging, fail-closed blocking (questions, the `BLOCKED` failure, the absent brief), `gate` verdict tracing, event sequences (`compile` versus `block`), owned-versus-borrowed engine teardown, idempotent `destroy`, and `DESTROYED` throws.
 - [`tests/src/core/BriefManager.test.ts`](../tests/src/core/BriefManager.test.ts) — content-hash id minting, version bump only on content change, the three `remove` forms, per-event emissions, and destroy semantics.
 - [`tests/src/core/helpers.test.ts`](../tests/src/core/helpers.test.ts) — every builder's output shape, every projection, the derivations and their off-vocabulary `undefined`, `pinBrief` determinism and idempotence, `gateDefinition`'s rule list against `findUnmetRules` over one value set, `validateBrief` errors and warnings, and the four `find*` leaves.
 - [`tests/src/core/validators.test.ts`](../tests/src/core/validators.test.ts) — each guard accepts valid and rejects invalid plus adversarial junk, exact-record semantics, and off-vocabulary rejection.
