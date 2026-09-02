@@ -185,9 +185,6 @@ export function buildForeignInterpret(value: unknown): InterpretInterface {
 		add: (template) => {
 			real.add(template)
 		},
-		// `remove` is an overload set, which an object literal cannot restate: an arrow
-		// delegating to all three arms returns `boolean | void` and matches no arm. A bound
-		// reference carries the whole set and keeps the real engine as its receiver.
 		remove: real.remove.bind(real),
 		template: (id) => real.template(id),
 		templates: () => real.templates(),
@@ -405,9 +402,6 @@ export function buildShiftingInterpret(): InterpretInterface {
 		add: (template) => {
 			real.add(template)
 		},
-		// `remove` is an overload set, which an object literal cannot restate: an arrow
-		// delegating to all three arms returns `boolean | void` and matches no arm. A bound
-		// reference carries the whole set and keeps the real engine as its receiver.
 		remove: real.remove.bind(real),
 		template: (id) => real.template(id),
 		templates: () => real.templates(),
@@ -434,9 +428,6 @@ export function buildAccessorInterpret(): InterpretInterface {
 		add: (template) => {
 			real.add(template)
 		},
-		// `remove` is an overload set, which an object literal cannot restate: an arrow
-		// delegating to all three arms returns `boolean | void` and matches no arm. A bound
-		// reference carries the whole set and keeps the real engine as its receiver.
 		remove: real.remove.bind(real),
 		template: (id) => real.template(id),
 		templates: () => real.templates(),
