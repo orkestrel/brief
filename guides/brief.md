@@ -39,16 +39,16 @@ Compile a request into a `Briefing`, then project the brief it carries:
 import {
 	briefToGoal,
 	briefToMarkdown,
+	buildOutcome,
+	buildProof,
+	buildTask,
 	createBriefCompiler,
-	outcome,
-	proof,
-	task,
 } from '@orkestrel/brief'
 
 const compiler = createBriefCompiler()
 
 const briefing = compiler.compile({
-	task: task('refactor', 'code', 'Refactor useForm to native browser form APIs.'),
+	task: buildTask('refactor', 'code', 'Refactor useForm to native browser form APIs.'),
 	authority: [{ path: 'AGENTS.md', note: 'project law; wins every conflict' }],
 	manifest: {
 		read: [
@@ -59,8 +59,8 @@ const briefing = compiler.compile({
 		locked: [{ path: 'src/browser/types.ts', note: 'the published contract' }],
 		forbidden: [{ path: 'app/**', note: 'out of scope' }],
 	},
-	outcomes: [outcome(1, 'useForm uses native FormData with no behavior change')],
-	proofs: [proof('type-check and lint pass', 'npm run check')],
+	outcomes: [buildOutcome(1, 'useForm uses native FormData with no behavior change')],
+	proofs: [buildProof('type-check and lint pass', 'npm run check')],
 })
 
 briefing.brief !== undefined // true — the brief is present exactly when the gate passed
@@ -130,18 +130,18 @@ check, met or missed, narrated by the reasoner.
 
 ### Constants
 
-| API                      | Kind  | Summary                                                                                                                                     |
-| ------------------------ | ----- | ------------------------------------------------------------------------------------------------------------------------------------------- |
-| `TASK_OPERATIONS`        | const | The `TaskOperation` values, frozen — compose with `literalOf(…)` / `parseEnum(…)`.                                                          |
-| `TASK_DOMAINS`           | const | The `TaskDomain` values, frozen.                                                                                                            |
-| `OUTPUT_FORMATS`         | const | The `OutputFormat` values, frozen.                                                                                                          |
-| `RISK_SEVERITIES`        | const | The `RiskSeverity` values, frozen.                                                                                                          |
-| `INTERPRETATION_MEMBERS` | const | Every published `Interpretation` member name, frozen — the capture list, pinned to `keyof Interpretation`.                                  |
-| `DEFAULT_BRIEF_TURNS`    | const | `16` — the default turn cap `briefToGoal` renders; domain-qualified to keep the barrel clean.                                               |
-| `GATE_ID`                | const | `'gate'` — the id of the `gateDefinition()` logical definition.                                                                             |
-| `LINE_BREAK_PATTERN`     | const | The ECMAScript line terminators a brief field refuses; unanchored and flagless-`g`.                                                         |
-| `SINGLE_LINE_PATTERN`    | const | The positive form of `LINE_BREAK_PATTERN`, for `stringShape`'s `pattern` — the same class as `LINE_BREAK_PATTERN`, expressed the other way. |
-| `BLANK_PATTERN`          | const | Empty or all spaces — the one exemplar side `exampleToLines` must not pad.                                                                  |
+| API                      | Kind  | Summary                                                                                                                                                                                                                                                  |
+| ------------------------ | ----- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `TASK_OPERATIONS`        | const | The `TaskOperation` values, frozen — compose with `literalOf(…)` / `parseEnum(…)`.                                                                                                                                                                       |
+| `TASK_DOMAINS`           | const | The `TaskDomain` values, frozen.                                                                                                                                                                                                                         |
+| `OUTPUT_FORMATS`         | const | The `OutputFormat` values, frozen.                                                                                                                                                                                                                       |
+| `RISK_SEVERITIES`        | const | The `RiskSeverity` values, frozen.                                                                                                                                                                                                                       |
+| `INTERPRETATION_MEMBERS` | const | Every published `Interpretation` member name, frozen — the capture list, pinned to `keyof Interpretation`.                                                                                                                                               |
+| `DEFAULT_BRIEF_TURNS`    | const | `16` — the default turn cap `briefToGoal` renders; domain-qualified to keep the barrel clean.                                                                                                                                                            |
+| `GATE_ID`                | const | `'gate'` — the id of the `buildGateDefinition()` logical definition.                                                                                                                                                                                     |
+| `LINE_BREAK_PATTERN`     | const | The ECMAScript line terminators a brief field refuses; unanchored and flagless-`g`.                                                                                                                                                                      |
+| `SINGLE_LINE_PATTERN`    | const | The positive form of `LINE_BREAK_PATTERN`, for `stringShape`'s `pattern` — the same class as `LINE_BREAK_PATTERN`, expressed the other way.                                                                                                              |
+| `BLANK_PATTERN`          | const | One or more spaces and nothing else — the one exemplar side `exampleToLines` must not pad; an EMPTY side is padded like any other, because CommonMark strips a fully-blank span to nothing while an unpadded empty span leaves an unclosed backtick run. |
 
 An interpretation the compiler reads is foreign data, and a class instance carries its contract
 on the prototype, so `BriefCompiler` materializes the members `INTERPRETATION_MEMBERS` names into
@@ -205,7 +205,7 @@ content-hash collision — and `DESTROYED` carries none.
 
 Total guards composed from the `@orkestrel/contract` combinators. Adversarial input — junk,
 cycles, hostile prototypes — returns `false`, never throws. Every record guard is EXACT: an
-extra key fails, which is why the builders below omit absent optional keys. A key that is
+extra key fails, which is why the following builders omit absent optional keys. A key that is
 PRESENT but holds `undefined` also fails, matching this workspace's
 `exactOptionalPropertyTypes` contract.
 
@@ -334,103 +334,109 @@ contract.generate(seededRandom(42)) // a reproducible, on-contract seed brief fo
 schemaToParameters(contract.schema) // the open tool-parameters record, no `as` anywhere
 
 createContract(taskShape).is({ operation: 'plan', domain: 'ops', statement: 'Plan it.' }) // true
-briefShape.type // 'object'
-referenceShape.type // 'object'
-manifestShape.type // 'object'
-outcomeShape.type // 'object'
-givenShape.type // 'object'
-exampleShape.type // 'object'
-citationShape.type // 'object'
-gapShape.type // 'object'
-riskShape.type // 'object'
-outputShape.type // 'object'
-proofShape.type // 'object'
+briefShape.category // 'object'
+referenceShape.category // 'object'
+manifestShape.category // 'object'
+outcomeShape.category // 'object'
+givenShape.category // 'object'
+exampleShape.category // 'object'
+citationShape.category // 'object'
+gapShape.category // 'object'
+riskShape.category // 'object'
+outputShape.category // 'object'
+proofShape.category // 'object'
 ```
 
 ### Builders
 
-Lowercase value builders following the reasons idiom — every builder returns a FRESH object
-and OMITS absent optional keys entirely, so its SHAPE round-trips the exact-record validators
-above.
+Value builders — every builder returns a FRESH object and OMITS absent optional keys entirely,
+so its SHAPE round-trips the exact-record validators named earlier.
 
-Builders are structural, not validating: they adopt whatever they are handed. `reference('a',
-'')` and `citation('MDN', 'https://x', 'a\nb')` both return a typed value the matching guard
+Builders are structural, not validating: they adopt whatever they are handed. `buildReference('a',
+'')` and `buildCitation('MDN', 'https://x', 'a\nb')` both return a typed value the matching guard
 rejects, because the single-line and non-empty contracts bind where a guard runs rather than
 where a value is built. That is deliberate and uniform across every builder — validation lives
 at the boundaries the data actually crosses: `parseBrief` on the way in, `snapshotBrief` inside
 every projection, and the gate before emission. Pass on-contract arguments, or check the
 result.
 
-| API              | Kind     | Builds…                                                                                                                                                          |
-| ---------------- | -------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `task`           | function | a `Task` from operation / domain / statement.                                                                                                                    |
-| `reference`      | function | a `Reference` from path / note — the one builder for an authority entry and a manifest entry alike.                                                              |
-| `manifest`       | function | a `Manifest` — every absent partition defaults to `[]`, so a partial literal is enough.                                                                          |
-| `outcome`        | function | an `Outcome` from rank / text; `required` defaults to `true` — an outcome gates "done" unless demoted.                                                           |
-| `given`          | function | a `Given` from category / name / value.                                                                                                                          |
-| `example`        | function | an `Example` from input / output; `note` is omitted when absent.                                                                                                 |
-| `citation`       | function | a `Citation` from name / url / note.                                                                                                                             |
-| `gap`            | function | a `Gap` from field / question; `blocking` defaults to `false` and `candidates` is omitted when absent.                                                           |
-| `risk`           | function | a `Risk` from severity / text / mitigation.                                                                                                                      |
-| `output`         | function | an `Output` from format; `sections` / `include` / `exclude` are omitted when absent.                                                                             |
-| `proof`          | function | a `Proof` from text / command.                                                                                                                                   |
-| `brief`          | function | a `Brief` from a `Task` plus overrides — every absent collection defaults to `[]`, `output` defaults to `output('markdown')`, and `trace` / `hash` stay omitted. |
-| `gateDefinition` | function | the fail-closed readiness gate as a reasons `LogicalDefinition` with id `GATE_ID` — the readiness rules plus the `ready` conjunction, fixed and unparameterised. |
+| API                   | Kind     | Builds…                                                                                                                                                               |
+| --------------------- | -------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `buildTask`           | function | a `Task` from operation / domain / statement.                                                                                                                         |
+| `buildReference`      | function | a `Reference` from path / note — the one builder for an authority entry and a manifest entry alike.                                                                   |
+| `buildManifest`       | function | a `Manifest` — every absent partition defaults to `[]`, so a partial literal is enough.                                                                               |
+| `buildOutcome`        | function | an `Outcome` from rank / text; `required` defaults to `true` — an outcome gates "done" unless demoted.                                                                |
+| `buildGiven`          | function | a `Given` from category / name / value.                                                                                                                               |
+| `buildExample`        | function | an `Example` from input / output; `note` is omitted when absent.                                                                                                      |
+| `buildCitation`       | function | a `Citation` from name / url / note.                                                                                                                                  |
+| `buildGap`            | function | a `Gap` from field / question; `blocking` defaults to `false` and `candidates` is omitted when absent.                                                                |
+| `buildRisk`           | function | a `Risk` from severity / text / mitigation.                                                                                                                           |
+| `buildOutput`         | function | an `Output` from format; `sections` / `include` / `exclude` are omitted when absent.                                                                                  |
+| `buildProof`          | function | a `Proof` from text / command.                                                                                                                                        |
+| `buildBrief`          | function | a `Brief` from a `Task` plus overrides — every absent collection defaults to `[]`, `output` defaults to `buildOutput('markdown')`, and `trace` / `hash` stay omitted. |
+| `buildGateDefinition` | function | the fail-closed readiness gate as a reasons `LogicalDefinition` with id `GATE_ID` — the readiness rules plus the `ready` conjunction, fixed and unparameterised.      |
 
 ```ts
 import {
-	brief,
-	citation,
-	example,
-	gap,
-	gateDefinition,
-	given,
-	manifest,
-	outcome,
-	output,
-	proof,
-	reference,
-	risk,
-	task,
+	buildBrief,
+	buildCitation,
+	buildExample,
+	buildGap,
+	buildGateDefinition,
+	buildGiven,
+	buildManifest,
+	buildOutcome,
+	buildOutput,
+	buildProof,
+	buildReference,
+	buildRisk,
+	buildTask,
 } from '@orkestrel/brief'
 
-const draft = brief(task('refactor', 'code', 'Refactor useForm to native browser form APIs.'), {
-	authority: [reference('AGENTS.md', 'project law; wins every conflict')],
-	manifest: manifest({
-		read: [
-			// Ranked authority must also be granted here — the `granted` rule refuses a brief
-			// that tells the executor to obey a file no partition lets it open.
-			reference('AGENTS.md', 'project law; wins every conflict'),
-			reference('guides/browser.md', 'the composable contract'),
+const draft = buildBrief(
+	buildTask('refactor', 'code', 'Refactor useForm to native browser form APIs.'),
+	{
+		authority: [buildReference('AGENTS.md', 'project law; wins every conflict')],
+		manifest: buildManifest({
+			read: [
+				// Ranked authority must also be granted here — the `granted` rule refuses a brief
+				// that tells the executor to obey a file no partition lets it open.
+				buildReference('AGENTS.md', 'project law; wins every conflict'),
+				buildReference('guides/browser.md', 'the composable contract'),
+			],
+			edit: [
+				buildReference('src/browser/composables/useForm.ts', 'the composable being refactored'),
+			],
+			locked: [buildReference('src/browser/types.ts', 'the published contract')],
+			forbidden: [buildReference('app/**', 'out of scope')],
+		}),
+		outcomes: [
+			buildOutcome(1, 'useForm uses native FormData with no behavior change'),
+			buildOutcome(2, 'tests cover the changed code paths'),
 		],
-		edit: [reference('src/browser/composables/useForm.ts', 'the composable being refactored')],
-		locked: [reference('src/browser/types.ts', 'the published contract')],
-		forbidden: [reference('app/**', 'out of scope')],
-	}),
-	outcomes: [
-		outcome(1, 'useForm uses native FormData with no behavior change'),
-		outcome(2, 'tests cover the new code paths'),
-	],
-	rules: ['No new dependencies.'],
-	invariants: ['useForm public method names and signatures in types.ts.'],
-	givens: [given('convention', 'indentation', 'tabs')],
-	examples: [example('<input required>', 'validity read from el.validity')],
-	assumptions: ['Validation message wording is preserved.'],
-	citations: [
-		citation(
-			'MDN Constraint Validation',
-			'https://developer.mozilla.org/',
-			'the native validity behavior being adopted',
-		),
-	],
-	gaps: [gap('rules', 'Should validation message wording change?')],
-	risks: [risk('medium', 'native validation differs subtly', 'assert message and state in tests')],
-	output: output('diff', { include: ['updated useForm.ts'] }),
-	proofs: [proof('type-check and lint pass', 'npm run check')],
-})
+		rules: ['Add no dependencies.'],
+		invariants: ['useForm public method names and signatures in types.ts.'],
+		givens: [buildGiven('convention', 'indentation', 'tabs')],
+		examples: [buildExample('<input required>', 'validity read from el.validity')],
+		assumptions: ['Validation message wording is preserved.'],
+		citations: [
+			buildCitation(
+				'MDN Constraint Validation',
+				'https://developer.mozilla.org/',
+				'the native validity behavior being adopted',
+			),
+		],
+		gaps: [buildGap('rules', 'Does validation message wording need to change?')],
+		risks: [
+			buildRisk('medium', 'native validation differs subtly', 'assert message and state in tests'),
+		],
+		output: buildOutput('diff', { include: ['updated useForm.ts'] }),
+		proofs: [buildProof('type-check and lint pass', 'npm run check')],
+	},
+)
 draft.output.format // 'diff'
 draft.trace // undefined — the pin fills it, never the author
-gateDefinition().rules.length // 7 — the readiness rules plus the conjunction
+buildGateDefinition().rules.length // 7 — the readiness rules plus the conjunction
 ```
 
 ### Helpers
@@ -460,7 +466,7 @@ consumes a WHOLE and returns a derived view of it.
 | `findManifestOverlaps`   | function | The paths appearing in more than one manifest partition, once each.                                                                                                    |
 | `findUngrantedAuthority` | function | The authority paths no partition opens — every ranked path must appear in `read`, `edit`, or `locked`, because the executor cannot obey what it cannot open.           |
 | `findUnpairedGaps`       | function | The open gaps past the assumption count — the discipline is exactly one recorded assumption per open gap.                                                              |
-| `deriveStatement`        | function | Derive one imperative statement from free text — whitespace collapsed, first letter raised, terminator appended.                                                       |
+| `deriveStatement`        | function | Derive one imperative statement from free text — whitespace collapsed, first letter raised, terminator appended; `undefined` for empty or whitespace-only text.        |
 | `deriveTask`             | function | Derive a `Task` from an interprets `Intent` through CALLER action and domain vocabularies; `undefined` when either side is unmapped.                                   |
 | `deriveGivens`           | function | Derive `Given[]` from an interprets `Entity[]` — each becomes a `{ category: 'extracted', name, value }` fact.                                                         |
 | `deriveGaps`             | function | Derive `Gap[]` from an interprets `Ambiguity[]` — REQUIRED ambiguities become BLOCKING gaps, the rest open.                                                            |
@@ -582,8 +588,8 @@ already own, and cross `snapshotBrief` when you want intake to own it for you.
 | `createBriefContract` | function | Compile `briefShape` into a guard / parser / schema / seeded-generator bundle over `Brief`.    |
 
 Every entry here builds something. `assertBrief` constructs nothing — it returns its
-argument once the guard passes — so it is a helper, not a factory, and lives beside the
-other pure leaves.
+argument after the guard passes — so it is a helper, not a factory, and lives beside
+the other pure leaves.
 
 ```ts
 import {
@@ -623,7 +629,7 @@ created.
 The public methods of each behavioral interface — one table per type, keyed by its
 backticked name, every call-signature member listed. The `readonly` data members
 (`emitter` / `interpret` / `reason` on `BriefCompiler`; `emitter` / `count` on `BriefManager`)
-stay in the Surface rows above. Each implementing class exposes exactly its interface's
+stay in the earlier Surface rows. Each implementing class exposes exactly its interface's
 methods, so this doubles as the per-instance method surface.
 
 #### `BriefCompilerInterface`
@@ -635,15 +641,22 @@ the OWNED engines first — never a borrowed one — and tears the emitter down 
 | Method    | Returns         | Behavior                                                                                                                        |
 | --------- | --------------- | ------------------------------------------------------------------------------------------------------------------------------- |
 | `compile` | `Briefing`      | Run the `interpret` → `draft` → `gate` → `pin` pipeline over a `BriefInput`, returning a complete or visible-incomplete result. |
-| `gate`    | `LogicalResult` | Evaluate ONE brief's readiness through the reasons gate — `briefToSubject` against `gateDefinition()`.                          |
+| `gate`    | `LogicalResult` | Evaluate ONE brief's readiness through the reasons gate — `briefToSubject` against `buildGateDefinition()`.                     |
 | `destroy` | `void`          | Idempotent teardown — owned engines first, emits `destroy`, then destroys the emitter LAST.                                     |
 
 ```ts
-import { BriefCompiler, brief, createBriefCompiler, outcome, proof, task } from '@orkestrel/brief'
+import {
+	BriefCompiler,
+	buildBrief,
+	buildOutcome,
+	buildProof,
+	buildTask,
+	createBriefCompiler,
+} from '@orkestrel/brief'
 
-const audit = brief(task('audit', 'code', 'Audit the barrel for undocumented exports.'), {
-	outcomes: [outcome(1, 'every export appears in the guide')],
-	proofs: [proof('parity passes', 'npm run test:guides')],
+const audit = buildBrief(buildTask('audit', 'code', 'Audit the barrel for undocumented exports.'), {
+	outcomes: [buildOutcome(1, 'every export appears in the guide')],
+	proofs: [buildProof('parity passes', 'npm run test:guides')],
 })
 
 const engine = createBriefCompiler()
@@ -683,10 +696,10 @@ of `remove` is declared FIRST so an id list resolves to the batch form, and it r
 | `destroy` | `void`                     | Idempotent teardown — clears the collection, emits `destroy`, then destroys the emitter LAST. |
 
 ```ts
-import { BriefManager, brief, createBriefManager, task } from '@orkestrel/brief'
+import { BriefManager, buildBrief, buildTask, createBriefManager } from '@orkestrel/brief'
 
 const registry = createBriefManager()
-const record = registry.add(brief(task('document', 'writing', 'Write the brief guide.')))
+const record = registry.add(buildBrief(buildTask('document', 'writing', 'Write the brief guide.')))
 record.id === record.hash // true — id minted from content, deterministic
 record.version // 1
 registry.has(record.id) // true
@@ -746,7 +759,7 @@ These invariants hold across `src/core` and this guide:
 
 3. **Fail closed at the gate, and the gate is not delegable.** Readiness is decided by
    `findUnmetRules` — in code, from the brief's own measures — BEFORE any verdict is consulted.
-   `gateDefinition()` states the same readiness rules as data so a reasoner can narrate them, and
+   `buildGateDefinition()` states the same readiness rules as data so a reasoner can narrate them, and
    a narration is not a decision: `BriefCompilerOptions.reason` lets a caller supply the engine,
    and a supplied engine can add detail to a refusal but can never turn one into a pass. The
    two are held together by a test that drives both over one value set.
@@ -755,7 +768,7 @@ These invariants hold across `src/core` and this guide:
    on `Briefing.questions`, and a `BriefStageFailure` coded `BLOCKED` — never a throw, never a
    half-specified brief. That holds even when the gate itself throws and leaves no verdict to
    name rules from: the `BLOCKED` marker is keyed on the blocking gaps, not on the verdict's
-   presence. Alongside the decision, `gateDefinition()` is evaluated against
+   presence. Alongside the decision, `buildGateDefinition()` is evaluated against
    `briefToSubject(brief)` by a `LogicalReasoner`, so every verdict carries the reasoner's own
    `trace` on `Briefing.verdict` and readiness is auditable, replayable data — and
    `BriefStageRecord` is discriminated by `stage`, so that replay is readable without a single
@@ -887,7 +900,7 @@ own required ambiguity, which drafts as a BLOCKING gap and stops emission — so
 needs an interpret pipeline that can actually match the request:
 
 ```ts
-import { createBriefCompiler, outcome, output, proof } from '@orkestrel/brief'
+import { buildOutcome, buildOutput, buildProof, createBriefCompiler } from '@orkestrel/brief'
 import { createInterpret } from '@orkestrel/interpret'
 import { createQuantitativeDefinition } from '@orkestrel/reason'
 
@@ -917,16 +930,16 @@ const migrations = createBriefCompiler({
 })
 
 const migration = migrations.compile({
-	text: 'migrate the 3 legacy stores to the new driver seam',
+	text: 'migrate the 3 legacy stores to the replacement driver seam',
 	manifest: {
 		read: [{ path: 'guides/stores.md', note: 'the driver seam contract' }],
 		edit: [{ path: 'src/core/stores/**', note: 'the three legacy stores' }],
 		locked: [],
 		forbidden: [{ path: 'app/**', note: 'out of scope' }],
 	},
-	outcomes: [outcome(1, 'all three stores implement the driver seam')],
-	output: output('diff'),
-	proofs: [proof('the core test project passes', 'npm run test:src:core')],
+	outcomes: [buildOutcome(1, 'all three stores implement the driver seam')],
+	output: buildOutput('diff'),
+	proofs: [buildProof('the core test project passes', 'npm run test:src:core')],
 })
 
 migration.stages.map((record) => record.stage) // ['interpret', 'draft', 'gate', 'pin']
@@ -951,26 +964,32 @@ A required, unresolvable decision drafts a BLOCKING gap. The gate stops emission
 brief ever leaves the pipeline.
 
 ```ts
-import { createBriefCompiler, gap, outcome, proof, task } from '@orkestrel/brief'
+import {
+	buildGap,
+	buildOutcome,
+	buildProof,
+	buildTask,
+	createBriefCompiler,
+} from '@orkestrel/brief'
 
 const blocked = createBriefCompiler()
 const stopped = blocked.compile({
-	task: task('refactor', 'code', 'Refactor the session store to the async seam.'),
-	outcomes: [outcome(1, 'the store implements the async seam')],
+	task: buildTask('refactor', 'code', 'Refactor the session store to the async seam.'),
+	outcomes: [buildOutcome(1, 'the store implements the async seam')],
 	gaps: [
-		gap('output', 'Should the result land as a diff or full files?', {
+		buildGap('output', 'Does the result need to land as a diff or as full files?', {
 			blocking: true,
 			candidates: ['diff', 'code'],
 		}),
 	],
-	proofs: [proof('checks pass', 'npm run check')],
+	proofs: [buildProof('checks pass', 'npm run check')],
 })
 
 stopped.brief // undefined — the gate failed closed, and that absence is the signal
 stopped.brief // undefined — nothing to project, deliberately
-stopped.questions // [{ field: 'output', question: 'Should the result land as…', blocking: true, … }]
+stopped.questions // [{ field: 'output', question: 'Does the result need…', blocking: true, … }]
 stopped.failures // [{ stage: 'gate', code: 'BLOCKED', message: '1 blocking gap(s)' }]
-stopped.verdict?.rules.filter((entry) => !entry.conclusion) // exactly which rules missed
+stopped.verdict?.rules.filter((entry) => !entry.applied) // exactly which rules missed
 stopped.verdict?.trace // the reasoner's narration of the rules that DERIVED, not the misses
 blocked.destroy()
 ```
@@ -992,11 +1011,11 @@ for you.
 
 The gate is ordinary reasons machinery, which means you can inspect it, run it standalone, or
 build your own beside it. `briefToSubject` projects the brief into a flat measures record,
-`gateDefinition()` is a `LogicalDefinition` whose rules read those measures, and the
+`buildGateDefinition()` is a `LogicalDefinition` whose rules read those measures, and the
 `LogicalReasoner` narrates the verdict.
 
 ```ts
-import { briefToSubject, gateDefinition } from '@orkestrel/brief'
+import { briefToSubject, buildGateDefinition } from '@orkestrel/brief'
 import {
 	createAtom,
 	createCompound,
@@ -1010,16 +1029,16 @@ const engine = createReason({ reasoners: [createLogicalReasoner()] })
 const measures = briefToSubject(pinned)
 measures // { operation: 'refactor', blocking: 0, outcomes: 2, required: 2, proofs: 1, edits: 1, … }
 
-const ruling = engine.reason(measures, gateDefinition())
+const ruling = engine.reason(measures, buildGateDefinition())
 if (ruling.reasoning === 'logical') {
 	ruling.conclusion // true — ready to emit
-	ruling.rules.filter((entry) => !entry.conclusion) // the rules that MISSED
+	ruling.rules.filter((entry) => !entry.applied) // the rules that MISSED
 }
 engine.destroy()
 
 // A house gate: this package's readiness UNCHANGED, plus one rule of your own, on your engine.
 const house = createLogicalDefinition('house', 'House readiness', [
-	...gateDefinition().rules,
+	...buildGateDefinition().rules,
 	createRule(
 		'anchored',
 		[createAtom('authority', 'above', 0)],
@@ -1039,18 +1058,18 @@ const house = createLogicalDefinition('house', 'House readiness', [
 engine.reason(measures, house) // conclusion is `fit` — base readiness AND anchored
 ```
 
-Keep `gateDefinition().rules` whole. `fit` reads the `ready` FACT, so dropping the rule that
+Keep `buildGateDefinition().rules` whole. `fit` reads the `ready` FACT, so dropping the rule that
 derives it leaves `fit` conjoining something nothing proved, and a base-ready brief concludes
 `false`.
 
 **`compile` does not decide readiness with this definition.** `findUnmetRules(brief)` measures
-the same readiness rules in code and refuses before any verdict is read; the definition above is
+the same readiness rules in code and refuses before any verdict is read; the preceding definition is
 what a reasoner narrates, so `Briefing.verdict` carries the trace and the rule-level detail.
 The two are conjoined in the refusing direction, so a borrowed engine can withhold a pass and
 can never grant one. A test drives both over one value set, which is what keeps the data and
 the code saying the same thing.
 
-**`gateDefinition()` takes no arguments, and there is no option that reaches it.** That is
+**`buildGateDefinition()` takes no arguments, and there is no option that reaches it.** That is
 the design, not an omission. The reasoner overlays every derived fact into one flat
 namespace, so a caller rule named for a readiness fact — `specified`, `proven`, `single` —
 overwrites the fact `ready` conjoins, and a brief carrying a blocking gap concludes `true`.
@@ -1058,7 +1077,7 @@ A gate whose whole job is to fail closed cannot take rules from the caller it is
 
 Readiness is this package's contract. A caller who needs different readiness composes their
 own `LogicalDefinition` over `briefToSubject` and evaluates it on their own reasoner, as
-above; both are exported for exactly that, and neither can reach the definition `compile`
+in the preceding example; both are exported for exactly that, and neither can reach the definition `compile`
 uses. Independent safeguards back it up: `compile` refuses a blocking gap **before** it
 consults the verdict, so no supplied engine can emit a brief that still carries an open
 question, and `ready` is always the last rule so forward chaining reports it.
@@ -1144,13 +1163,19 @@ briefToMarkdown(boundary.generate(seededRandom(7))) // a reproducible fixture, r
 ### Storing briefs by their own identity
 
 ```ts
-import { brief, createBriefManager, outcome, proof, task } from '@orkestrel/brief'
+import {
+	buildBrief,
+	buildOutcome,
+	buildProof,
+	buildTask,
+	createBriefManager,
+} from '@orkestrel/brief'
 
 const store = createBriefManager()
 const first = store.add(
-	brief(task('plan', 'ops', 'Plan the 0.1 release.'), {
-		outcomes: [outcome(1, 'the layer order is written down')],
-		proofs: [proof('the catalog regenerates', 'npx @orkestrel/scaffold catalog')],
+	buildBrief(buildTask('plan', 'ops', 'Plan the 0.1 release.'), {
+		outcomes: [buildOutcome(1, 'the layer order is written down')],
+		proofs: [buildProof('the catalog regenerates', 'npx @orkestrel/scaffold catalog')],
 	}),
 )
 store.add(first.brief).version // 1 — unchanged content is a version no-op
@@ -1198,10 +1223,10 @@ store.destroy()
 
 ## Tests
 
-- [`tests/guides.test.ts`](../tests/guides.test.ts) — the `## Surface` to `src/core` bijection (value and type exports), the `## Methods` to interface-method bijection, link integrity, fence languages, example presence, and fence-import reality.
+- [`tests/guides.test.ts`](../tests/guides.test.ts) — the `## Surface` to `src/core` bijection (value and type exports), the `## Methods` to interface-method bijection, link integrity, fence languages, example presence, fence-import reality, and the executed flagship fences: the `## Surface` compile and the `### Builders` draft, each asserting the values its `// value` comments claim.
 - [`tests/src/core/BriefCompiler.test.ts`](../tests/src/core/BriefCompiler.test.ts) — the `interpret` → `draft` → `gate` → `pin` pipeline, stage order and records, the interpret-skip path, caller-over-derived merging, fail-closed blocking (questions, the `BLOCKED` failure, the absent brief), `gate` verdict tracing, event sequences (`compile` versus `block`), owned-versus-borrowed engine teardown, idempotent `destroy`, and `DESTROYED` throws.
 - [`tests/src/core/BriefManager.test.ts`](../tests/src/core/BriefManager.test.ts) — content-hash id minting, version bump only on content change, the `remove` forms, per-event emissions, and destroy semantics.
-- [`tests/src/core/helpers.test.ts`](../tests/src/core/helpers.test.ts) — every builder's output shape, every projection, the derivations and their off-vocabulary `undefined`, `pinBrief` determinism and idempotence, `gateDefinition`'s rule list against `findUnmetRules` over one value set, `validateBrief` errors and warnings, and the `find*` leaves.
+- [`tests/src/core/helpers.test.ts`](../tests/src/core/helpers.test.ts) — every builder's output shape, every projection, the derivations and their off-vocabulary `undefined`, `pinBrief` determinism and idempotence, `buildGateDefinition`'s rule list against `findUnmetRules` over one value set, `validateBrief` errors and warnings, and the `find*` leaves.
 - [`tests/src/core/validators.test.ts`](../tests/src/core/validators.test.ts) — each guard accepts valid and rejects invalid plus adversarial junk, exact-record semantics, and off-vocabulary rejection.
 - [`tests/src/core/shapers.test.ts`](../tests/src/core/shapers.test.ts) — the shape family against the guard family over one value set, JSON Schema essentials, and seeded generate round-trips.
 - [`tests/src/core/parsers.test.ts`](../tests/src/core/parsers.test.ts) — `parseBrief` guard soundness in both directions, its JSON round-trip, and the intake contrast: `assertBrief` returning its argument by identity where `parseBrief` returns a graph sharing no reference with the source.
@@ -1212,7 +1237,7 @@ store.destroy()
 
 ## See also
 
-- [`reason.md`](reason.md) — the engine beneath the gate: `LogicalDefinition`, `Subject`, the traceable `LogicalResult`, and the capability layer `gateDefinition` extends.
+- [`reason.md`](reason.md) — the engine beneath the gate: `LogicalDefinition`, `Subject`, the traceable `LogicalResult`, and the capability layer `buildGateDefinition` extends.
 - [`interpret.md`](interpret.md) — the language pipeline the `interpret` stage delegates to: `Interpretation`, `Intent`, `Entity`, `Ambiguity`.
 - [`contract.md`](contract.md) — the guards, combinators, shapes, and `createContract` machinery this package composes.
 - [`emitter.md`](emitter.md) — the typed emitter behind the compiler's and the manager's observation surfaces.

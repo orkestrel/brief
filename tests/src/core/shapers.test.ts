@@ -27,7 +27,7 @@ import {
 } from '@src/core'
 import { createContract, seededRandom } from '@orkestrel/contract'
 import { describe, expect, it } from 'vitest'
-import { buildBrief } from '../../setup.js'
+import { buildReadyBrief } from '../../setup.js'
 
 // Each row pairs the two independent mechanisms over one vocabulary — the hand-composed
 // guard and the compiled shape — with values chosen so a divergence in either shows up.
@@ -112,7 +112,7 @@ const PAIRS = [
 ]
 
 // The single-line contract is the property `LINE_BREAK_PATTERN` and `SINGLE_LINE_PATTERN` exist to hold in
-// lockstep, and no row above carries a line terminator — so the two derivations of that one
+// lockstep, and no earlier row carries a line terminator — so the two derivations of that one
 // character class were proven by nothing. One value per terminator, on both mechanisms.
 const TERMINATORS: readonly string[] = ['\n', '\r', '\u2028', '\u2029']
 
@@ -121,7 +121,7 @@ const TERMINATORS: readonly string[] = ['\n', '\r', '\u2028', '\u2029']
 // two of them let a field silently drop from `isLine` to `isNonEmptyString`.
 const MULTILINE: Readonly<Record<string, readonly string[]>> = { example: ['input', 'output'] }
 
-// Every single-line field the sweep below must reach, in `PAIRS` order. `manifest` contributes
+// Every single-line field the following sweep must reach, in `PAIRS` order. `manifest` contributes
 // none: its four members are arrays of references, and the reference row drives those fields.
 //
 // COVERAGE, stated because a conclusion inherits its instrument's scope and an unstated one
@@ -190,7 +190,7 @@ describe('line terminators across both mechanisms', () => {
 	}
 
 	it('accepts the same values on both sides once the terminator is gone', () => {
-		// The control: the refusals above must come from the terminator, not from the shape.
+		// The control: the earlier refusals must come from the terminator, not from the shape.
 		const clean = { path: 'a b', note: 'the file under repair' }
 		expect(isReference(clean)).toBe(true)
 		expect(createContract(referenceShape).is(clean)).toBe(true)
@@ -238,7 +238,7 @@ describe('shape and guard lockstep', () => {
 	}
 
 	// The control: a value the shape family accepts and the guard family must not, proving
-	// the comparison above can report a disagreement rather than only ever agreeing.
+	// the earlier comparison can report a disagreement rather than only ever agreeing.
 	it('reports a disagreement when the two mechanisms are given different vocabularies', () => {
 		const drifted = createContract(taskShape)
 		expect(drifted.is({ operation: 'refactor', domain: 'code', statement: 'x' })).toBe(true)
@@ -251,7 +251,7 @@ describe('shape and guard lockstep', () => {
 describe('briefShape', () => {
 	it('agrees with isBrief on a real brief', () => {
 		const contract = createBriefContract()
-		const source = buildBrief()
+		const source = buildReadyBrief()
 		expect(contract.is(source)).toBe(true)
 		expect(isBrief(source)).toBe(true)
 		expect(contract.is({ ...source, surplus: 1 })).toBe(isBrief({ ...source, surplus: 1 }))
@@ -301,7 +301,7 @@ describe('briefShape', () => {
 	})
 
 	it('exposes briefShape as a composed object shape', () => {
-		expect(briefShape.type).toBe('object')
+		expect(briefShape.category).toBe('object')
 		expect(Object.keys(briefShape.properties)).toContain('manifest')
 	})
 })

@@ -1,8 +1,4 @@
 import type { ContractInterface } from '@orkestrel/contract'
-import { createContract } from '@orkestrel/contract'
-import { BriefManager } from './BriefManager.js'
-import { BriefCompiler } from './BriefCompiler.js'
-import { briefShape } from './shapers.js'
 import type {
 	Brief,
 	BriefManagerInterface,
@@ -10,6 +6,10 @@ import type {
 	BriefCompilerInterface,
 	BriefCompilerOptions,
 } from './types.js'
+import { createContract } from '@orkestrel/contract'
+import { BriefManager } from './BriefManager.js'
+import { BriefCompiler } from './BriefCompiler.js'
+import { briefShape } from './shapers.js'
 
 /**
  * Creates a compilation orchestrator.

@@ -1,17 +1,5 @@
-import { attempt } from '@orkestrel/contract'
 import type { Ambiguity, Entity, Intent } from '@orkestrel/interpret'
-import { canonicalize, collapseWhitespace, digestValue } from '@orkestrel/interpret'
 import type { LogicalDefinition, ReasonValidationResult, Rule, Subject } from '@orkestrel/reason'
-import {
-	createAtom,
-	createCompound,
-	createLogicalDefinition,
-	createRule,
-	formatField,
-} from '@orkestrel/reason'
-import { snapshotBrief } from './cloners.js'
-import { BriefError } from './errors.js'
-import { BLANK_PATTERN, DEFAULT_BRIEF_TURNS, GATE_ID, LINE_BREAK_PATTERN } from './constants.js'
 import type {
 	Brief,
 	Citation,
@@ -31,10 +19,22 @@ import type {
 	TaskDomain,
 	TaskOperation,
 } from './types.js'
+import { attempt } from '@orkestrel/contract'
+import { canonicalize, collapseWhitespace, digestValue } from '@orkestrel/interpret'
+import {
+	createAtom,
+	createCompound,
+	createLogicalDefinition,
+	createRule,
+	formatField,
+} from '@orkestrel/reason'
+import { snapshotBrief } from './cloners.js'
+import { BriefError } from './errors.js'
+import { BLANK_PATTERN, DEFAULT_BRIEF_TURNS, GATE_ID, LINE_BREAK_PATTERN } from './constants.js'
 import { isBrief, isTaskDomain, isTaskOperation } from './validators.js'
 
 /**
- * Builds a `Task`.
+ * Assembles a `Task` from an operation, a domain, and a statement.
  *
  * @param operation - What the brief asks for, from the closed operation vocabulary.
  * @param domain - The subject matter, from the closed domain vocabulary.
@@ -43,17 +43,17 @@ import { isBrief, isTaskDomain, isTaskOperation } from './validators.js'
  *
  * @example
  * ```ts
- * import { task } from '@orkestrel/brief'
+ * import { buildTask } from '@orkestrel/brief'
  *
- * task('refactor', 'code', 'Refactor useForm to native browser form APIs.')
+ * buildTask('refactor', 'code', 'Refactor useForm to native browser form APIs.')
  * ```
  */
-export function task(operation: TaskOperation, domain: TaskDomain, statement: string): Task {
+export function buildTask(operation: TaskOperation, domain: TaskDomain, statement: string): Task {
 	return { operation, domain, statement }
 }
 
 /**
- * Builds a `Reference`.
+ * Assembles a `Reference` from a path and the note that justifies listing it.
  *
  * @param path - The referenced path or glob.
  * @param note - Why the path is listed.
@@ -61,29 +61,29 @@ export function task(operation: TaskOperation, domain: TaskDomain, statement: st
  *
  * @example
  * ```ts
- * import { reference } from '@orkestrel/brief'
+ * import { buildReference } from '@orkestrel/brief'
  *
- * reference('AGENTS.md', 'project law') // { path: 'AGENTS.md', note: 'project law' }
+ * buildReference('AGENTS.md', 'project law') // { path: 'AGENTS.md', note: 'project law' }
  * ```
  */
-export function reference(path: string, note: string): Reference {
+export function buildReference(path: string, note: string): Reference {
 	return { path, note }
 }
 
 /**
- * Builds a `Manifest`, defaulting every absent partition to an empty list.
+ * Assembles a `Manifest`, defaulting every absent partition to an empty list.
  *
  * @param partitions - The partitions to fill; a partial literal is enough.
  * @returns A fresh `Manifest` with every partition present.
  *
  * @example
  * ```ts
- * import { manifest, reference } from '@orkestrel/brief'
+ * import { buildManifest, buildReference } from '@orkestrel/brief'
  *
- * manifest({ edit: [reference('src/core/helpers.ts', 'implementation')] })
+ * buildManifest({ edit: [buildReference('src/core/helpers.ts', 'implementation')] })
  * ```
  */
-export function manifest(partitions?: Partial<Manifest>): Manifest {
+export function buildManifest(partitions?: Partial<Manifest>): Manifest {
 	return {
 		read: partitions?.read ?? [],
 		edit: partitions?.edit ?? [],
@@ -93,27 +93,28 @@ export function manifest(partitions?: Partial<Manifest>): Manifest {
 }
 
 /**
- * Builds an `Outcome`.
+ * Assembles an `Outcome` from a rank and its result text.
  *
  * @param rank - The one-based rank; lower ranks matter more.
  * @param text - The result, never a step.
- * @param required - Whether the outcome gates "done"; defaults to `true`.
+ * @param required - If `true`, the outcome gates "done"; if `false`, it is desirable but not
+ *   blocking. Default: `true`.
  * @returns A fresh `Outcome`.
  *
  * @example
  * ```ts
- * import { outcome } from '@orkestrel/brief'
+ * import { buildOutcome } from '@orkestrel/brief'
  *
- * outcome(1, 'useForm uses native FormData with no behavior change') // required: true
- * outcome(2, 'the diff stays under 200 lines', false)
+ * buildOutcome(1, 'useForm uses native FormData with no behavior change') // required: true
+ * buildOutcome(2, 'the diff stays under 200 lines', false)
  * ```
  */
-export function outcome(rank: number, text: string, required = true): Outcome {
+export function buildOutcome(rank: number, text: string, required = true): Outcome {
 	return { rank, text, required }
 }
 
 /**
- * Builds a `Given`.
+ * Assembles a `Given` from a category, a name, and a value.
  *
  * @param category - The kind of fact — a convention, a version, a constraint.
  * @param name - The fact's name.
@@ -122,36 +123,36 @@ export function outcome(rank: number, text: string, required = true): Outcome {
  *
  * @example
  * ```ts
- * import { given } from '@orkestrel/brief'
+ * import { buildGiven } from '@orkestrel/brief'
  *
- * given('convention', 'indentation', 'tabs')
+ * buildGiven('convention', 'indentation', 'tabs')
  * ```
  */
-export function given(category: string, name: string, value: string): Given {
+export function buildGiven(category: string, name: string, value: string): Given {
 	return { category, name, value }
 }
 
 /**
- * Builds an `Example`.
+ * Assembles an `Example` from an exemplar input and its expected output.
  *
  * @param input - The exemplar input.
- * @param result - The expected output for that input.
+ * @param output - The expected output for that input.
  * @param note - Optional detail; the key is OMITTED when absent.
  * @returns A fresh `Example`.
  *
  * @example
  * ```ts
- * import { example } from '@orkestrel/brief'
+ * import { buildExample } from '@orkestrel/brief'
  *
- * example('<input required>', 'validity read from el.validity')
+ * buildExample('<input required>', 'validity read from el.validity')
  * ```
  */
-export function example(input: string, result: string, note?: string): Example {
-	return note === undefined ? { input, output: result } : { input, output: result, note }
+export function buildExample(input: string, output: string, note?: string): Example {
+	return note === undefined ? { input, output } : { input, output, note }
 }
 
 /**
- * Builds a `Citation`.
+ * Assembles a `Citation` from a name, a URL, and the note that justifies citing it.
  *
  * @param name - The source's display name.
  * @param url - Where the source lives.
@@ -160,37 +161,37 @@ export function example(input: string, result: string, note?: string): Example {
  *
  * @example
  * ```ts
- * import { citation } from '@orkestrel/brief'
+ * import { buildCitation } from '@orkestrel/brief'
  *
- * citation(
+ * buildCitation(
  * 	'MDN Constraint Validation',
  * 	'https://developer.mozilla.org/',
  * 	'the native validity behavior being adopted',
  * )
  * ```
  */
-export function citation(name: string, url: string, note: string): Citation {
+export function buildCitation(name: string, url: string, note: string): Citation {
 	return { name, url, note }
 }
 
 /**
- * Builds a `Gap`.
+ * Assembles a `Gap` from the section it belongs to and the question that would close it.
  *
  * @param field - The brief section the unknown belongs to.
  * @param question - The question that would close it.
- * @param overrides - Optional `blocking` (defaults `false`) and `candidates`; an absent
- *   `candidates` key is OMITTED entirely.
+ * @param overrides - Optional `blocking` and `candidates`; an absent `candidates` key is
+ *   OMITTED entirely. Default: `blocking: false`.
  * @returns A fresh `Gap`.
  *
  * @example
  * ```ts
- * import { gap } from '@orkestrel/brief'
+ * import { buildGap } from '@orkestrel/brief'
  *
- * gap('rules', 'Should validation message wording change?') // blocking: false
- * gap('output', 'Diff or full files?', { blocking: true, candidates: ['diff', 'code'] })
+ * buildGap('rules', 'Does validation message wording need to change?') // blocking: false
+ * buildGap('output', 'Diff or full files?', { blocking: true, candidates: ['diff', 'code'] })
  * ```
  */
-export function gap(
+export function buildGap(
 	field: string,
 	question: string,
 	overrides?: Partial<Omit<Gap, 'field' | 'question'>>,
@@ -202,7 +203,7 @@ export function gap(
 }
 
 /**
- * Builds a `Risk`.
+ * Assembles a `Risk` from a severity, what could go wrong, and the mitigation that answers it.
  *
  * @param severity - The closed severity.
  * @param text - What could go wrong.
@@ -211,17 +212,17 @@ export function gap(
  *
  * @example
  * ```ts
- * import { risk } from '@orkestrel/brief'
+ * import { buildRisk } from '@orkestrel/brief'
  *
- * risk('medium', 'native validation differs subtly', 'assert message and state in tests')
+ * buildRisk('medium', 'native validation differs subtly', 'assert message and state in tests')
  * ```
  */
-export function risk(severity: RiskSeverity, text: string, mitigation: string): Risk {
+export function buildRisk(severity: RiskSeverity, text: string, mitigation: string): Risk {
 	return { severity, text, mitigation }
 }
 
 /**
- * Builds an `Output`.
+ * Assembles an `Output` from a format plus its optional refinements.
  *
  * @param format - The closed deliverable format.
  * @param overrides - Optional `sections` / `include` / `exclude`; absent keys are OMITTED.
@@ -229,13 +230,16 @@ export function risk(severity: RiskSeverity, text: string, mitigation: string): 
  *
  * @example
  * ```ts
- * import { output } from '@orkestrel/brief'
+ * import { buildOutput } from '@orkestrel/brief'
  *
- * output('markdown') // { format: 'markdown' }
- * output('diff', { include: ['updated useForm.ts'] })
+ * buildOutput('markdown') // { format: 'markdown' }
+ * buildOutput('diff', { include: ['updated useForm.ts'] })
  * ```
  */
-export function output(format: OutputFormat, overrides?: Partial<Omit<Output, 'format'>>): Output {
+export function buildOutput(
+	format: OutputFormat,
+	overrides?: Partial<Omit<Output, 'format'>>,
+): Output {
 	return {
 		format,
 		...(overrides?.sections === undefined ? {} : { sections: overrides.sections }),
@@ -245,7 +249,7 @@ export function output(format: OutputFormat, overrides?: Partial<Omit<Output, 'f
 }
 
 /**
- * Builds a `Proof`.
+ * Assembles a `Proof` from what the check settles and the command that settles it.
  *
  * @param text - What the check settles.
  * @param command - The command whose exit signal settles it.
@@ -253,42 +257,42 @@ export function output(format: OutputFormat, overrides?: Partial<Omit<Output, 'f
  *
  * @example
  * ```ts
- * import { proof } from '@orkestrel/brief'
+ * import { buildProof } from '@orkestrel/brief'
  *
- * proof('type-check and lint pass', 'npm run check')
+ * buildProof('type-check and lint pass', 'npm run check')
  * ```
  */
-export function proof(text: string, command: string): Proof {
+export function buildProof(text: string, command: string): Proof {
 	return { text, command }
 }
 
 /**
- * Builds a `Brief` from a `Task` plus section overrides.
+ * Assembles a `Brief` from a `Task` plus section overrides.
  *
  * @param subject - The task the brief is about.
- * @param overrides - Any sections to fill; every absent collection defaults to `[]`,
- *   `output` defaults to `output('markdown')`, and `trace` / `hash` stay OMITTED so
- *   `pinBrief` can fill them.
+ * @param overrides - Any sections to fill; `trace` / `hash` stay OMITTED so `pinBrief` can
+ *   fill them. Default: `[]` for every absent collection and `buildOutput('markdown')` for
+ *   `output`.
  * @returns A fresh, unpinned `Brief`.
  *
  * @example
  * ```ts
- * import { brief, outcome, proof, task } from '@orkestrel/brief'
+ * import { buildBrief, buildOutcome, buildProof, buildTask } from '@orkestrel/brief'
  *
- * brief(task('audit', 'code', 'Audit the barrel for undocumented exports.'), {
- * 	outcomes: [outcome(1, 'every export appears in the guide')],
- * 	proofs: [proof('parity passes', 'npm run test:guides')],
+ * buildBrief(buildTask('audit', 'code', 'Audit the barrel for undocumented exports.'), {
+ * 	outcomes: [buildOutcome(1, 'every export appears in the guide')],
+ * 	proofs: [buildProof('parity passes', 'npm run test:guides')],
  * })
  * ```
  */
-export function brief(
+export function buildBrief(
 	subject: Task,
 	overrides?: Partial<Omit<Brief, 'task' | 'trace' | 'hash'>>,
 ): Brief {
 	return {
 		task: subject,
 		authority: overrides?.authority ?? [],
-		manifest: overrides?.manifest ?? manifest(),
+		manifest: overrides?.manifest ?? buildManifest(),
 		outcomes: overrides?.outcomes ?? [],
 		rules: overrides?.rules ?? [],
 		invariants: overrides?.invariants ?? [],
@@ -298,13 +302,13 @@ export function brief(
 		citations: overrides?.citations ?? [],
 		gaps: overrides?.gaps ?? [],
 		risks: overrides?.risks ?? [],
-		output: overrides?.output ?? output('markdown'),
+		output: overrides?.output ?? buildOutput('markdown'),
 		proofs: overrides?.proofs ?? [],
 	}
 }
 
 /**
- * Builds the fail-closed readiness gate as a reasons `LogicalDefinition`.
+ * Assembles the fail-closed readiness gate as a reasons `LogicalDefinition`.
  *
  * @remarks
  * Each readiness rule derives one named fact from `briefToSubject`'s measures, and a final
@@ -323,15 +327,15 @@ export function brief(
  *
  * @example
  * ```ts
- * import { briefToSubject, gateDefinition } from '@orkestrel/brief'
+ * import { briefToSubject, buildGateDefinition } from '@orkestrel/brief'
  * import { createLogicalReasoner, createReason } from '@orkestrel/reason'
  *
  * const reason = createReason({ reasoners: [createLogicalReasoner()] })
- * const verdict = reason.reason(briefToSubject(pinned), gateDefinition())
+ * const verdict = reason.reason(briefToSubject(pinned), buildGateDefinition())
  * reason.destroy()
  * ```
  */
-export function gateDefinition(): LogicalDefinition {
+export function buildGateDefinition(): LogicalDefinition {
 	const readiness: readonly Rule[] = [
 		createRule(
 			'specified',
@@ -384,7 +388,7 @@ export function gateDefinition(): LogicalDefinition {
  * Lists the readiness rules a brief fails, computed directly from its own measures.
  *
  * @remarks
- * The gate's decision, in code. `gateDefinition()` states the same rules as data for a
+ * The gate's decision, in code. `buildGateDefinition()` states the same rules as data for a
  * reasoner to narrate, and a narration is not a decision: `BriefCompilerOptions.reason` lets a
  * caller supply the engine, and an engine that answers "met" to everything would otherwise
  * emit a brief with no proofs. `compile` refuses on THIS and keeps the verdict for its
@@ -398,13 +402,13 @@ export function gateDefinition(): LogicalDefinition {
  *
  * @example
  * ```ts
- * import { brief, findUnmetRules, outcome, proof, task } from '@orkestrel/brief'
+ * import { buildBrief, buildOutcome, buildProof, buildTask, findUnmetRules } from '@orkestrel/brief'
  *
- * findUnmetRules(brief(task('plan', 'ops', 'Plan the release.'))) // ['aimed', 'proven']
+ * findUnmetRules(buildBrief(buildTask('plan', 'ops', 'Plan the release.'))) // ['aimed', 'proven']
  * findUnmetRules(
- * 	brief(task('plan', 'ops', 'Plan the release.'), {
- * 		outcomes: [outcome(1, 'shipped')],
- * 		proofs: [proof('x', 'npm test')],
+ * 	buildBrief(buildTask('plan', 'ops', 'Plan the release.'), {
+ * 		outcomes: [buildOutcome(1, 'shipped')],
+ * 		proofs: [buildProof('x', 'npm test')],
  * 	}),
  * ) // []
  * ```
@@ -475,10 +479,10 @@ export function countSentences(statement: string): number {
  *
  * @example
  * ```ts
- * import { brief, findBlockingGaps, gap, task } from '@orkestrel/brief'
+ * import { buildBrief, buildGap, buildTask, findBlockingGaps } from '@orkestrel/brief'
  *
- * const draft = brief(task('plan', 'ops', 'Plan the release.'), {
- * 	gaps: [gap('output', 'Diff or files?', { blocking: true })],
+ * const draft = buildBrief(buildTask('plan', 'ops', 'Plan the release.'), {
+ * 	gaps: [buildGap('output', 'Diff or files?', { blocking: true })],
  * })
  * findBlockingGaps(draft).length // 1
  * ```
@@ -510,11 +514,17 @@ export function findBlockingGaps(source: Brief): readonly Gap[] {
  *
  * @example
  * ```ts
- * import { brief, findUngrantedAuthority, manifest, reference, task } from '@orkestrel/brief'
+ * import {
+ * 	buildBrief,
+ * 	buildManifest,
+ * 	buildReference,
+ * 	buildTask,
+ * 	findUngrantedAuthority,
+ * } from '@orkestrel/brief'
  *
- * const draft = brief(task('debug', 'code', 'Fix the leak.'), {
- * 	authority: [reference('AGENTS.md', 'project law')],
- * 	manifest: manifest(),
+ * const draft = buildBrief(buildTask('debug', 'code', 'Fix the leak.'), {
+ * 	authority: [buildReference('AGENTS.md', 'project law')],
+ * 	manifest: buildManifest(),
  * })
  * findUngrantedAuthority(draft) // ['AGENTS.md'] — ranked, but no partition opens it
  * ```
@@ -548,12 +558,18 @@ export function findUngrantedAuthority(source: Brief): readonly string[] {
  *
  * @example
  * ```ts
- * import { brief, findManifestOverlaps, manifest, reference, task } from '@orkestrel/brief'
+ * import {
+ * 	buildBrief,
+ * 	buildManifest,
+ * 	buildReference,
+ * 	buildTask,
+ * 	findManifestOverlaps,
+ * } from '@orkestrel/brief'
  *
- * const draft = brief(task('debug', 'code', 'Fix the leak.'), {
- * 	manifest: manifest({
- * 		edit: [reference('src/core/BriefCompiler.ts', 'the leaking pipeline')],
- * 		locked: [reference('src/core/BriefCompiler.ts', 'the published contract')],
+ * const draft = buildBrief(buildTask('debug', 'code', 'Fix the leak.'), {
+ * 	manifest: buildManifest({
+ * 		edit: [buildReference('src/core/BriefCompiler.ts', 'the leaking pipeline')],
+ * 		locked: [buildReference('src/core/BriefCompiler.ts', 'the published contract')],
  * 	}),
  * })
  * findManifestOverlaps(draft) // ['src/core/BriefCompiler.ts']
@@ -592,10 +608,10 @@ export function findManifestOverlaps(source: Brief): readonly string[] {
  *
  * @example
  * ```ts
- * import { brief, findUnpairedGaps, gap, task } from '@orkestrel/brief'
+ * import { buildBrief, buildGap, buildTask, findUnpairedGaps } from '@orkestrel/brief'
  *
- * const draft = brief(task('plan', 'ops', 'Plan the release.'), {
- * 	gaps: [gap('rules', 'Keep the wording?'), gap('output', 'Diff or files?')],
+ * const draft = buildBrief(buildTask('plan', 'ops', 'Plan the release.'), {
+ * 	gaps: [buildGap('rules', 'Keep the wording?'), buildGap('output', 'Diff or files?')],
  * 	assumptions: ['Wording is preserved.'],
  * })
  * findUnpairedGaps(draft).length // 1
@@ -613,9 +629,9 @@ export function findUnpairedGaps(source: Brief): readonly Gap[] {
  *
  * @example
  * ```ts
- * import { brief, briefToSubject, proof, task } from '@orkestrel/brief'
+ * import { briefToSubject, buildBrief, buildProof, buildTask } from '@orkestrel/brief'
  *
- * briefToSubject(brief(task('test', 'code', 'Cover the gate.'), { proofs: [proof('x', 'y')] }))
+ * briefToSubject(buildBrief(buildTask('test', 'code', 'Cover the gate.'), { proofs: [buildProof('x', 'y')] }))
  * // { operation: 'test', domain: 'code', sentences: 1, proofs: 1, … }
  * ```
  */
@@ -657,11 +673,11 @@ export function briefToSubject(source: Brief): Subject {
  *
  * @example
  * ```ts
- * import { brief, proof, task, validateBrief } from '@orkestrel/brief'
+ * import { buildBrief, buildProof, buildTask, validateBrief } from '@orkestrel/brief'
  *
- * validateBrief(brief(task('plan', 'ops', 'Plan the release.'))) // valid: false — no proofs
+ * validateBrief(buildBrief(buildTask('plan', 'ops', 'Plan the release.'))) // valid: false — no proofs
  * validateBrief(
- * 	brief(task('plan', 'ops', 'Plan the release.'), { proofs: [proof('ok', 'npm test')] }),
+ * 	buildBrief(buildTask('plan', 'ops', 'Plan the release.'), { proofs: [buildProof('ok', 'npm test')] }),
  * ) // valid: true
  * ```
  */
@@ -723,9 +739,9 @@ export function validateBrief(source: Brief): ReasonValidationResult {
  *
  * @example
  * ```ts
- * import { brief, briefToHash, pinBrief, task } from '@orkestrel/brief'
+ * import { briefToHash, buildBrief, buildTask, pinBrief } from '@orkestrel/brief'
  *
- * const draft = brief(task('plan', 'ops', 'Plan the release.'))
+ * const draft = buildBrief(buildTask('plan', 'ops', 'Plan the release.'))
  * briefToHash(draft) === briefToHash(pinBrief(draft)) // true — pinning does not move it
  * ```
  */
@@ -746,9 +762,9 @@ export function briefToHash(source: Brief): string {
  *
  * @example
  * ```ts
- * import { brief, briefToContent, pinBrief, task } from '@orkestrel/brief'
+ * import { briefToContent, buildBrief, buildTask, pinBrief } from '@orkestrel/brief'
  *
- * const draft = brief(task('plan', 'ops', 'Plan the release.'))
+ * const draft = buildBrief(buildTask('plan', 'ops', 'Plan the release.'))
  * briefToContent(draft) === briefToContent(pinBrief(draft)) // true — pinning adds no content
  * ```
  */
@@ -850,7 +866,7 @@ export function errorToMessage(error: unknown): string {
  * Narrows unknown data to a `Brief`, throwing when it is off-contract.
  *
  * @remarks
- * The throwing half of the intake pair: this returns its argument by IDENTITY once the
+ * The throwing half of the intake pair: this returns its argument by IDENTITY after the
  * guard passes, while `parseBrief` returns `undefined` for bad input. It constructs
  * nothing, so it is an assertion rather than a factory. Reserve it for programmer-error
  * contexts where invalidity is a bug.
@@ -864,23 +880,23 @@ export function errorToMessage(error: unknown): string {
  * `briefToTrace` read the value they are handed instead, so a caller reaching one of those
  * directly owns that reading. Pass `assertBrief` a value you already own.
  *
- * @param data - The candidate brief data.
+ * @param value - The candidate brief value.
  * @returns The same value, now known to satisfy {@link Brief}.
- * @throws {@link BriefError} `INVALID` when `data` fails `isBrief`.
+ * @throws {@link BriefError} `INVALID` when `value` fails `isBrief`.
  *
  * @example
  * ```ts
- * import { assertBrief, brief, proof, task } from '@orkestrel/brief'
+ * import { assertBrief, buildBrief, buildProof, buildTask } from '@orkestrel/brief'
  *
- * assertBrief(brief(task('plan', 'ops', 'Plan the release.'), { proofs: [proof('x', 'y')] }))
+ * assertBrief(buildBrief(buildTask('plan', 'ops', 'Plan the release.'), { proofs: [buildProof('x', 'y')] }))
  * assertBrief({ task: { operation: 'plan', domain: 'ops', statement: 'x.' } }) // throws INVALID
  * ```
  */
-export function assertBrief(data: unknown): Brief {
-	if (!isBrief(data)) {
+export function assertBrief(value: unknown): Brief {
+	if (!isBrief(value)) {
 		throw new BriefError('INVALID', 'Brief failed the exact-record contract', { field: 'brief' })
 	}
-	return data
+	return value
 }
 
 /**
@@ -900,9 +916,9 @@ export function assertBrief(data: unknown): Brief {
  *
  * @example
  * ```ts
- * import { brief, pinBrief, task } from '@orkestrel/brief'
+ * import { buildBrief, buildTask, pinBrief } from '@orkestrel/brief'
  *
- * const pinned = pinBrief(brief(task('document', 'writing', 'Write the brief guide.')))
+ * const pinned = pinBrief(buildBrief(buildTask('document', 'writing', 'Write the brief guide.')))
  * pinned.hash // an 8-hex-digit structural digest
  * pinned.trace // 'document/writing · outcomes:0 · gaps:0/0 · proofs:0'
  * ```
@@ -927,9 +943,9 @@ export function pinBrief(source: Brief): Brief {
  *
  * @example
  * ```ts
- * import { brief, briefToTrace, task } from '@orkestrel/brief'
+ * import { briefToTrace, buildBrief, buildTask } from '@orkestrel/brief'
  *
- * briefToTrace(brief(task('document', 'writing', 'Write the guide.')))
+ * briefToTrace(buildBrief(buildTask('document', 'writing', 'Write the guide.')))
  * // 'document/writing · outcomes:0 · gaps:0/0 · proofs:0'
  * ```
  */
@@ -955,9 +971,9 @@ export function briefToTrace(source: Brief): string {
  *
  * @example
  * ```ts
- * import { example, exampleToLines } from '@orkestrel/brief'
+ * import { buildExample, exampleToLines } from '@orkestrel/brief'
  *
- * exampleToLines(example('<input required>', 'el.validity')) // ['- ` <input required> ` → ` el.validity `']
+ * exampleToLines(buildExample('<input required>', 'el.validity')) // ['- ` <input required> ` → ` el.validity `']
  * ```
  */
 export function exampleToLines(entry: Example): readonly string[] {
@@ -1019,9 +1035,9 @@ export function exampleToLines(entry: Example): readonly string[] {
  *
  * @example
  * ```ts
- * import { brief, briefToMarkdown, task } from '@orkestrel/brief'
+ * import { briefToMarkdown, buildBrief, buildTask } from '@orkestrel/brief'
  *
- * briefToMarkdown(brief(task('review', 'code', 'Review the gate rules.')))
+ * briefToMarkdown(buildBrief(buildTask('review', 'code', 'Review the gate rules.')))
  * // '# Brief: Review the gate rules.\n\nreview · code\n\n## Output\n\n- format: markdown\n'
  * ```
  */
@@ -1157,14 +1173,14 @@ export function briefToMarkdown(input: Brief): string {
  * brief does not carry.
  *
  * @param input - The brief to render.
- * @param turns - The turn cap; defaults to `DEFAULT_BRIEF_TURNS`.
+ * @param turns - The turn cap. Default: `DEFAULT_BRIEF_TURNS`.
  * @returns The one-line completion condition.
  *
  * @example
  * ```ts
- * import { brief, briefToGoal, proof, task } from '@orkestrel/brief'
+ * import { briefToGoal, buildBrief, buildProof, buildTask } from '@orkestrel/brief'
  *
- * briefToGoal(brief(task('test', 'code', 'Cover the gate.'), { proofs: [proof('x', 'npm test')] }))
+ * briefToGoal(buildBrief(buildTask('test', 'code', 'Cover the gate.'), { proofs: [buildProof('x', 'npm test')] }))
  * // 'Done when every proof passes: npm test exits 0. Cap: 16 turns.'
  * ```
  */
@@ -1196,11 +1212,17 @@ export function briefToGoal(input: Brief, turns: number = DEFAULT_BRIEF_TURNS): 
  *
  * @example
  * ```ts
- * import { brief, briefToDispatch, manifest, reference, task } from '@orkestrel/brief'
+ * import {
+ * 	briefToDispatch,
+ * 	buildBrief,
+ * 	buildManifest,
+ * 	buildReference,
+ * 	buildTask,
+ * } from '@orkestrel/brief'
  *
- * const draft = brief(task('migrate', 'code', 'Migrate the stores.'), {
- * 	authority: [reference('AGENTS.md', 'project law')],
- * 	manifest: manifest({ edit: [reference('src/core/stores/**', 'the legacy stores')] }),
+ * const draft = buildBrief(buildTask('migrate', 'code', 'Migrate the stores.'), {
+ * 	authority: [buildReference('AGENTS.md', 'project law')],
+ * 	manifest: buildManifest({ edit: [buildReference('src/core/stores/**', 'the legacy stores')] }),
  * })
  * briefToDispatch(draft).edit // ['src/core/stores/**']
  * briefToDispatch(draft).authority // ['AGENTS.md']
@@ -1231,19 +1253,19 @@ export function briefToDispatch(input: Brief): Dispatch {
  * when the text carries none. Nothing else is invented.
  *
  * @param text - The raw request text.
- * @returns The statement, or `''` for empty or whitespace-only text.
+ * @returns The statement, or `undefined` for empty or whitespace-only text.
  *
  * @example
  * ```ts
  * import { deriveStatement } from '@orkestrel/brief'
  *
  * deriveStatement('  clean up   useForm ') // 'Clean up useForm.'
- * deriveStatement('') // ''
+ * deriveStatement('') // undefined
  * ```
  */
-export function deriveStatement(text: string): string {
+export function deriveStatement(text: string): string | undefined {
 	const collapsed = collapseWhitespace(text)
-	if (collapsed.length === 0) return ''
+	if (collapsed.length === 0) return undefined
 	const capitalized = collapsed.charAt(0).toUpperCase() + collapsed.slice(1)
 	return /[.!?]$/u.test(capitalized) ? capitalized : `${capitalized}.`
 }
@@ -1302,7 +1324,7 @@ export function deriveTask(
 					: Reflect.apply(domainDescriptor.get, domains, [])
 	if (!isTaskOperation(operation) || !isTaskDomain(domain)) return undefined
 	const statement = deriveStatement(text)
-	return statement.length === 0 ? undefined : task(operation, domain, statement)
+	return statement === undefined ? undefined : buildTask(operation, domain, statement)
 }
 
 /**
@@ -1328,7 +1350,7 @@ export function deriveGivens(entities: readonly Entity[]): readonly Given[] {
 	return entities
 		.filter((entity) => entity.name.length > 0)
 		.map((entity) =>
-			given(
+			buildGiven(
 				'extracted',
 				entity.name,
 				typeof entity.value === 'string'
@@ -1362,7 +1384,7 @@ export function deriveGivens(entities: readonly Entity[]): readonly Given[] {
 export function deriveGaps(ambiguities: readonly Ambiguity[]): readonly Gap[] {
 	return ambiguities.map((ambiguity) => {
 		const candidates = ambiguity.candidates.filter((candidate) => candidate.length > 0)
-		return gap(formatField(ambiguity.field), ambiguity.question, {
+		return buildGap(formatField(ambiguity.field), ambiguity.question, {
 			blocking: ambiguity.required,
 			...(candidates.length === 0 ? {} : { candidates }),
 		})

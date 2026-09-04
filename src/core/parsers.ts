@@ -1,5 +1,5 @@
-import { parseJSONAs } from '@orkestrel/contract'
 import type { Brief } from './types.js'
+import { parseJSONAs } from '@orkestrel/contract'
 import { isBrief } from './validators.js'
 
 /**

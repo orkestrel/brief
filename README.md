@@ -17,16 +17,16 @@ import {
 	createBriefCompiler,
 	briefToGoal,
 	briefToMarkdown,
-	outcome,
-	proof,
-	task,
+	buildOutcome,
+	buildProof,
+	buildTask,
 } from '@orkestrel/brief'
 
 const compiler = createBriefCompiler()
 const briefing = compiler.compile({
-	task: task('refactor', 'code', 'Refactor useForm to native browser form APIs.'),
-	outcomes: [outcome(1, 'useForm uses native FormData with no behavior change')],
-	proofs: [proof('type-check and lint pass', 'npm run check')],
+	task: buildTask('refactor', 'code', 'Refactor useForm to native browser form APIs.'),
+	outcomes: [buildOutcome(1, 'useForm uses native FormData with no behavior change')],
+	proofs: [buildProof('type-check and lint pass', 'npm run check')],
 })
 
 if (briefing.brief !== undefined) {

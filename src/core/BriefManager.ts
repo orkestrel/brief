@@ -1,9 +1,5 @@
 import type { EmitterInterface } from '@orkestrel/emitter'
-import { Emitter } from '@orkestrel/emitter'
 import type { RecordOptions } from '@orkestrel/interpret'
-import { snapshotBrief } from './cloners.js'
-import { BriefError } from './errors.js'
-import { briefToContent, briefToHash, briefToTrace } from './helpers.js'
 import type {
 	Brief,
 	BriefManagerEventMap,
@@ -11,6 +7,10 @@ import type {
 	BriefManagerOptions,
 	BriefRecord,
 } from './types.js'
+import { Emitter } from '@orkestrel/emitter'
+import { snapshotBrief } from './cloners.js'
+import { BriefError } from './errors.js'
+import { briefToContent, briefToHash, briefToTrace } from './helpers.js'
 
 /**
  * Implements the self-owning, versioned and content-hashed brief registry.
@@ -23,10 +23,10 @@ import type {
  *
  * @example
  * ```ts
- * import { BriefManager, brief, task } from '@orkestrel/brief'
+ * import { BriefManager, buildBrief, buildTask } from '@orkestrel/brief'
  *
  * const briefs = new BriefManager()
- * const record = briefs.add(brief(task('document', 'writing', 'Write the brief guide.')))
+ * const record = briefs.add(buildBrief(buildTask('document', 'writing', 'Write the brief guide.')))
  * record.id === record.hash // true
  * briefs.destroy()
  * ```
@@ -81,9 +81,9 @@ export class BriefManager implements BriefManagerInterface {
 		return [...this.#records.values()]
 	}
 
-	add(source: Brief, options?: RecordOptions): BriefRecord {
+	add(brief: Brief, options?: RecordOptions): BriefRecord {
 		this.#refuseDestroyed()
-		const record = this.#stage(source, this.#records, options)
+		const record = this.#stage(brief, this.#records, options)
 		this.#commit(record)
 		return record
 	}
@@ -163,7 +163,7 @@ export class BriefManager implements BriefManagerInterface {
 	}
 
 	// Register a staged record and announce it. Nothing here can throw, which is what makes
-	// seeding all-or-nothing once every entry has been staged.
+	// seeding all-or-nothing after every entry has been staged.
 	#commit(record: BriefRecord): void {
 		this.#records.set(record.id, record)
 		this.#emitter.emit('add', record.id)

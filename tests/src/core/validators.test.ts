@@ -17,7 +17,7 @@ import {
 	isTaskOperation,
 } from '@src/core'
 import { describe, expect, it } from 'vitest'
-import { buildAdversarialValues, buildBrief } from '../../setup.js'
+import { buildAdversarialValues, buildReadyBrief } from '../../setup.js'
 
 const VOCABULARY_GUARDS = [
 	{ name: 'isTaskOperation', guard: isTaskOperation, valid: 'refactor', invalid: 'improve' },
@@ -111,8 +111,8 @@ const OPTIONAL_MEMBERS = [
 	{ name: 'isOutput', guard: isOutput, key: 'sections', valid: { format: 'diff' } },
 	{ name: 'isOutput', guard: isOutput, key: 'include', valid: { format: 'diff' } },
 	{ name: 'isOutput', guard: isOutput, key: 'exclude', valid: { format: 'diff' } },
-	{ name: 'isBrief', guard: isBrief, key: 'trace', valid: buildBrief() },
-	{ name: 'isBrief', guard: isBrief, key: 'hash', valid: buildBrief() },
+	{ name: 'isBrief', guard: isBrief, key: 'trace', valid: buildReadyBrief() },
+	{ name: 'isBrief', guard: isBrief, key: 'hash', valid: buildReadyBrief() },
 ]
 
 describe('vocabulary guards', () => {
@@ -194,7 +194,7 @@ describe('optional record members', () => {
 
 describe('isBrief', () => {
 	it('accepts the whole exact-record contract', () => {
-		expect(isBrief(buildBrief())).toBe(true)
+		expect(isBrief(buildReadyBrief())).toBe(true)
 	})
 
 	it('refuses a brief missing its sections', () => {
@@ -202,19 +202,19 @@ describe('isBrief', () => {
 	})
 
 	it('refuses an extra top-level key', () => {
-		expect(isBrief({ ...buildBrief(), surplus: 1 })).toBe(false)
+		expect(isBrief({ ...buildReadyBrief(), surplus: 1 })).toBe(false)
 	})
 
 	it('refuses a brief whose nested section is off-contract', () => {
-		expect(isBrief({ ...buildBrief(), outcomes: [{ rank: 1, text: 'x' }] })).toBe(false)
+		expect(isBrief({ ...buildReadyBrief(), outcomes: [{ rank: 1, text: 'x' }] })).toBe(false)
 		expect(
-			isBrief({ ...buildBrief(), gaps: [{ field: 'a', question: 'b', blocking: 'yes' }] }),
+			isBrief({ ...buildReadyBrief(), gaps: [{ field: 'a', question: 'b', blocking: 'yes' }] }),
 		).toBe(false)
 	})
 
 	it('accepts a pinned brief and refuses an empty trace', () => {
-		expect(isBrief({ ...buildBrief(), trace: 't', hash: 'abcd1234' })).toBe(true)
-		expect(isBrief({ ...buildBrief(), trace: '' })).toBe(false)
+		expect(isBrief({ ...buildReadyBrief(), trace: 't', hash: 'abcd1234' })).toBe(true)
+		expect(isBrief({ ...buildReadyBrief(), trace: '' })).toBe(false)
 	})
 
 	it('never throws on adversarial input', () => {

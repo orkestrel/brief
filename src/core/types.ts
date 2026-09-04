@@ -165,10 +165,9 @@ export interface Example {
  * guard, the compiled shape, the generator, and `createBriefContract()` working beats one
  * stricter member.
  *
- * The cost lands on one migration: `citation` takes `(name, url, note)` where it once took
- * `(name, role, url)` — strings in the same positions either way, so a stale call still
- * compiles and still passes the guard, and only renders wrong. Nothing is published, so a
- * version bump carries it.
+ * The cost lands on one migration: `buildCitation` takes `(name, url, note)` where the 0.0.6
+ * release took `(name, role, url)` — strings in the same positions either way, so a stale call
+ * still compiles and still passes the guard, and only renders wrong.
  */
 export interface Citation {
 	readonly name: string
@@ -225,7 +224,7 @@ export interface Proof {
  * Represents the closed execution contract — a rough request with every implicit decision resolved.
  *
  * @remarks
- * `trace` and `hash` are DERIVED by `pinBrief`. The `brief` builder cannot set them, so
+ * `trace` and `hash` are DERIVED by `pinBrief`. The `buildBrief` builder cannot set them, so
  * nothing this package produces authors them.
  *
  * They are still SHAPE-checked rather than verified on the way in: `isBrief` and `parseBrief`

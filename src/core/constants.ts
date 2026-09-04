@@ -67,7 +67,6 @@ export const INTERPRETATION_MEMBERS = Object.freeze([
 	'prompt',
 	'stages',
 	'failures',
-	'complete',
 	'confidence',
 	'digest',
 ] satisfies ReadonlyArray<keyof Interpretation>)
@@ -81,7 +80,7 @@ export const INTERPRETATION_MEMBERS = Object.freeze([
  */
 export const DEFAULT_BRIEF_TURNS = 16
 
-/** Holds `'gate'` — the id of the `gateDefinition()` logical definition. */
+/** Holds `'gate'` — the id of the `buildGateDefinition()` logical definition. */
 export const GATE_ID = 'gate'
 
 /**

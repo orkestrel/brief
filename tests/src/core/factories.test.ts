@@ -1,7 +1,7 @@
 import { createBriefContract, createBriefManager, createBriefCompiler, isBrief } from '@src/core'
 import { seededRandom } from '@orkestrel/contract'
 import { describe, expect, it } from 'vitest'
-import { buildAdversarialValues, buildBrief, buildReadyInput } from '../../setup.js'
+import { buildAdversarialValues, buildReadyBrief, buildReadyInput } from '../../setup.js'
 
 describe('createBriefCompiler', () => {
 	it('wires its own engines when none are supplied', () => {
@@ -28,7 +28,7 @@ describe('createBriefManager', () => {
 	})
 
 	it('seeds from the supplied briefs', () => {
-		const registry = createBriefManager({ briefs: [buildBrief()] })
+		const registry = createBriefManager({ briefs: [buildReadyBrief()] })
 		expect(registry.count).toBe(1)
 		registry.destroy()
 	})
@@ -37,7 +37,7 @@ describe('createBriefManager', () => {
 describe('createBriefContract', () => {
 	it('compiles a guard that agrees with isBrief', () => {
 		const contract = createBriefContract()
-		expect(contract.is(buildBrief())).toBe(true)
+		expect(contract.is(buildReadyBrief())).toBe(true)
 		expect(contract.is({})).toBe(false)
 		for (const value of buildAdversarialValues()) {
 			expect(contract.is(value)).toBe(isBrief(value))
@@ -48,7 +48,7 @@ describe('createBriefContract', () => {
 		// `contract.is(x) === isBrief(x)` alone passes when BOTH mechanisms are wrong the same
 		// way. These assert the absolute answer each one owes.
 		const contract = createBriefContract()
-		const valid = buildBrief()
+		const valid = buildReadyBrief()
 		expect(contract.is(valid)).toBe(true)
 		expect(isBrief(valid)).toBe(true)
 		expect(contract.is({ ...valid, surplus: 1 })).toBe(false)
@@ -60,7 +60,7 @@ describe('createBriefContract', () => {
 		expect(contract.schema.type).toBe('object')
 		// The parser rebuilds an owned record rather than returning the input, so the
 		// comparison is structural: `toStrictEqual` would fail on the prototype alone.
-		expect(contract.parse(buildBrief())).toEqual(buildBrief())
+		expect(contract.parse(buildReadyBrief())).toEqual(buildReadyBrief())
 		expect(contract.parse(null)).toBeUndefined()
 		expect(contract.generate(seededRandom(3))).toStrictEqual(contract.generate(seededRandom(3)))
 	})

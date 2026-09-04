@@ -1,29 +1,6 @@
 import type { EmitterInterface } from '@orkestrel/emitter'
-import { Emitter } from '@orkestrel/emitter'
 import type { Interpretation, InterpretInterface } from '@orkestrel/interpret'
-import { createInterpret, digestValue, isInterpretation } from '@orkestrel/interpret'
-import { attempt } from '@orkestrel/contract'
 import type { LogicalResult, ReasonInterface } from '@orkestrel/reason'
-import { createLogicalReasoner, createReason, isLogicalResult } from '@orkestrel/reason'
-import { captureValue, snapshotBrief } from './cloners.js'
-import { INTERPRETATION_MEMBERS } from './constants.js'
-import { BriefError } from './errors.js'
-import {
-	brief,
-	briefToSubject,
-	deriveGaps,
-	deriveGivens,
-	deriveTask,
-	errorToMessage,
-	findBlockingGaps,
-	findUnmetRules,
-	freezeDeep,
-	gap,
-	pinBrief,
-	gateDefinition,
-	manifest,
-	output,
-} from './helpers.js'
 import type {
 	Brief,
 	BriefInput,
@@ -37,6 +14,29 @@ import type {
 	TaskDomain,
 	TaskOperation,
 } from './types.js'
+import { Emitter } from '@orkestrel/emitter'
+import { createInterpret, digestValue, isInterpretation } from '@orkestrel/interpret'
+import { attempt } from '@orkestrel/contract'
+import { createLogicalReasoner, createReason, isLogicalResult } from '@orkestrel/reason'
+import { captureValue, snapshotBrief } from './cloners.js'
+import { INTERPRETATION_MEMBERS } from './constants.js'
+import { BriefError } from './errors.js'
+import {
+	briefToSubject,
+	buildBrief,
+	buildGap,
+	buildGateDefinition,
+	buildManifest,
+	buildOutput,
+	deriveGaps,
+	deriveGivens,
+	deriveTask,
+	errorToMessage,
+	findBlockingGaps,
+	findUnmetRules,
+	freezeDeep,
+	pinBrief,
+} from './helpers.js'
 
 /**
  * Implements the compilation orchestrator — the `[interpret, draft, gate, pin]` pipeline.
@@ -49,13 +49,13 @@ import type {
  *
  * @example
  * ```ts
- * import { BriefCompiler, proof, task } from '@orkestrel/brief'
+ * import { BriefCompiler, buildProof, buildTask } from '@orkestrel/brief'
  *
  * const compiler = new BriefCompiler()
  * const briefing = compiler.compile({
- * 	task: task('audit', 'code', 'Audit the barrel for undocumented exports.'),
+ * 	task: buildTask('audit', 'code', 'Audit the barrel for undocumented exports.'),
  * 	outcomes: [{ rank: 1, text: 'every export appears in the guide', required: true }],
- * 	proofs: [proof('parity passes', 'npm run test:guides')],
+ * 	proofs: [buildProof('parity passes', 'npm run test:guides')],
  * })
  * briefing.brief !== undefined // true — the presence of the brief IS the completeness test
  * compiler.destroy()
@@ -109,7 +109,7 @@ export class BriefCompiler implements BriefCompilerInterface {
 		const stages: BriefStageRecord[] = []
 		const failures: BriefStageFailure[] = []
 
-		// ONE reading of the caller's object, taken first and used by every stage below. Reading
+		// ONE reading of the caller's object, taken first and used by every following stage. Reading
 		// it again per stage let a getter answer differently each time, so the replay could
 		// describe a compilation that did not happen — and a getter that THREW escaped `compile`
 		// as a foreign error, which this contains into the same visible refusal as any other
@@ -189,7 +189,7 @@ export class BriefCompiler implements BriefCompilerInterface {
 		return briefing
 	}
 
-	gate(source: Brief): LogicalResult {
+	gate(brief: Brief): LogicalResult {
 		this.#refuseDestroyed()
 		// The reasoner is BORROWED, so it can throw its own foreign error — a `ReasonError` from
 		// an engine the caller already destroyed, for one. Every throw out of this module is a
@@ -199,7 +199,7 @@ export class BriefCompiler implements BriefCompilerInterface {
 		// the law `compile` already applies to the caller's input. Validating one reading and
 		// recording another let a getter bless a shape the pipeline never saw.
 		const ruled = attempt(() =>
-			this.#own(this.#reason.reason(briefToSubject(source), gateDefinition()), [
+			this.#own(this.#reason.reason(briefToSubject(brief), buildGateDefinition()), [
 				'reasoning',
 				'conclusion',
 				'rules',
@@ -337,7 +337,7 @@ export class BriefCompiler implements BriefCompilerInterface {
 		}
 		if (verdict === undefined) return undefined
 		const refused = verdict.rules
-			.filter((entry) => !entry.conclusion)
+			.filter((entry) => !entry.applied)
 			.map((entry) => entry.id)
 			.join(', ')
 		// A borrowed engine may refuse through `conclusion` alone and name no failing rule, which
@@ -370,7 +370,7 @@ export class BriefCompiler implements BriefCompilerInterface {
 		if (interpretation !== undefined) return []
 		if (!failures.some((entry) => entry.stage === 'interpret')) return []
 		return [
-			gap(
+			buildGap(
 				'gaps',
 				'The interpret stage failed, so the request is unread and its unknowns are unknown',
 				{
@@ -403,9 +403,9 @@ export class BriefCompiler implements BriefCompilerInterface {
 		// arrays, and it is what `Briefing.stages` records — a replay that changes when the
 		// caller mutates their own input afterwards is not a replay.
 		return snapshotBrief(
-			brief(subject, {
+			buildBrief(subject, {
 				authority: input.authority ?? [],
-				manifest: input.manifest ?? manifest(),
+				manifest: input.manifest ?? buildManifest(),
 				outcomes: input.outcomes ?? [],
 				rules: input.rules ?? [],
 				invariants: input.invariants ?? [],
@@ -422,7 +422,7 @@ export class BriefCompiler implements BriefCompilerInterface {
 					...(input.gaps ?? []),
 				],
 				risks: input.risks ?? [],
-				output: input.output ?? output('markdown'),
+				output: input.output ?? buildOutput('markdown'),
 				proofs: input.proofs ?? [],
 			}),
 		)

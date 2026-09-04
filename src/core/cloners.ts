@@ -1,6 +1,6 @@
+import type { Brief } from './types.js'
 import { attempt, cloneJSONRecord } from '@orkestrel/contract'
 import { BriefError } from './errors.js'
-import type { Brief } from './types.js'
 import { isBrief } from './validators.js'
 
 /**
@@ -111,10 +111,10 @@ export function captureValue(source: unknown, members: readonly string[]): unkno
  *
  * @example
  * ```ts
- * import { brief, outcome, snapshotBrief, task } from '@orkestrel/brief'
+ * import { buildBrief, buildOutcome, buildTask, snapshotBrief } from '@orkestrel/brief'
  *
- * const outcomes = [outcome(1, 'shipped')]
- * const owned = snapshotBrief(brief(task('plan', 'ops', 'Plan the release.'), { outcomes }))
+ * const outcomes = [buildOutcome(1, 'shipped')]
+ * const owned = snapshotBrief(buildBrief(buildTask('plan', 'ops', 'Plan the release.'), { outcomes }))
  * owned.outcomes === outcomes // false — the alias is broken
  * Object.isFrozen(owned.outcomes) // true
  * ```

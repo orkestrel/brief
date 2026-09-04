@@ -19,7 +19,34 @@ import {
 	parseManifest,
 	resolveLink,
 } from '@orkestrel/guide'
-import { INTERPRETATION_MEMBERS } from '@src/core'
+import {
+	briefToDispatch,
+	briefToGoal,
+	briefToHash,
+	briefToMarkdown,
+	buildBrief,
+	buildCitation,
+	buildExample,
+	buildGap,
+	buildGateDefinition,
+	buildGiven,
+	buildManifest,
+	buildOutcome,
+	buildOutput,
+	buildProof,
+	buildReference,
+	buildRisk,
+	buildTask,
+	createBriefCompiler,
+	findBlockingGaps,
+	findManifestOverlaps,
+	findUngrantedAuthority,
+	findUnpairedGaps,
+	INTERPRETATION_MEMBERS,
+	pinBrief,
+	validateBrief,
+} from '@src/core'
+import { requireValue } from '@orkestrel/test'
 import { readInventory } from '@orkestrel/test/server'
 import { describe, expect, it } from 'vitest'
 
@@ -111,13 +138,13 @@ describe.each(MANIFEST)('$concept', (entry) => {
 
 	it('SB — the comparison can report a difference', () => {
 		expect(
-			findMissingSymbols([{ name: 'Phantom', kind: 'class' }], source.surface()),
+			findMissingSymbols([{ name: 'Phantom', keyword: 'class' }], source.surface()),
 		).toStrictEqual(['class Phantom'])
 		const [first] = source.surface()
 		if (first === undefined) throw new Error('the barrel surface is empty')
 		expect(
 			findMissingSymbols(
-				[{ name: first.name, kind: first.kind === 'const' ? 'class' : 'const' }],
+				[{ name: first.name, keyword: first.keyword === 'const' ? 'class' : 'const' }],
 				source.surface(),
 			),
 		).toHaveLength(1)
@@ -163,7 +190,7 @@ describe.each(MANIFEST)('$concept', (entry) => {
 	it('EX — every documented function and method carries an example', () => {
 		const functions = guide
 			.surface()
-			.filter((symbol) => symbol.kind === 'function')
+			.filter((symbol) => symbol.keyword === 'function')
 			.map((symbol) => symbol.name)
 		expect(functions.length).toBeGreaterThan(0)
 		expect(findUnexampled(functions, fences, source.examples())).toStrictEqual([])
@@ -187,7 +214,7 @@ describe.each(MANIFEST)('$concept', (entry) => {
 
 		const options = guide
 			.surface()
-			.filter((symbol) => symbol.kind === 'interface' && symbol.name.endsWith('Options'))
+			.filter((symbol) => symbol.keyword === 'interface' && symbol.name.endsWith('Options'))
 			.map((symbol) => symbol.name)
 		expect(options.length).toBeGreaterThan(0)
 
@@ -252,7 +279,7 @@ describe.each(MANIFEST)('$concept', (entry) => {
 	})
 
 	it('IM — the member check can report a dead member', () => {
-		// The control: a member no source file mentions must be reported, or the check above
+		// The control: a member no source file mentions must be reported, or the earlier check
 		// is satisfied by every interface it will ever read.
 		const invented = 'export interface PhantomOptions {\n\treadonly neverReadAnywhere?: number\n}\n'
 		const members = extractDeclaration(invented, 'interface', 'PhantomOptions')?.body ?? []
@@ -303,5 +330,166 @@ describe.each(MANIFEST)('$concept', (entry) => {
 			}
 		}
 		expect(checked).toBeGreaterThan(0)
+	})
+})
+
+// The parity checks earlier in this file prove every backticked NAME in the guide resolves to a
+// real export. They cannot prove a `// value` comment beside a call is true, because they never
+// run one — so a fence documenting a value the code contradicts shipped green. It did:
+// strengthening the `granted` rule made the guide's own headline example refuse at the gate, and
+// every parity assertion stayed passing. These tests transcribe the guide's flagship fences
+// and assert the values their comments claim. Change a fence, change the test beside it.
+describe('the guide fences, executed', () => {
+	it("runs the ## Surface fence and yields the 'true' it documents", () => {
+		const compiler = createBriefCompiler()
+		const briefing = compiler.compile({
+			task: buildTask('refactor', 'code', 'Refactor useForm to native browser form APIs.'),
+			authority: [{ path: 'AGENTS.md', note: 'project law; wins every conflict' }],
+			manifest: {
+				read: [
+					{ path: 'AGENTS.md', note: 'project law; wins every conflict' },
+					{ path: 'guides/browser.md', note: 'the composable contract' },
+				],
+				edit: [
+					{ path: 'src/browser/composables/useForm.ts', note: 'the composable being refactored' },
+				],
+				locked: [{ path: 'src/browser/types.ts', note: 'the published contract' }],
+				forbidden: [{ path: 'app/**', note: 'out of scope' }],
+			},
+			outcomes: [buildOutcome(1, 'useForm uses native FormData with no behavior change')],
+			proofs: [buildProof('type-check and lint pass', 'npm run check')],
+		})
+		// The fence's own comment: `briefing.brief !== undefined // true`.
+		expect(briefing.failures).toStrictEqual([])
+		expect(briefing.brief !== undefined).toBe(true)
+		const emitted = requireValue(briefing.brief, 'the documented Surface fence compiles')
+		expect(briefToMarkdown(emitted).startsWith('# Brief: ')).toBe(true)
+		expect(briefToGoal(emitted)).toBe(
+			'Done when every proof passes: npm run check exits 0. Cap: 16 turns.',
+		)
+		compiler.destroy()
+	})
+
+	it('runs the ### Builders fence and yields every value the Helpers fence documents', () => {
+		const draft = buildBrief(
+			buildTask('refactor', 'code', 'Refactor useForm to native browser form APIs.'),
+			{
+				authority: [buildReference('AGENTS.md', 'project law; wins every conflict')],
+				manifest: buildManifest({
+					read: [
+						buildReference('AGENTS.md', 'project law; wins every conflict'),
+						buildReference('guides/browser.md', 'the composable contract'),
+					],
+					edit: [
+						buildReference('src/browser/composables/useForm.ts', 'the composable being refactored'),
+					],
+					locked: [buildReference('src/browser/types.ts', 'the published contract')],
+					forbidden: [buildReference('app/**', 'out of scope')],
+				}),
+				outcomes: [
+					buildOutcome(1, 'useForm uses native FormData with no behavior change'),
+					buildOutcome(2, 'tests cover the changed code paths'),
+				],
+				rules: ['Add no dependencies.'],
+				invariants: ['useForm public method names and signatures in types.ts.'],
+				givens: [buildGiven('convention', 'indentation', 'tabs')],
+				examples: [buildExample('<input required>', 'validity read from el.validity')],
+				assumptions: ['Validation message wording is preserved.'],
+				citations: [
+					buildCitation(
+						'MDN Constraint Validation',
+						'https://developer.mozilla.org/',
+						'the native validity behavior being adopted',
+					),
+				],
+				gaps: [buildGap('rules', 'Does validation message wording need to change?')],
+				risks: [
+					buildRisk(
+						'medium',
+						'native validation differs subtly',
+						'assert message and state in tests',
+					),
+				],
+				output: buildOutput('diff', { include: ['updated useForm.ts'] }),
+				proofs: [buildProof('type-check and lint pass', 'npm run check')],
+			},
+		)
+		expect(draft.task).toStrictEqual({
+			operation: 'refactor',
+			domain: 'code',
+			statement: 'Refactor useForm to native browser form APIs.',
+		})
+		expect(draft.authority).toStrictEqual([
+			{ path: 'AGENTS.md', note: 'project law; wins every conflict' },
+		])
+		expect(draft.manifest).toStrictEqual({
+			read: [
+				{ path: 'AGENTS.md', note: 'project law; wins every conflict' },
+				{ path: 'guides/browser.md', note: 'the composable contract' },
+			],
+			edit: [
+				{ path: 'src/browser/composables/useForm.ts', note: 'the composable being refactored' },
+			],
+			locked: [{ path: 'src/browser/types.ts', note: 'the published contract' }],
+			forbidden: [{ path: 'app/**', note: 'out of scope' }],
+		})
+		expect(draft.outcomes).toStrictEqual([
+			{
+				rank: 1,
+				text: 'useForm uses native FormData with no behavior change',
+				required: true,
+			},
+			{ rank: 2, text: 'tests cover the changed code paths', required: true },
+		])
+		expect(draft.rules).toStrictEqual(['Add no dependencies.'])
+		expect(draft.invariants).toStrictEqual([
+			'useForm public method names and signatures in types.ts.',
+		])
+		expect(draft.givens).toStrictEqual([
+			{ category: 'convention', name: 'indentation', value: 'tabs' },
+		])
+		expect(draft.examples).toStrictEqual([
+			{ input: '<input required>', output: 'validity read from el.validity' },
+		])
+		expect(draft.assumptions).toStrictEqual(['Validation message wording is preserved.'])
+		expect(draft.citations).toStrictEqual([
+			{
+				name: 'MDN Constraint Validation',
+				url: 'https://developer.mozilla.org/',
+				note: 'the native validity behavior being adopted',
+			},
+		])
+		expect(draft.gaps).toStrictEqual([
+			{
+				field: 'rules',
+				question: 'Does validation message wording need to change?',
+				blocking: false,
+			},
+		])
+		expect(draft.risks).toStrictEqual([
+			{
+				severity: 'medium',
+				text: 'native validation differs subtly',
+				mitigation: 'assert message and state in tests',
+			},
+		])
+		expect(draft.output).toStrictEqual({ format: 'diff', include: ['updated useForm.ts'] })
+		expect(draft.proofs).toStrictEqual([
+			{ text: 'type-check and lint pass', command: 'npm run check' },
+		])
+		expect(draft.output.format).toBe('diff')
+		expect(draft.trace).toBeUndefined()
+		expect(draft.hash).toBeUndefined()
+		expect(buildGateDefinition().rules.length).toBe(7)
+		const pinned = pinBrief(draft)
+		// Each assertion following is a documented `// value` comment from `### Helpers`.
+		expect(findUngrantedAuthority(pinned)).toStrictEqual([])
+		expect(findManifestOverlaps(pinned)).toStrictEqual([])
+		expect(findBlockingGaps(pinned)).toStrictEqual([])
+		expect(findUnpairedGaps(pinned)).toStrictEqual([])
+		expect(validateBrief(pinned)).toStrictEqual({ valid: true, errors: [], warnings: [] })
+		expect(briefToHash(pinned)).toBe(briefToHash(draft))
+		expect(briefToDispatch(pinned).edit).toStrictEqual(['src/browser/composables/useForm.ts'])
+		expect(briefToDispatch(pinned).authority).toStrictEqual(['AGENTS.md'])
 	})
 })

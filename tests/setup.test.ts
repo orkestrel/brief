@@ -1,5 +1,5 @@
-import { BriefError, briefToSubject, gateDefinition } from '@src/core'
 import type { ReasonResult } from '@orkestrel/reason'
+import { BriefError, briefToSubject, buildGateDefinition } from '@src/core'
 import { describe, expect, it } from 'vitest'
 import {
 	AccessorInterpretation,
@@ -10,20 +10,20 @@ import {
 	ShiftingLogicalResult,
 	buildAccessorInterpret,
 	buildAdversarialValues,
-	buildBrief,
+	buildReadyBrief,
 	buildCountingReason,
 	buildFailingInterpret,
 	buildForeignInterpret,
 	buildInheritedActions,
 	buildInterpret,
-	buildManifest,
+	buildReadyManifest,
 	buildPermissiveEvaluator,
 	buildReadyInput,
 	buildShiftingInterpret,
 	buildShiftingReason,
 	buildSilentReason,
 	buildStableReason,
-	buildTask,
+	buildReadyTask,
 	readConclusion,
 	readErrorCode,
 	readErrorContext,
@@ -34,15 +34,15 @@ import {
 // never production behavior the fixtures merely pass through to a real engine.
 
 describe('task and manifest fixtures', () => {
-	it('buildTask returns the fixed refactor task the suites key their assertions on', () => {
-		const task = buildTask()
+	it('buildReadyTask returns the fixed refactor task the suites key their assertions on', () => {
+		const task = buildReadyTask()
 		expect(task.operation).toBe('refactor')
 		expect(task.domain).toBe('code')
 		expect(task.statement).toBe('Refactor useForm to native browser form APIs.')
 	})
 
-	it('buildManifest returns four disjoint, populated partitions', () => {
-		const manifest = buildManifest()
+	it('buildReadyManifest returns four disjoint, populated partitions', () => {
+		const manifest = buildReadyManifest()
 		const paths = [
 			...manifest.read.map((entry) => entry.path),
 			...manifest.edit.map((entry) => entry.path),
@@ -59,27 +59,27 @@ describe('task and manifest fixtures', () => {
 	})
 })
 
-describe('buildBrief and buildReadyInput', () => {
-	it('buildBrief composes a gate-passing brief from buildTask and buildManifest', () => {
-		const built = buildBrief()
-		expect(built.task).toEqual(buildTask())
-		expect(built.manifest).toEqual(buildManifest())
+describe('buildReadyBrief and buildReadyInput', () => {
+	it('buildReadyBrief composes a gate-passing brief from buildReadyTask and buildReadyManifest', () => {
+		const built = buildReadyBrief()
+		expect(built.task).toEqual(buildReadyTask())
+		expect(built.manifest).toEqual(buildReadyManifest())
 		expect(built.outcomes).toHaveLength(1)
 		expect(built.proofs).toHaveLength(1)
 	})
 
-	it('buildBrief overrides replace only the named section, keeping the rest at default', () => {
-		const overriddenManifest = { ...buildManifest(), read: [] }
-		const built = buildBrief({ manifest: overriddenManifest })
+	it('buildReadyBrief overrides replace only the named section, keeping the rest at default', () => {
+		const overriddenManifest = { ...buildReadyManifest(), read: [] }
+		const built = buildReadyBrief({ manifest: overriddenManifest })
 		expect(built.manifest.read).toEqual([])
 		// Untouched sections still carry the default fixture's values.
-		expect(built.outcomes).toEqual(buildBrief().outcomes)
-		expect(built.proofs).toEqual(buildBrief().proofs)
+		expect(built.outcomes).toEqual(buildReadyBrief().outcomes)
+		expect(built.proofs).toEqual(buildReadyBrief().proofs)
 	})
 
-	it('buildReadyInput carries the same task, manifest, outcomes, and proofs as buildBrief', () => {
+	it('buildReadyInput carries the same task, manifest, outcomes, and proofs as buildReadyBrief', () => {
 		const input = buildReadyInput()
-		const built = buildBrief()
+		const built = buildReadyBrief()
 		expect(input.task).toEqual(built.task)
 		expect(input.manifest).toEqual(built.manifest)
 		expect(input.outcomes).toEqual(built.outcomes)
@@ -88,15 +88,16 @@ describe('buildBrief and buildReadyInput', () => {
 })
 
 describe('FIRST_RULE and CAPTURED_RULE', () => {
-	it('FIRST_RULE is a frozen, conclusion-true rule result', () => {
+	it('FIRST_RULE is a frozen, applied rule result whose premises all held', () => {
 		expect(Object.isFrozen(FIRST_RULE)).toBe(true)
-		expect(FIRST_RULE.conclusion).toBe(true)
 		expect(FIRST_RULE.applied).toBe(true)
+		expect(FIRST_RULE.premises).toEqual([true])
 	})
 
-	it('CAPTURED_RULE is a frozen, conclusion-false rule result distinct from FIRST_RULE', () => {
+	it('CAPTURED_RULE is a frozen, unapplied rule result distinct from FIRST_RULE', () => {
 		expect(Object.isFrozen(CAPTURED_RULE)).toBe(true)
-		expect(CAPTURED_RULE.conclusion).toBe(false)
+		expect(CAPTURED_RULE.applied).toBe(false)
+		expect(CAPTURED_RULE.premises).toEqual([false])
 		expect(CAPTURED_RULE.id).not.toBe(FIRST_RULE.id)
 	})
 })
@@ -106,7 +107,7 @@ describe('interpret fixtures', () => {
 		const interpret = buildInterpret('migrate', 'code', true)
 		const result = interpret.interpret('anything')
 		expect(result.intent).toEqual({ action: 'migrate', domain: 'code', confidence: 1 })
-		expect(result.complete).toBe(true)
+		expect(result.failures).toEqual([])
 		expect(result.ambiguities).toEqual([])
 	})
 
@@ -141,7 +142,7 @@ describe('AccessorInterpretation and its engines', () => {
 	it('AccessorInterpretation reports every member through a prototype getter', () => {
 		const interpretation = new AccessorInterpretation()
 		expect(interpretation.digest).toBe('accessor')
-		expect(interpretation.complete).toBe(false)
+		expect(interpretation.failures).toEqual([])
 		expect(interpretation.entities).toEqual([])
 		// Own-enumerable-key count is the exact defect the fixture exists to prove: every member
 		// is a getter, so `Object.keys` — which lists only own enumerable keys — sees none of them.
@@ -233,7 +234,7 @@ describe('readErrorCode and readErrorContext', () => {
 describe('reason fixtures', () => {
 	it('buildPermissiveEvaluator reports every check met, singly and batched', () => {
 		const evaluator = buildPermissiveEvaluator()
-		const subject = briefToSubject(buildBrief())
+		const subject = briefToSubject(buildReadyBrief())
 		expect(evaluator.evaluate({ field: 'x', operator: 'any', value: undefined }, subject)).toEqual({
 			field: 'x',
 			met: true,
@@ -254,8 +255,8 @@ describe('reason fixtures', () => {
 	})
 
 	it('buildCountingReason answers each member differently after its first read; buildStableReason freezes the first answer', () => {
-		const subject = briefToSubject(buildBrief())
-		const definition = gateDefinition()
+		const subject = briefToSubject(buildReadyBrief())
+		const definition = buildGateDefinition()
 		const counting = buildCountingReason()
 		const first = counting.reason(subject, definition)
 		const second = counting.reason(subject, definition)
@@ -272,7 +273,7 @@ describe('reason fixtures', () => {
 
 	it('buildShiftingReason yields a ShiftingLogicalResult whose conclusion only turns true on the third read', () => {
 		const reason = buildShiftingReason()
-		const result = reason.reason(briefToSubject(buildBrief()), gateDefinition())
+		const result = reason.reason(briefToSubject(buildReadyBrief()), buildGateDefinition())
 		expect(result).toBeInstanceOf(ShiftingLogicalResult)
 		if (result.reasoning !== 'logical') throw new Error('expected a logical result')
 		expect(result.conclusion).toBe(false)
@@ -289,7 +290,7 @@ describe('reason fixtures', () => {
 
 	it('buildSilentReason refuses through conclusion alone, naming no failing rule', () => {
 		const reason = buildSilentReason()
-		const result = reason.reason(briefToSubject(buildBrief()), gateDefinition())
+		const result = reason.reason(briefToSubject(buildReadyBrief()), buildGateDefinition())
 		expect(readConclusion(result)).toBe(false)
 		if (result.reasoning !== 'logical') throw new Error('expected a logical result')
 		expect(result.rules).toEqual([])

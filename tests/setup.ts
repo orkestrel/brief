@@ -1,5 +1,4 @@
 import type { Brief, BriefErrorCode, BriefInput, Manifest, Task } from '@src/core'
-import { brief, isBriefError, manifest, outcome, proof, reference, task } from '@src/core'
 import type {
 	Ambiguity,
 	Entity,
@@ -10,7 +9,6 @@ import type {
 	StageFailure,
 	StageRecord,
 } from '@orkestrel/interpret'
-import { createInterpret } from '@orkestrel/interpret'
 import type {
 	Check,
 	EvaluatorInterface,
@@ -19,6 +17,16 @@ import type {
 	ReasonResult,
 	RuleResult,
 } from '@orkestrel/reason'
+import {
+	buildBrief,
+	buildManifest,
+	buildOutcome,
+	buildProof,
+	buildReference,
+	buildTask,
+	isBriefError,
+} from '@src/core'
+import { createInterpret } from '@orkestrel/interpret'
 import { createQuantitativeDefinition, createReason } from '@orkestrel/reason'
 
 /** The single rule result the counting and stable engines agree on for a first read. */
@@ -26,29 +34,27 @@ export const FIRST_RULE: RuleResult = Object.freeze({
 	id: 'ready',
 	applied: true,
 	premises: Object.freeze([true]),
-	conclusion: true,
 })
 
 /** The refused rule a captured shifting verdict must retain. */
 export const CAPTURED_RULE: RuleResult = Object.freeze({
 	id: 'captured',
-	applied: true,
+	applied: false,
 	premises: Object.freeze([false]),
-	conclusion: false,
 })
 
 /** The canonical valid task every fixture builds on. */
-export function buildTask(): Task {
-	return task('refactor', 'code', 'Refactor useForm to native browser form APIs.')
+export function buildReadyTask(): Task {
+	return buildTask('refactor', 'code', 'Refactor useForm to native browser form APIs.')
 }
 
 /** A manifest whose four partitions are populated and disjoint. */
-export function buildManifest(): Manifest {
-	return manifest({
-		read: [reference('AGENTS.md', 'project law')],
-		edit: [reference('src/browser/composables/useForm.ts', 'the composable being refactored')],
-		locked: [reference('src/browser/types.ts', 'the published contract')],
-		forbidden: [reference('app/**', 'out of scope')],
+export function buildReadyManifest(): Manifest {
+	return buildManifest({
+		read: [buildReference('AGENTS.md', 'project law')],
+		edit: [buildReference('src/browser/composables/useForm.ts', 'the composable being refactored')],
+		locked: [buildReference('src/browser/types.ts', 'the published contract')],
+		forbidden: [buildReference('app/**', 'out of scope')],
 	})
 }
 
@@ -56,11 +62,11 @@ export function buildManifest(): Manifest {
  * A gate-passing brief: one sentence, a required outcome, a proof, disjoint partitions.
  * Override any section to build the near-miss a specific assertion needs.
  */
-export function buildBrief(overrides?: Partial<Omit<Brief, 'task'>>): Brief {
-	return brief(buildTask(), {
-		manifest: buildManifest(),
-		outcomes: [outcome(1, 'useForm uses native FormData with no behavior change')],
-		proofs: [proof('type-check and lint pass', 'npm run check')],
+export function buildReadyBrief(overrides?: Partial<Omit<Brief, 'task'>>): Brief {
+	return buildBrief(buildReadyTask(), {
+		manifest: buildReadyManifest(),
+		outcomes: [buildOutcome(1, 'useForm uses native FormData with no behavior change')],
+		proofs: [buildProof('type-check and lint pass', 'npm run check')],
 		...overrides,
 	})
 }
@@ -68,10 +74,10 @@ export function buildBrief(overrides?: Partial<Omit<Brief, 'task'>>): Brief {
 /** A `BriefInput` the gate passes: a task, a disjoint manifest, one outcome, one proof. */
 export function buildReadyInput(): BriefInput {
 	return {
-		task: buildTask(),
-		manifest: buildManifest(),
-		outcomes: [outcome(1, 'useForm uses native FormData with no behavior change')],
-		proofs: [proof('type-check and lint pass', 'npm run check')],
+		task: buildReadyTask(),
+		manifest: buildReadyManifest(),
+		outcomes: [buildOutcome(1, 'useForm uses native FormData with no behavior change')],
+		proofs: [buildProof('type-check and lint pass', 'npm run check')],
 	}
 }
 
@@ -90,7 +96,7 @@ export function buildInterpret(
 ): InterpretInterface {
 	return createInterpret({
 		extractor: {
-			extract: () => ({ intent: { action, domain, confidence: 1 }, numbers: [3], complete: true }),
+			extract: () => ({ intent: { action, domain, confidence: 1 }, numbers: [3] }),
 		},
 		templates: matched
 			? [
@@ -167,7 +173,6 @@ export function buildForeignInterpret(value: unknown): InterpretInterface {
 			extract: () => ({
 				intent: { action: 'migrate', domain: 'code', confidence: 1 },
 				numbers: [],
-				complete: false,
 			}),
 		},
 	})
@@ -239,10 +244,6 @@ export class AccessorInterpretation {
 		return []
 	}
 
-	get complete(): boolean {
-		return false
-	}
-
 	get confidence(): number {
 		return 1
 	}
@@ -310,10 +311,6 @@ export class ShiftingAccessorInterpretation implements Interpretation {
 		return []
 	}
 
-	get complete(): boolean {
-		return true
-	}
-
 	get confidence(): number {
 		return 1
 	}
@@ -375,10 +372,6 @@ export class ShiftingForeignInterpretation implements Interpretation {
 
 	get failures(): readonly StageFailure[] {
 		return []
-	}
-
-	get complete(): boolean {
-		return true
 	}
 
 	get confidence(): number {
