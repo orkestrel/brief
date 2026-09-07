@@ -503,7 +503,7 @@ export function findBlockingGaps(source: Brief): readonly Gap[] {
  * are disjoint — `findManifestOverlaps` and the `disjoint` rule enforce it — so a forbidden
  * path is in none of the grants and is reported here. An authority named in NO partition at
  * all is reported for the same reason, and that is the case a forbidden-only check misses
- * entirely: the brief simply never says the executor may open what it must obey.
+ * entirely: the brief never says the executor may open what it must obey.
  *
  * Paths are compared as EXACT strings, matching `findManifestOverlaps`. A glob is never
  * expanded, so `read: 'guides/**'` does not grant `authority: 'guides/brief.md'`. State a

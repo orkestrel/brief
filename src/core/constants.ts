@@ -87,7 +87,7 @@ export const GATE_ID = 'gate'
  * Matches every line terminator a brief field refuses.
  *
  * @remarks
- * Every ECMAScript line terminator, not just `\n`: a renderer that splits on any of them
+ * Every ECMAScript line terminator, not only `\n`: a renderer that splits on any of them
  * would let the others forge a markdown row. CRLF leads the alternation so a Windows
  * exemplar splits as ONE break rather than two, which would insert a blank line the caller
  * never wrote. Kept unanchored and stateless — no `g` flag — so `test` never carries

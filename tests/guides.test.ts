@@ -159,12 +159,18 @@ describe.each(MANIFEST)('$concept', (entry) => {
 		expect(groups.length).toBeGreaterThan(0)
 		for (const group of groups) {
 			expect(group.methods.length).toBeGreaterThan(0)
-			const declared = source.methods(group.interface)
-			expect(declared.length).toBeGreaterThan(0)
-			expect(findMissing(group.methods, declared)).toStrictEqual([])
-			expect(findMissing(declared, group.methods)).toStrictEqual([])
+			const members = source.methods(group.interface).map((method) => method.name)
+			const documented = group.methods.map((method) => method.name)
+			expect(members.length).toBeGreaterThan(0)
+			expect(findMissing(documented, members)).toStrictEqual([])
+			expect(findMissing(members, documented)).toStrictEqual([])
 			const implementation = group.interface.replace(/Interface$/u, '')
-			expect(findMissing(source.methods(implementation), group.methods)).toStrictEqual([])
+			expect(
+				findMissing(
+					source.methods(implementation).map((method) => method.name),
+					documented,
+				),
+			).toStrictEqual([])
 		}
 	})
 
@@ -193,15 +199,25 @@ describe.each(MANIFEST)('$concept', (entry) => {
 			.filter((symbol) => symbol.keyword === 'function')
 			.map((symbol) => symbol.name)
 		expect(functions.length).toBeGreaterThan(0)
-		expect(findUnexampled(functions, fences, source.examples())).toStrictEqual([])
-		expect(findUnexampled(['neverDocumented'], fences, source.examples())).toStrictEqual([
-			'neverDocumented',
-		])
+		expect(
+			findUnexampled(
+				functions,
+				fences,
+				source.examples().map((example) => example.name),
+			),
+		).toStrictEqual([])
+		expect(
+			findUnexampled(
+				['neverDocumented'],
+				fences,
+				source.examples().map((example) => example.name),
+			),
+		).toStrictEqual(['neverDocumented'])
 		for (const group of guide.methods()) {
 			const implementation = group.interface.replace(/Interface$/u, '')
-			expect(findUnexampled(group.methods, fences, source.examples(implementation))).toStrictEqual(
-				[],
-			)
+			const documented = group.methods.map((method) => method.name)
+			const examples = source.examples(implementation).map((example) => example.name)
+			expect(findUnexampled(documented, fences, examples)).toStrictEqual([])
 		}
 	})
 

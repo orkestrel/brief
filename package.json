@@ -1,6 +1,6 @@
 {
 	"name": "@orkestrel/brief",
-	"version": "0.0.7",
+	"version": "0.0.8",
 	"description": "A synchronous, deterministic specification compiler: a rough request becomes a closed, content-hashed execution contract another agent can run, gated by a traceable reasoner and projected into every downstream artifact.",
 	"keywords": [
 		"agent",
@@ -68,7 +68,8 @@
 		"prepack": "npm run build",
 		"prepublishOnly": "npm run format:check && npm run lint:check && npm run check && npm run build && npm test && npm run test:distribution -- --mode release",
 		"test:bench": "vitest bench --config vite.config.ts --no-cache --project probe",
-		"test:setup": "vitest run --config vite.config.ts --no-cache --reporter=dot --project setup"
+		"test:setup": "vitest run --config vite.config.ts --no-cache --reporter=dot --project setup",
+		"docs": "node --experimental-strip-types scripts/docs.ts"
 	},
 	"dependencies": {
 		"@orkestrel/contract": "^0.0.16",

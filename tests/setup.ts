@@ -29,26 +29,26 @@ import {
 import { createInterpret } from '@orkestrel/interpret'
 import { createQuantitativeDefinition, createReason } from '@orkestrel/reason'
 
-/** The single rule result the counting and stable engines agree on for a first read. */
+/** Holds the single rule result the counting and stable engines agree on for a first read. */
 export const FIRST_RULE: RuleResult = Object.freeze({
 	id: 'ready',
 	applied: true,
 	premises: Object.freeze([true]),
 })
 
-/** The refused rule a captured shifting verdict must retain. */
+/** Holds the refused rule a captured shifting verdict must retain. */
 export const CAPTURED_RULE: RuleResult = Object.freeze({
 	id: 'captured',
 	applied: false,
 	premises: Object.freeze([false]),
 })
 
-/** The canonical valid task every fixture builds on. */
+/** Returns the canonical valid task every fixture builds on. */
 export function buildReadyTask(): Task {
 	return buildTask('refactor', 'code', 'Refactor useForm to native browser form APIs.')
 }
 
-/** A manifest whose four partitions are populated and disjoint. */
+/** Returns a manifest whose partitions are populated and disjoint. */
 export function buildReadyManifest(): Manifest {
 	return buildManifest({
 		read: [buildReference('AGENTS.md', 'project law')],
@@ -59,7 +59,7 @@ export function buildReadyManifest(): Manifest {
 }
 
 /**
- * A gate-passing brief: one sentence, a required outcome, a proof, disjoint partitions.
+ * Returns a gate-passing brief: one sentence, a required outcome, a proof, disjoint partitions.
  * Override any section to build the near-miss a specific assertion needs.
  */
 export function buildReadyBrief(overrides?: Partial<Omit<Brief, 'task'>>): Brief {
@@ -71,7 +71,7 @@ export function buildReadyBrief(overrides?: Partial<Omit<Brief, 'task'>>): Brief
 	})
 }
 
-/** A `BriefInput` the gate passes: a task, a disjoint manifest, one outcome, one proof. */
+/** Returns a `BriefInput` the gate passes: a task, a disjoint manifest, one outcome, one proof. */
 export function buildReadyInput(): BriefInput {
 	return {
 		task: buildReadyTask(),
@@ -82,7 +82,7 @@ export function buildReadyInput(): BriefInput {
 }
 
 /**
- * A real interpret pipeline driven by an injected extractor.
+ * Returns a real interpret pipeline driven by an injected extractor.
  *
  * @remarks
  * `createInterpret`'s `extractor` option is the package's own documented injection seam,
@@ -116,7 +116,8 @@ export function buildInterpret(
 }
 
 /**
- * An interpret engine whose `interpret` throws, for driving the `interpret` stage's failure.
+ * Returns an interpret engine whose `interpret` throws, for driving the `interpret`
+ * stage's failure.
  *
  * @remarks
  * A boundary stub, not a fake: every other member delegates to a REAL `createInterpret`
@@ -155,7 +156,7 @@ export function buildFailingInterpret(): InterpretInterface {
 }
 
 /**
- * An interpret engine whose entity carries whatever value the caller names.
+ * Returns an interpret engine whose entity carries whatever value the caller names.
  *
  * @remarks
  * A boundary stub: every member delegates to a REAL `createInterpret`, and only the returned
@@ -202,10 +203,10 @@ export function buildForeignInterpret(value: unknown): InterpretInterface {
 }
 
 /**
- * A conforming `Interpretation` carried entirely by prototype getters — the class satisfies
- * the interface, and `structuredClone` keeps own members only, so the compiler's ownership
- * copy arrives with every member missing. The vector the interpret-stage guard exists for:
- * type-valid at the engine, malformed after the clone.
+ * Implements a conforming `Interpretation` carried entirely by prototype getters — the
+ * class satisfies the interface, and `structuredClone` keeps own members only, so the
+ * compiler's ownership copy arrives with every member missing. The vector the
+ * interpret-stage guard exists for: type-valid at the engine, malformed after the clone.
  */
 export class AccessorInterpretation {
 	get text(): string {
@@ -254,8 +255,9 @@ export class AccessorInterpretation {
 }
 
 /**
- * A conforming supplied interpretation whose prototype getters change after their first read.
- * The compiler must draft from one captured view rather than guard one reading and draft another.
+ * Implements a conforming supplied interpretation whose prototype getters change after
+ * their first read. The compiler must draft from one captured view rather than guard one
+ * reading and draft another.
  */
 export class ShiftingAccessorInterpretation implements Interpretation {
 	#text = 0
@@ -322,8 +324,9 @@ export class ShiftingAccessorInterpretation implements Interpretation {
 }
 
 /**
- * A conforming engine interpretation with shifting prototype getters and a function-valued
- * `Entity.value`. The entity member forces the clone fallback and names the retained leaf.
+ * Implements a conforming engine interpretation with shifting prototype getters and a
+ * function-valued `Entity.value`. The entity member forces the clone fallback and names
+ * the retained leaf.
  */
 export class ShiftingForeignInterpretation implements Interpretation {
 	#text = 0
@@ -384,7 +387,7 @@ export class ShiftingForeignInterpretation implements Interpretation {
 	}
 }
 
-/** A borrowed engine that returns the shifting function-valued interpretation. */
+/** Returns a borrowed engine that yields the shifting function-valued interpretation. */
 export function buildShiftingInterpret(): InterpretInterface {
 	const real = createInterpret()
 	return {
@@ -407,7 +410,7 @@ export function buildShiftingInterpret(): InterpretInterface {
 }
 
 /**
- * A borrowed engine whose `interpret` returns a CONFORMING class-instance
+ * Returns a borrowed engine whose `interpret` yields a CONFORMING class-instance
  * `Interpretation` that the ownership clone cannot carry — see
  * {@link AccessorInterpretation}. Every other member delegates to a real engine.
  */
@@ -466,7 +469,7 @@ export function buildAdversarialValues(): readonly unknown[] {
 }
 
 /**
- * Read a caught value's `BriefErrorCode` without branching at the assertion site.
+ * Reads a caught value's `BriefErrorCode` without branching at the assertion site.
  *
  * @remarks
  * Returns `undefined` for anything that is not a `BriefError`, so one unconditional
@@ -477,7 +480,7 @@ export function readErrorCode(error: unknown): BriefErrorCode | undefined {
 }
 
 /**
- * An evaluator that reports every check met.
+ * Returns an evaluator that reports every check met.
  *
  * @remarks
  * `createLogicalReasoner`'s `evaluator` is `@orkestrel/reason`'s own published injection
@@ -495,7 +498,7 @@ export function buildPermissiveEvaluator(): EvaluatorInterface {
 }
 
 /**
- * A reasons engine whose verdict answers differently on every read after the first.
+ * Returns a reasons engine whose verdict answers differently on every read after the first.
  *
  * @remarks
  * Registered through `createReason`'s published `reasoners` seam, so the REAL engine runs and
@@ -549,7 +552,10 @@ export function buildCountingReason(): ReasonInterface {
 	})
 }
 
-/** The static twin of `buildCountingReason` — each member's first answer, as plain data. */
+/**
+ * Returns the static twin of `buildCountingReason` — each member's first answer, as plain
+ * data.
+ */
 export function buildStableReason(): ReasonInterface {
 	return createReason({
 		reasoners: [
@@ -572,7 +578,7 @@ export function buildStableReason(): ReasonInterface {
 	})
 }
 
-/** A reasons engine whose uncloneable logical result shifts after its captured answers. */
+/** Returns a reasons engine whose uncloneable logical result shifts after its captured answers. */
 export function buildShiftingReason(): ReasonInterface {
 	return createReason({
 		reasoners: [
@@ -587,7 +593,10 @@ export function buildShiftingReason(): ReasonInterface {
 	})
 }
 
-/** A logical result whose function member forces capture and whose declared getters shift. */
+/**
+ * Implements a logical result whose function member forces capture and whose declared
+ * getters shift.
+ */
 export class ShiftingLogicalResult implements LogicalResult {
 	#conclusion = 0
 	#rules = 0
@@ -624,7 +633,7 @@ export class ShiftingLogicalResult implements LogicalResult {
 	}
 }
 
-/** A reasons engine that refuses through `conclusion` alone and names no failing rule. */
+/** Returns a reasons engine that refuses through `conclusion` alone and names no failing rule. */
 export function buildSilentReason(): ReasonInterface {
 	return createReason({
 		reasoners: [
@@ -648,7 +657,7 @@ export function buildSilentReason(): ReasonInterface {
 }
 
 /**
- * Read a reasoner verdict's conclusion without narrowing at the assertion site.
+ * Reads a reasoner verdict's conclusion without narrowing at the assertion site.
  *
  * @remarks
  * `ReasonResult` is a union and only the logical arm carries `conclusion`, so this returns
@@ -659,13 +668,13 @@ export function readConclusion(result: ReasonResult): boolean | undefined {
 	return result.reasoning === 'logical' ? result.conclusion : undefined
 }
 
-/** Read a caught `BriefError`'s `context`, or `undefined` for any other value. */
+/** Reads a caught `BriefError`'s `context`, or `undefined` for any other value. */
 export function readErrorContext(error: unknown): Readonly<Record<string, unknown>> | undefined {
 	return isBriefError(error) ? error.context : undefined
 }
 
 /**
- * A `Record` whose prototype carries the mapping, so a lookup that ignores ownership
+ * Returns a `Record` whose prototype carries the mapping, so a lookup that ignores ownership
  * resolves a key the caller never declared.
  */
 export function buildInheritedActions(): Readonly<Record<string, 'migrate'>> {

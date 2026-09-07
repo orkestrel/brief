@@ -100,7 +100,7 @@ export class BriefManager implements BriefManagerInterface {
 		if (typeof target === 'string') return this.#discard(target)
 		// Deduplicated, because the contract is about the listed SET. A repeated id was removed
 		// on its first pass and then reported missing on its second, so `remove(['a', 'a'])`
-		// returned false for a record it had just removed.
+		// returned false for a record it had already removed.
 		let removed = true
 		for (const id of new Set(target)) {
 			if (!this.#discard(id)) removed = false

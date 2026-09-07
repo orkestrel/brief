@@ -97,7 +97,7 @@ pipeline at all.
 | `Manifest`               | interface | `{ read, edit, locked, forbidden }` — the DISJOINT file partitions, each `readonly Reference[]`; `read` order is the reading order.                                                                                                                 |
 | `Outcome`                | interface | `{ rank, text, required }` — one ranked outcome, not a step; `required: true` gates "done".                                                                                                                                                         |
 | `Given`                  | interface | `{ category, name, value }` — one context fact handed to the executor.                                                                                                                                                                              |
-| `Example`                | interface | `{ input, output, note? }` — one input-to-output exemplar; the highest-leverage ambiguity remover.                                                                                                                                                  |
+| `Example`                | interface | `{ input, output, note? }` — one input-to-output exemplar; the ambiguity remover that leaves the least to interpret.                                                                                                                                |
 | `Citation`               | interface | `{ name, url, note }` — one external source and why it is cited; the off-repository twin of `Reference`. List ORDER is the trust order.                                                                                                             |
 | `Gap`                    | interface | `{ field, question, blocking, candidates? }` — one unknown; `blocking: true` means no safe default exists and the gate must fail closed.                                                                                                            |
 | `Risk`                   | interface | `{ severity, text, mitigation }` — one pre-empted risk.                                                                                                                                                                                             |
@@ -549,7 +549,7 @@ The grant check reads `read`, `edit`, and `locked` — all of them OPEN a file, 
 exactly what obeying one requires. It subsumes the narrower question of an authority sitting
 in `forbidden`, because the partitions are disjoint, and it also catches the case a
 forbidden-only check cannot see: an authority the manifest never mentions at all, where the
-brief simply never says the executor may open what it must obey.
+brief never says the executor may open what it must obey.
 
 Both path checks compare EXACT strings and never expand a glob. `read: 'guides/**'` does not
 grant `authority: 'guides/brief.md'`, and `forbidden: 'app/**'` does not overlap
@@ -1116,8 +1116,8 @@ same brief without conflict.
 ### Narrowing an untrusted brief
 
 Briefs round-trip JSON — a stored brief, a tool argument, an agent's emission — through the
-parse-then-trust boundary: shape via the compiled guard, semantics via `validateBrief`,
-readiness via the gate. Each check answers its own question.
+parse-then-trust boundary: shape through the compiled guard, semantics through
+`validateBrief`, readiness through the gate. Each check answers its own question.
 
 ```ts
 import { createBriefCompiler, parseBrief, validateBrief } from '@orkestrel/brief'

@@ -133,7 +133,7 @@ export interface Given {
 	readonly value: string
 }
 
-/** Represents one input to output exemplar — the highest-leverage ambiguity remover. */
+/** Represents one input to output exemplar — the ambiguity remover that leaves the least to interpret. */
 export interface Example {
 	readonly input: string
 	readonly output: string
@@ -357,7 +357,7 @@ export interface BriefStageFailure {
  * types — import them from `@orkestrel/interpret` and `@orkestrel/reason`.
  *
  * `digest` identifies this OUTCOME — the brief, the questions, and the failures together — so
- * two identical compiles share it and a refused compile has one just as a complete one does.
+ * two identical compiles share it and a refused compile has one the same way a complete one does.
  * It is not `Brief.hash`, which identifies the brief's content alone and exists only on an
  * emitted brief. Key a cache of compile results by `digest`; key a registry of briefs by
  * `hash`.

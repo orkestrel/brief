@@ -390,7 +390,7 @@ describe('find leaves', () => {
 
 	it('reports an authority no partition opens, whether banned or simply absent', () => {
 		// The case a forbidden-only check missed entirely: the brief never says the executor
-		// may open what it must obey. Nothing is banned here — the manifest is just silent.
+		// may open what it must obey. Nothing is banned here — the manifest is silent.
 		const absent = buildReadyBrief({
 			authority: [buildReference('AGENTS.md', 'project law')],
 			manifest: buildManifest(),
@@ -533,7 +533,7 @@ describe('validateBrief', () => {
 		)
 		expect(banned.valid).toBe(false)
 		expect(banned.errors).toContain(message)
-		// Simply never granted — the case a forbidden-only check could not see.
+		// Never granted at all — the case a forbidden-only check could not see.
 		const absent = validateBrief(
 			buildReadyBrief({
 				authority: [buildReference('AGENTS.md', 'project law')],
