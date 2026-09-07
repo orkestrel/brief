@@ -1,12 +1,15 @@
 # @orkestrel/brief
 
-A synchronous, deterministic specification compiler. A rough request compiles into a
-`Brief` — a closed, JSON-serializable execution contract another agent can run with no
-interpretation left to do — and every downstream artifact (the prompt a model reads, a
-completion condition, a subagent dispatch) is projected from that one source of truth.
+> The specification compiler: a synchronous, deterministic pipeline that resolves a rough
+> request into a `Brief` — a closed, content-hashed execution contract another agent can run
+> with no interpretation left to do — gated by a traceable reasoner and projected into every
+> downstream artifact.
 
-A brief with blocking gaps never emits. The readiness gate is a `@orkestrel/reason`
-`LogicalDefinition`, so every verdict carries a traceable account of which check missed.
+Compile a request with the `createBriefCompiler` factory, read the `Briefing` it returns, and
+project the brief it carries into the prompt a model reads, a completion condition, or a
+subagent dispatch. A brief with blocking gaps never emits: the readiness gate is a
+`@orkestrel/reason` `LogicalDefinition`, so every verdict carries a traceable account of which
+check missed. Part of the `@orkestrel` line.
 
 ```sh
 npm install @orkestrel/brief

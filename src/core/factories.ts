@@ -24,6 +24,45 @@ import { briefShape } from './shapers.js'
  * emitter hooks.
  * @returns A working {@link BriefCompilerInterface}.
  *
+ * @example Compile and project a brief
+ * ```ts
+ * import {
+ * 	briefToGoal,
+ * 	briefToMarkdown,
+ * 	buildOutcome,
+ * 	buildProof,
+ * 	buildTask,
+ * 	createBriefCompiler,
+ * } from '@orkestrel/brief'
+ *
+ * const compiler = createBriefCompiler()
+ *
+ * const briefing = compiler.compile({
+ * 	task: buildTask('refactor', 'code', 'Refactor useForm to native browser form APIs.'),
+ * 	authority: [{ path: 'AGENTS.md', note: 'project law; wins every conflict' }],
+ * 	manifest: {
+ * 		read: [
+ * 			{ path: 'AGENTS.md', note: 'project law; wins every conflict' },
+ * 			{ path: 'guides/browser.md', note: 'the composable contract' },
+ * 		],
+ * 		edit: [{ path: 'src/browser/composables/useForm.ts', note: 'the composable being refactored' }],
+ * 		locked: [{ path: 'src/browser/types.ts', note: 'the published contract' }],
+ * 		forbidden: [{ path: 'app/**', note: 'out of scope' }],
+ * 	},
+ * 	outcomes: [buildOutcome(1, 'useForm uses native FormData with no behavior change')],
+ * 	proofs: [buildProof('type-check and lint pass', 'npm run check')],
+ * })
+ *
+ * briefing.brief !== undefined // true — the brief is present exactly when the gate passed
+ * if (briefing.brief !== undefined) {
+ * 	briefToMarkdown(briefing.brief) // the copy-ready agent prompt
+ * 	briefToGoal(briefing.brief) // the /goal completion condition
+ * }
+ *
+ * compiler.emitter.on('block', (questions) => questions.length)
+ * compiler.destroy()
+ * ```
+ *
  * @example
  * ```ts
  * import { createBriefCompiler } from '@orkestrel/brief'

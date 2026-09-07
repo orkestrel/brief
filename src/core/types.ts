@@ -470,11 +470,39 @@ export interface BriefCompilerOptions {
 
 /** Declares the compilation orchestrator contract. */
 export interface BriefCompilerInterface {
+	/** Holds the typed emitter carrying `compile`, `block`, `error`, and `destroy`. */
 	readonly emitter: EmitterInterface<BriefCompilerEventMap>
+	/** Holds the interpret pipeline the `interpret` stage delegates to, owned or borrowed. */
 	readonly interpret: InterpretInterface
+	/** Holds the reasoner the gate evaluates its `LogicalDefinition` on, owned or borrowed. */
 	readonly reason: ReasonInterface
+	/**
+	 * Runs the `interpret` → `draft` → `gate` → `pin` pipeline over a `BriefInput`, returning a
+	 * complete or visible-incomplete result.
+	 *
+	 * @remarks
+	 * Synchronous, and it never throws for a brief it cannot emit: a blocking gap, a refused
+	 * gate, and a thrown stage each record their cause on `failures` and leave `brief` absent.
+	 *
+	 * @param input - The caller's text, interpretation, and authored sections.
+	 * @returns The `Briefing` for this call, complete exactly when `brief` is present.
+	 */
 	compile(input: BriefInput): Briefing
+	/**
+	 * Evaluates one brief's readiness through the reasons gate — `briefToSubject` against
+	 * `buildGateDefinition()`.
+	 *
+	 * @param brief - The brief to measure.
+	 * @returns The reasoner's traceable verdict, whose `conclusion` is the `ready` fact.
+	 */
 	gate(brief: Brief): LogicalResult
+	/**
+	 * Tears the orchestrator down idempotently — owned engines first, the emitter last.
+	 *
+	 * @remarks
+	 * Emits `destroy` between the two, and releases only the engines it created. Every method
+	 * except this one throws `BriefError('DESTROYED', …)` afterwards.
+	 */
 	destroy(): void
 }
 
@@ -502,14 +530,61 @@ export interface BriefManagerOptions {
  * unchanged content is a version no-op.
  */
 export interface BriefManagerInterface {
+	/** Holds the typed emitter carrying `add`, `remove`, and `destroy`. */
 	readonly emitter: EmitterInterface<BriefManagerEventMap>
+	/** Holds how many records are registered. */
 	readonly count: number
+	/**
+	 * Reports whether a brief with the given id is registered.
+	 *
+	 * @param id - The record id to look for.
+	 * @returns True if a record carries that id; false otherwise.
+	 */
 	has(id: string): boolean
+	/**
+	 * Looks up one registered brief record by id.
+	 *
+	 * @param id - The record id to read.
+	 * @returns The record, or `undefined` when no record carries that id.
+	 */
 	brief(id: string): BriefRecord | undefined
+	/**
+	 * Lists every registered brief record.
+	 *
+	 * @returns The records, in registration order.
+	 */
 	briefs(): readonly BriefRecord[]
+	/**
+	 * Registers one brief from its data, minting the id from its content hash when none is given.
+	 *
+	 * @remarks
+	 * Emits `add`. `version` bumps only when the content hash moves, so re-adding unchanged
+	 * content is a no-op that keeps the record it already had.
+	 *
+	 * @param brief - The brief to register.
+	 * @param options - An explicit `id` to key the record by.
+	 * @returns The registered record.
+	 */
 	add(brief: Brief, options?: RecordOptions): BriefRecord
+	/**
+	 * Removes the listed briefs by id, one brief by id, or every brief.
+	 *
+	 * @remarks
+	 * Emits `remove` once per removed id. The array overload is declared first so an id list
+	 * resolves to the batch form, which reports `true` only when every listed id was present.
+	 *
+	 * @param ids - The record ids to remove.
+	 * @returns True when every listed id was registered; false otherwise.
+	 */
 	remove(ids: readonly string[]): boolean
 	remove(id: string): boolean
 	remove(): void
+	/**
+	 * Tears the registry down idempotently — the collection first, the emitter last.
+	 *
+	 * @remarks
+	 * Emits `destroy` between the two. Every method except this one throws
+	 * `BriefError('DESTROYED', …)` afterwards.
+	 */
 	destroy(): void
 }

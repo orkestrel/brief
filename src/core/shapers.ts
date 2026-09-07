@@ -16,13 +16,20 @@ import {
 	SINGLE_LINE_PATTERN,
 } from './constants.js'
 
-/** Describes a single-line string of any length, including empty. */
+/** Describes a single-line string of any length, including empty — the shape mirror of `isText`. */
 export const textShape: StringShape = stringShape({ pattern: SINGLE_LINE_PATTERN })
 
 /** Describes a non-empty single-line string — the shape mirror of `isLine`. */
 export const lineShape: StringShape = stringShape({ min: 1, pattern: SINGLE_LINE_PATTERN })
 
-/** Describes the `Task` shape — closed operation and domain vocabularies plus a non-empty statement. */
+/**
+ * Describes the `Task` shape — closed operation and domain vocabularies plus a non-empty
+ * statement.
+ *
+ * @remarks
+ * `literalShape(TASK_OPERATIONS)` and `literalShape(TASK_DOMAINS)` compile the same tuples the
+ * guards read, and `statement` carries `min: 1`.
+ */
 export const taskShape = objectShape(
 	{
 		operation: literalShape(TASK_OPERATIONS),
@@ -41,7 +48,13 @@ export const referenceShape = objectShape(
 	{ description: 'One referenced path and why it is listed.' },
 )
 
-/** Describes the `Manifest` shape — disjoint reference partitions. */
+/**
+ * Describes the `Manifest` shape — disjoint reference partitions.
+ *
+ * @remarks
+ * Each partition is an `arrayShape(referenceShape)`; disjointness is `validateBrief`'s pass
+ * rather than the shape's.
+ */
 export const manifestShape = objectShape(
 	{
 		read: arrayShape(referenceShape),
@@ -52,7 +65,12 @@ export const manifestShape = objectShape(
 	{ description: 'The disjoint file partitions of a brief.' },
 )
 
-/** Describes the `Outcome` shape — a one-based rank, the result text, and whether it gates done. */
+/**
+ * Describes the `Outcome` shape — a one-based rank, the result text, and whether it gates done.
+ *
+ * @remarks
+ * `rank` is an `integerShape({ min: 1 })`, so a zero or fractional rank is off-contract.
+ */
 export const outcomeShape = objectShape(
 	{
 		rank: integerShape({ min: 1 }),

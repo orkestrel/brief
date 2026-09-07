@@ -54,6 +54,10 @@ export const isText: Guard<string> = (value: unknown): value is string =>
 /**
  * Checks whether the value is a non-empty string holding no line terminator.
  *
+ * @remarks
+ * The shape of nearly every brief field: a path, a note, a statement, a rule, and a command
+ * all narrow through it.
+ *
  * @param value - The value to inspect.
  * @returns True if `value` is a non-empty string holding no line terminator; false otherwise.
  */

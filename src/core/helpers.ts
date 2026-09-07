@@ -55,6 +55,10 @@ export function buildTask(operation: TaskOperation, domain: TaskDomain, statemen
 /**
  * Assembles a `Reference` from a path and the note that justifies listing it.
  *
+ * @remarks
+ * The one builder for an authority entry and a manifest entry alike: the container the record
+ * lands in is what says whether the path is ranked or permitted.
+ *
  * @param path - The referenced path or glob.
  * @param note - Why the path is listed.
  * @returns A fresh `Reference`.
@@ -473,6 +477,10 @@ export function countSentences(statement: string): number {
 
 /**
  * Lists the gaps that block emission.
+ *
+ * @remarks
+ * A non-empty result means the gate must fail closed: a blocking gap has no safe default, so
+ * the compile yields a visible incomplete `Briefing` carrying the questions instead of a brief.
  *
  * @param source - The brief to inspect.
  * @returns Every gap carrying `blocking: true`, in declaration order.
@@ -1027,8 +1035,9 @@ export function exampleToLines(entry: Example): readonly string[] {
  * Projects a brief into the copy-ready agent prompt.
  *
  * @remarks
- * Paths are REFERENCED, never inlined — the executor retrieves them. An empty section is
- * omitted entirely, so the rendering carries no filler an executor must read past.
+ * Sections render in authority order, so the executor meets what wins a conflict before what
+ * it may touch. Paths are referenced, never inlined — the executor retrieves them. An empty
+ * section is omitted entirely, so the rendering carries no filler an executor must read past.
  *
  * @param input - The brief to render.
  * @returns The markdown prompt.
@@ -1199,10 +1208,11 @@ export function briefToGoal(input: Brief, turns: number = DEFAULT_BRIEF_TURNS): 
  * Projects a brief into a subagent `Dispatch`.
  *
  * @remarks
- * `edit` is exactly `manifest.edit`, so two dispatches whose `edit` sets do not intersect
- * can run concurrently under the same brief without conflict.
+ * `edit` is exactly `manifest.edit` — the owned set — so two dispatches whose `edit` sets do
+ * not intersect can run concurrently under the same brief without conflict. `locked` and
+ * `forbidden` cross unchanged as the do-not-touch sets.
  *
- * `authority` is exactly `brief.authority` in rank order, and it is a SEPARATE axis from the
+ * `authority` is exactly `brief.authority` in rank order, and it is a separate axis from the
  * permission sets rather than a further partition — a ranked path normally also appears in
  * `read` or `locked`, because the executor has to open what it obeys. It is projected as
  * paths so a machine consumer never has to parse `prompt`, which is written for a model.

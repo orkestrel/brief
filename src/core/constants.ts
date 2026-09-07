@@ -1,7 +1,13 @@
 import type { Interpretation } from '@orkestrel/interpret'
 import type { OutputFormat, RiskSeverity, TaskDomain, TaskOperation } from './types.js'
 
-/** Lists the `TaskOperation` values, frozen. */
+/**
+ * Lists the `TaskOperation` values, frozen.
+ *
+ * @remarks
+ * Compose the tuple rather than restating its members: `literalOf(TASK_OPERATIONS)` builds the
+ * guard and `parseEnum(value, TASK_OPERATIONS)` coerces a bare value against it.
+ */
 export const TASK_OPERATIONS: readonly TaskOperation[] = Object.freeze([
 	'create',
 	'refactor',
