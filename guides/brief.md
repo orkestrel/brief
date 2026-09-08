@@ -232,7 +232,7 @@ guards the same way with `@orkestrel/interpret`'s published `isInterpretation`, 
 doors: the borrowed engine's return and a caller-supplied `interpretation`. A malformed value at
 either door records `INTERPRET_FAILED` instead of throwing out of `compile`.
 
-A `Shape` cell holds an interface's data members as bare names in braces, `?` marking an optional member and `plus` introducing its call-signature members, and a type alias's own type literal with a union's arms escaped as `\|`. In a guard table a `Shape` cell holds the type the guard narrows to.
+In a guard table a `Shape` cell holds the type the guard narrows to.
 
 | API               | Kind  | Shape           | Summary                                                                                          |
 | ----------------- | ----- | --------------- | ------------------------------------------------------------------------------------------------ |
