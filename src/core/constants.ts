@@ -102,7 +102,7 @@ export const GATE_ID = 'gate'
 export const LINE_BREAK_PATTERN = /\r\n|[\n\r\u2028\u2029]/
 
 /**
- * Holds the positive form of {@link LINE_BREAK_PATTERN}, for the shape DSL.
+ * Holds the positive form of {@link LINE_BREAK_PATTERN}, for a `stringShape` `pattern`.
  *
  * @remarks
  * `stringShape`'s `pattern` must MATCH an accepted value, so the guard's refusal regex

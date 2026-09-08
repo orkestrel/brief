@@ -38,9 +38,9 @@ Source: [`src/core`](../src/core). Surfaced through the `@src/core` barrel.
 
 ## Surface
 
-Compile a request into a `Briefing`, then project the brief it carries:
-
 ### Compile and project a brief
+
+Compile a request into a `Briefing`, then project the brief it carries:
 
 ```ts
 import {
@@ -139,18 +139,20 @@ check, met or missed, narrated by the reasoner.
 
 ### Constants
 
-| API                      | Kind  | Summary                                                                    |
-| ------------------------ | ----- | -------------------------------------------------------------------------- |
-| `TASK_OPERATIONS`        | const | Lists the `TaskOperation` values, frozen.                                  |
-| `TASK_DOMAINS`           | const | Lists the `TaskDomain` values, frozen.                                     |
-| `OUTPUT_FORMATS`         | const | Lists the `OutputFormat` values, frozen.                                   |
-| `RISK_SEVERITIES`        | const | Lists the `RiskSeverity` values, frozen.                                   |
-| `INTERPRETATION_MEMBERS` | const | Lists every published `Interpretation` member name, frozen.                |
-| `DEFAULT_BRIEF_TURNS`    | const | Holds `16` — the default turn cap `briefToGoal` renders.                   |
-| `GATE_ID`                | const | Holds `'gate'` — the id of the `buildGateDefinition()` logical definition. |
-| `LINE_BREAK_PATTERN`     | const | Matches every line terminator a brief field refuses.                       |
-| `SINGLE_LINE_PATTERN`    | const | Holds the positive form of `LINE_BREAK_PATTERN`, for the shape DSL.        |
-| `BLANK_PATTERN`          | const | Matches a string of one or more spaces and nothing else.                   |
+A `Shape` cell holds the constant's declared type.
+
+| API                      | Kind  | Shape                               | Summary                                                                         |
+| ------------------------ | ----- | ----------------------------------- | ------------------------------------------------------------------------------- |
+| `TASK_OPERATIONS`        | const | `readonly TaskOperation[]`          | Lists the `TaskOperation` values, frozen.                                       |
+| `TASK_DOMAINS`           | const | `readonly TaskDomain[]`             | Lists the `TaskDomain` values, frozen.                                          |
+| `OUTPUT_FORMATS`         | const | `readonly OutputFormat[]`           | Lists the `OutputFormat` values, frozen.                                        |
+| `RISK_SEVERITIES`        | const | `readonly RiskSeverity[]`           | Lists the `RiskSeverity` values, frozen.                                        |
+| `INTERPRETATION_MEMBERS` | const | `readonly (keyof Interpretation)[]` | Lists every published `Interpretation` member name, frozen.                     |
+| `DEFAULT_BRIEF_TURNS`    | const | `number`                            | Holds `16` — the default turn cap `briefToGoal` renders.                        |
+| `GATE_ID`                | const | `string`                            | Holds `'gate'` — the id of the `buildGateDefinition()` logical definition.      |
+| `LINE_BREAK_PATTERN`     | const | `RegExp`                            | Matches every line terminator a brief field refuses.                            |
+| `SINGLE_LINE_PATTERN`    | const | `RegExp`                            | Holds the positive form of `LINE_BREAK_PATTERN`, for a `stringShape` `pattern`. |
+| `BLANK_PATTERN`          | const | `RegExp`                            | Matches a string of one or more spaces and nothing else.                        |
 
 An interpretation the compiler reads is foreign data, and a class instance carries its contract
 on the prototype, so `BriefCompiler` materializes the members `INTERPRETATION_MEMBERS` names into
@@ -1000,11 +1002,11 @@ const stopped = blocked.compile({
 })
 
 stopped.brief // undefined — the gate failed closed, and that absence is the signal
-stopped.brief // undefined — nothing to project, deliberately
 stopped.questions // [{ field: 'output', question: 'Does the result need…', blocking: true, … }]
+stopped.questions.length // 1 — one question to answer, then re-compile
 stopped.failures // [{ stage: 'gate', code: 'BLOCKED', message: '1 blocking gap(s)' }]
 stopped.verdict?.rules.filter((entry) => !entry.applied) // exactly which rules missed
-stopped.verdict?.trace // the reasoner's narration of the rules that DERIVED, not the misses
+stopped.verdict?.trace // the reasoner's narration of the rules that derived, not the misses
 blocked.destroy()
 ```
 
@@ -1046,11 +1048,11 @@ measures // { operation: 'refactor', blocking: 0, outcomes: 2, required: 2, proo
 const ruling = engine.reason(measures, buildGateDefinition())
 if (ruling.reasoning === 'logical') {
 	ruling.conclusion // true — ready to emit
-	ruling.rules.filter((entry) => !entry.applied) // the rules that MISSED
+	ruling.rules.filter((entry) => !entry.applied) // the rules that missed
 }
 engine.destroy()
 
-// A house gate: this package's readiness UNCHANGED, plus one rule of your own, on your engine.
+// A house gate: this package's readiness unchanged, plus one rule of your own, on your engine.
 const house = createLogicalDefinition('house', 'House readiness', [
 	...buildGateDefinition().rules,
 	createRule(
@@ -1175,6 +1177,9 @@ briefToMarkdown(boundary.generate(seededRandom(7))) // a reproducible fixture, r
 ```
 
 ### Storing briefs by their own identity
+
+A record's id is its brief's own content hash, so re-adding identical content mints no second
+record and moves no version:
 
 ```ts
 import {

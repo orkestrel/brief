@@ -1,6 +1,6 @@
 // The consumer-side guides-parity drop-in: runs `@orkestrel/guide`'s checks against
 // this repo's own `guides/README.md` manifest. The constants that follow are this
-// package's own, and are the only part a sibling package changes.
+// package's own, as is the executed section that closes the file.
 
 import { describe, expect, it } from 'vitest'
 import {
@@ -41,6 +41,7 @@ import {
 	buildRisk,
 	buildTask,
 	createBriefCompiler,
+	createBriefManager,
 	findBlockingGaps,
 	findManifestOverlaps,
 	findUngrantedAuthority,
@@ -114,13 +115,6 @@ it('manifest lists at least one guide', () => {
 	expect(manifest.length).toBeGreaterThan(0)
 })
 
-it('reads a real inventory covering the documented source', () => {
-	expect(Object.keys(files)).toContain('src/core/index.ts')
-	expect(Object.keys(files)).toContain(GUIDE_SPEC)
-	// The instrument must be able to report absence, not only presence.
-	expect(Object.keys(files)).not.toContain('src/core/absent.ts')
-})
-
 // The example half of the equality case is silent over an empty population: with no
 // title on both sides `findDrift` compares no pair and the case passes on the summaries
 // alone. This pins the population this repository's own guide contributes, so removing
@@ -165,6 +159,13 @@ it('opens the README with the guide tagline', () => {
 	expect(pitch).not.toBeUndefined()
 	expect(tagline).not.toBeUndefined()
 	expect(pitch).toBe(tagline)
+})
+
+it('reads a real inventory covering the documented source', () => {
+	expect(Object.keys(files)).toContain('src/core/index.ts')
+	expect(Object.keys(files)).toContain(GUIDE_SPEC)
+	// The instrument must be able to report absence, not only presence.
+	expect(Object.keys(files)).not.toContain('src/core/absent.ts')
 })
 
 for (const entry of manifest) {
@@ -629,5 +630,54 @@ describe('flagship fences', () => {
 		expect(briefToHash(pinned)).toBe(briefToHash(draft))
 		expect(briefToDispatch(pinned).edit).toStrictEqual(['src/browser/composables/useForm.ts'])
 		expect(briefToDispatch(pinned).authority).toStrictEqual(['AGENTS.md'])
+	})
+
+	it('runs the blocking path fence and yields the readings its comments claim', () => {
+		const blocked = createBriefCompiler()
+		const stopped = blocked.compile({
+			task: buildTask('refactor', 'code', 'Refactor the session store to the async seam.'),
+			outcomes: [buildOutcome(1, 'the store implements the async seam')],
+			gaps: [
+				buildGap('output', 'Does the result need to land as a diff or as full files?', {
+					blocking: true,
+					candidates: ['diff', 'code'],
+				}),
+			],
+			proofs: [buildProof('checks pass', 'npm run check')],
+		})
+		// Each assertion following is a documented `// value` comment from the blocking path fence.
+		expect(stopped.brief).toBeUndefined()
+		// `toEqual`, not `toStrictEqual`: a gap the compiler emits carries a null prototype, so a
+		// prototype-sensitive matcher reports two records with no visual difference as unequal.
+		expect(stopped.questions).toEqual([
+			{
+				field: 'output',
+				question: 'Does the result need to land as a diff or as full files?',
+				blocking: true,
+				candidates: ['diff', 'code'],
+			},
+		])
+		expect(stopped.questions.length).toBe(1)
+		expect(stopped.failures).toEqual([
+			{ stage: 'gate', code: 'BLOCKED', message: '1 blocking gap(s)' },
+		])
+		expect(stopped.verdict?.rules.filter((entry) => !entry.applied).length).toBeGreaterThan(0)
+		blocked.destroy()
+	})
+
+	it('runs the identity fence and mints one record for repeated content', () => {
+		const store = createBriefManager()
+		const first = store.add(
+			buildBrief(buildTask('plan', 'ops', 'Plan the 0.1 release.'), {
+				outcomes: [buildOutcome(1, 'the layer order is written down')],
+				proofs: [buildProof('the catalog regenerates', 'npx @orkestrel/scaffold catalog')],
+			}),
+		)
+		// The section's own claim: the same content mints the same id and moves no version.
+		const again = store.add(first.brief)
+		expect(again.id).toBe(first.id)
+		expect(again.version).toBe(1)
+		expect(store.count).toBe(1)
+		store.destroy()
 	})
 })

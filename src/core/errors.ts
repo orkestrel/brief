@@ -4,6 +4,9 @@ import type { BriefErrorCode } from './types.js'
  * Represents the one error class this package throws.
  *
  * @remarks
+ * Extends `Error` with a readonly `code` on the `BriefErrorCode` vocabulary and an optional
+ * readonly `context` record carrying whatever the raising site can supply.
+ *
  * Throws are reserved for caller misuse: `assertBrief`, `snapshotBrief`, and `pinBrief` on
  * off-contract data throw `INVALID`; any method after `destroy()` throws `DESTROYED`; and `BriefCompiler.gate` throws
  * `GATE_FAILED` when a borrowed reasoner returns a non-logical result. A stage that fails

@@ -412,7 +412,13 @@ export interface BriefRecord {
 	readonly hash: string
 }
 
-/** Declares the `BriefCompiler`'s push observation surface. */
+/**
+ * Declares the `BriefCompiler`'s push observation surface.
+ *
+ * @remarks
+ * `compile` carries the `Briefing` the call produced, `block` carries the blocking `Gap` list
+ * that stopped emission, `error` carries the thrown value, and `destroy` carries nothing.
+ */
 export type BriefCompilerEventMap = {
 	readonly compile: readonly [briefing: Briefing]
 	readonly block: readonly [questions: readonly Gap[]]
@@ -506,7 +512,13 @@ export interface BriefCompilerInterface {
 	destroy(): void
 }
 
-/** Declares the `BriefManager`'s push observation surface. */
+/**
+ * Declares the `BriefManager`'s push observation surface.
+ *
+ * @remarks
+ * `add` and `remove` each carry the record id the store minted from the brief's content hash,
+ * and `destroy` carries nothing.
+ */
 export type BriefManagerEventMap = {
 	readonly add: readonly [id: string]
 	readonly remove: readonly [id: string]

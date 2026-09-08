@@ -11,9 +11,18 @@ subagent dispatch. A brief with blocking gaps never emits: the readiness gate is
 `@orkestrel/reason` `LogicalDefinition`, so every verdict carries a traceable account of which
 check missed. Part of the `@orkestrel` line.
 
+## Install
+
 ```sh
 npm install @orkestrel/brief
 ```
+
+## Requirements
+
+- Node.js >= 22.12.0, matching the `engines` field in `package.json`
+- ESM and CommonJS entry points, selected by the `exports` field in `package.json`
+
+## Usage
 
 ```ts
 import {
@@ -38,6 +47,8 @@ if (briefing.brief !== undefined) {
 }
 compiler.destroy()
 ```
+
+## Guide
 
 Full documentation: [`guides/brief.md`](guides/brief.md). The guides index lives at
 [`guides/README.md`](guides/README.md).
