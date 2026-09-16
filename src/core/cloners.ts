@@ -1,5 +1,5 @@
 import type { Brief } from './types.js'
-import { attempt, cloneJSONRecord } from '@orkestrel/contract'
+import { attempt, cloneJSONRecord, isArray, isFunction, isObject } from '@orkestrel/contract'
 import { BriefError } from './errors.js'
 import { isBrief } from './validators.js'
 
@@ -28,11 +28,11 @@ import { isBrief } from './validators.js'
  * ```
  */
 export function captureValue(source: unknown, members: readonly string[]): unknown {
-	if (source === null || (typeof source !== 'object' && typeof source !== 'function')) {
+	if (!isObject(source) && !isFunction(source)) {
 		return source
 	}
 
-	const target: object = Array.isArray(source) ? [] : Object.create(null)
+	const target: object = isArray(source) ? [] : Object.create(null)
 	const seen = new WeakMap<object, object>([[source, target]])
 	const captured: object[] = [target]
 	const pending: Array<
@@ -58,14 +58,14 @@ export function captureValue(source: unknown, members: readonly string[]): unkno
 
 		for (const [key, value] of entries) {
 			let owned = value
-			if (value !== null && typeof value === 'object') {
+			if (isObject(value)) {
 				const existing = seen.get(value)
 				if (existing !== undefined) {
 					owned = existing
 				} else {
 					const prototype = Reflect.getPrototypeOf(value)
-					if (Array.isArray(value) || prototype === null || prototype === Object.prototype) {
-						const branch: object = Array.isArray(value) ? [] : Object.create(null)
+					if (isArray(value) || prototype === null || prototype === Object.prototype) {
+						const branch: object = isArray(value) ? [] : Object.create(null)
 						seen.set(value, branch)
 						captured.push(branch)
 						pending.push([value, branch, undefined])

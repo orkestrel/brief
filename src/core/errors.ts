@@ -1,4 +1,5 @@
 import type { BriefErrorCode } from './types.js'
+import { isInstance } from '@orkestrel/contract'
 
 /**
  * Represents the one error class this package throws.
@@ -53,5 +54,5 @@ export class BriefError extends Error {
  * ```
  */
 export function isBriefError(value: unknown): value is BriefError {
-	return value instanceof BriefError
+	return isInstance(value, BriefError)
 }

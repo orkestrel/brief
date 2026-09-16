@@ -8,6 +8,7 @@ import type {
 	BriefRecord,
 } from './types.js'
 import { Emitter } from '@orkestrel/emitter'
+import { isString } from '@orkestrel/contract'
 import { snapshotBrief } from './cloners.js'
 import { BriefError } from './errors.js'
 import { briefToContent, briefToHash, briefToTrace } from './helpers.js'
@@ -97,7 +98,7 @@ export class BriefManager implements BriefManagerInterface {
 			for (const id of [...this.#records.keys()]) this.#discard(id)
 			return
 		}
-		if (typeof target === 'string') return this.#discard(target)
+		if (isString(target)) return this.#discard(target)
 		// Deduplicated, because the contract is about the listed SET. A repeated id was removed
 		// on its first pass and then reported missing on its second, so `remove(['a', 'a'])`
 		// returned false for a record it had already removed.

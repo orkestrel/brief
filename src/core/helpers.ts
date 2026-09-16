@@ -19,7 +19,7 @@ import type {
 	TaskDomain,
 	TaskOperation,
 } from './types.js'
-import { attempt } from '@orkestrel/contract'
+import { attempt, isError, isObject, isString } from '@orkestrel/contract'
 import { canonicalize, collapseWhitespace, digestValue } from '@orkestrel/interpret'
 import {
 	createAtom,
@@ -828,7 +828,7 @@ export function freezeDeep<T>(value: T): T {
  * ```
  */
 export function freezeBranch<T>(value: T, seen: WeakSet<object>): T {
-	if (value === null || typeof value !== 'object') return value
+	if (!isObject(value)) return value
 	if (seen.has(value)) return value
 	seen.add(value)
 	Object.freeze(value)
@@ -865,8 +865,8 @@ export function freezeBranch<T>(value: T, seen: WeakSet<object>): T {
  * ```
  */
 export function errorToMessage(error: unknown): string {
-	const read = attempt(() => (error instanceof Error ? error.message : String(error)))
-	if (read.success && typeof read.value === 'string') return read.value
+	const read = attempt(() => (isError(error) ? error.message : String(error)))
+	if (read.success && isString(read.value)) return read.value
 	return `an unreadable ${typeof error} was thrown`
 }
 
@@ -1363,9 +1363,9 @@ export function deriveGivens(entities: readonly Entity[]): readonly Given[] {
 			buildGiven(
 				'extracted',
 				entity.name,
-				typeof entity.value === 'string'
+				isString(entity.value)
 					? entity.value
-					: typeof entity.value === 'object' && entity.value !== null
+					: isObject(entity.value)
 						? canonicalize(entity.value)
 						: String(entity.value),
 			),
