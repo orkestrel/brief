@@ -475,7 +475,7 @@ export function buildAdversarialValues(): readonly unknown[] {
  * Returns `undefined` for anything that is not a `BriefError`, so one unconditional
  * `expect` covers both the narrowing and the code.
  */
-export function readErrorCode(error: unknown): BriefErrorCode | undefined {
+export function readBriefCode(error: unknown): BriefErrorCode | undefined {
 	return isBriefError(error) ? error.code : undefined
 }
 

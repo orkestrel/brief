@@ -25,7 +25,7 @@ import {
 	buildStableReason,
 	buildReadyTask,
 	readConclusion,
-	readErrorCode,
+	readBriefCode,
 	readErrorContext,
 } from './setup.js'
 
@@ -217,16 +217,16 @@ describe('buildAdversarialValues', () => {
 	})
 })
 
-describe('readErrorCode and readErrorContext', () => {
+describe('readBriefCode and readErrorContext', () => {
 	it('reads the code and context from a real BriefError', () => {
 		const error = new BriefError('INVALID', 'broke the contract', { field: 'task' })
-		expect(readErrorCode(error)).toBe('INVALID')
+		expect(readBriefCode(error)).toBe('INVALID')
 		expect(readErrorContext(error)).toEqual({ field: 'task' })
 	})
 
 	it('returns undefined for a value that is not a BriefError', () => {
-		expect(readErrorCode(new Error('plain'))).toBeUndefined()
-		expect(readErrorCode('not an error')).toBeUndefined()
+		expect(readBriefCode(new Error('plain'))).toBeUndefined()
+		expect(readBriefCode('not an error')).toBeUndefined()
 		expect(readErrorContext(new Error('plain'))).toBeUndefined()
 	})
 })

@@ -13,7 +13,7 @@ import {
 } from '@src/core'
 import { captureError, createRecorder, requireValue } from '@orkestrel/test'
 import { describe, expect, it } from 'vitest'
-import { buildReadyBrief, buildReadyTask, readErrorCode } from '../../setup.js'
+import { buildReadyBrief, buildReadyTask, readBriefCode } from '../../setup.js'
 
 describe('BriefManager records', () => {
 	it('mints the record id from the brief content hash', () => {
@@ -114,7 +114,7 @@ describe('BriefManager accessors', () => {
 		const registry = createBriefManager()
 		const record = registry.add(first)
 		const error = captureError(() => registry.add(second))
-		expect(readErrorCode(error)).toBe('INVALID')
+		expect(readBriefCode(error)).toBe('INVALID')
 		expect(registry.count).toBe(1)
 		expect(briefToContent(requireValue(registry.brief(record.id), 'the first record').brief)).toBe(
 			briefToContent(first),
@@ -189,7 +189,7 @@ describe('BriefManager seeding', () => {
 				}),
 		)
 		expect(isBriefError(failure)).toBe(true)
-		expect(readErrorCode(failure)).toBe('INVALID')
+		expect(readBriefCode(failure)).toBe('INVALID')
 		expect(seen).toStrictEqual([])
 
 		// The control: a wholly valid seed collection constructs, announces, and registers.
@@ -255,7 +255,7 @@ describe('BriefManager remove', () => {
 		expect(forged).toBeDefined()
 		const registry = createBriefManager()
 		const failure = captureError(() => registry.add(requireValue(forged, 'the forged brief')))
-		expect(readErrorCode(failure)).toBe('INVALID')
+		expect(readBriefCode(failure)).toBe('INVALID')
 		expect(registry.count).toBe(0)
 		// The control: the same brief with its real hash is accepted.
 		expect(registry.add(pinBrief(buildReadyBrief())).version).toBe(1)
@@ -275,7 +275,7 @@ describe('BriefManager remove', () => {
 		expect(forged).toBeDefined()
 		const registry = createBriefManager()
 		const failure = captureError(() => registry.add(requireValue(forged, 'the forged brief')))
-		expect(readErrorCode(failure)).toBe('INVALID')
+		expect(readBriefCode(failure)).toBe('INVALID')
 		expect(registry.count).toBe(0)
 		// The control: the same brief with the trace its own content derives is accepted.
 		expect(registry.add(pinBrief(buildReadyBrief())).version).toBe(1)
@@ -380,7 +380,7 @@ describe('BriefManager teardown', () => {
 		registry.destroy()
 		const error = captureError(() => registry.briefs())
 		expect(isBriefError(error)).toBe(true)
-		expect(readErrorCode(error)).toBe('DESTROYED')
-		expect(readErrorCode(new Error('unrelated'))).toBeUndefined()
+		expect(readBriefCode(error)).toBe('DESTROYED')
+		expect(readBriefCode(new Error('unrelated'))).toBeUndefined()
 	})
 })

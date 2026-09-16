@@ -55,7 +55,7 @@ import {
 	buildReadyManifest,
 	buildReadyTask,
 	readConclusion,
-	readErrorCode,
+	readBriefCode,
 	readErrorContext,
 } from '../../setup.js'
 
@@ -879,7 +879,7 @@ describe('assertBrief', () => {
 			assertBrief({ task: { operation: 'plan', domain: 'ops', statement: 'x.' } }),
 		)
 		expect(isBriefError(error)).toBe(true)
-		expect(readErrorCode(error)).toBe('INVALID')
+		expect(readBriefCode(error)).toBe('INVALID')
 		expect(readErrorContext(error)).toStrictEqual({ field: 'brief' })
 	})
 

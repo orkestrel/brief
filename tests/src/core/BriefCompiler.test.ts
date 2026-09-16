@@ -34,7 +34,7 @@ import {
 	buildShiftingReason,
 	buildStableReason,
 	buildReadyTask,
-	readErrorCode,
+	readBriefCode,
 } from '../../setup.js'
 
 describe('BriefCompiler pipeline', () => {
@@ -465,7 +465,7 @@ describe('BriefCompiler fail-closed paths', () => {
 		borrowed.destroy()
 		const failure = captureError(() => compiler.gate(buildReadyBrief()))
 		expect(isBriefError(failure)).toBe(true)
-		expect(readErrorCode(failure)).toBe('GATE_FAILED')
+		expect(readBriefCode(failure)).toBe('GATE_FAILED')
 		// And `compile` still contains it rather than throwing.
 		const briefing = compiler.compile(buildReadyInput())
 		expect(briefing.brief).toBeUndefined()
@@ -941,7 +941,7 @@ describe('BriefCompiler teardown', () => {
 		compiler.destroy()
 		const error = captureError(() => compiler.gate(buildReadyBrief()))
 		expect(isBriefError(error)).toBe(true)
-		expect(readErrorCode(error)).toBe('DESTROYED')
+		expect(readBriefCode(error)).toBe('DESTROYED')
 	})
 
 	it('keeps the getters working after destroy', () => {
