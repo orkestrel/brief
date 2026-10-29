@@ -584,23 +584,17 @@ export function findUngrantedAuthority(source: Brief): readonly string[] {
  * ```
  */
 export function findManifestOverlaps(source: Brief): readonly string[] {
-	const counts = new Map<string, number>()
 	const partitions: ReadonlyArray<readonly Reference[]> = [
 		source.manifest.read,
 		source.manifest.edit,
 		source.manifest.locked,
 		source.manifest.forbidden,
 	]
-	for (const partition of partitions) {
-		for (const path of new Set(partition.map((entry) => entry.path))) {
-			counts.set(path, (counts.get(path) ?? 0) + 1)
-		}
-	}
-	const overlaps: string[] = []
-	for (const [path, count] of counts) {
-		if (count > 1) overlaps.push(path)
-	}
-	return overlaps
+	const groups = Map.groupBy(
+		partitions.flatMap((partition) => [...new Set(partition.map((entry) => entry.path))]),
+		(path) => path,
+	)
+	return [...groups].filter(([, entries]) => entries.length > 1).map(([path]) => path)
 }
 
 /**
@@ -711,10 +705,15 @@ export function validateBrief(source: Brief): ReasonValidationResult {
 		)
 	}
 
-	const ranks = new Map<number, number>()
-	for (const entry of source.outcomes) ranks.set(entry.rank, (ranks.get(entry.rank) ?? 0) + 1)
-	for (const [rank, count] of ranks) {
-		if (count > 1) warnings.push(`Outcome rank ${String(rank)} is used ${String(count)} times`)
+	// One rank read per outcome, so a getter's answer cannot depend on how often the census reads it.
+	const ranks = Map.groupBy(
+		Array.from(source.outcomes, (entry) => entry.rank),
+		(rank) => rank,
+	)
+	for (const [rank, group] of ranks) {
+		if (group.length > 1) {
+			warnings.push(`Outcome rank ${String(rank)} is used ${String(group.length)} times`)
+		}
 	}
 	for (const entry of findUnpairedGaps(source)) {
 		warnings.push(`Open gap "${entry.field}" has no paired assumption`)
@@ -987,12 +986,10 @@ export function briefToTrace(source: Brief): string {
 export function exampleToLines(entry: Example): readonly string[] {
 	const note = entry.note === undefined ? '' : ` (${entry.note})`
 	// The longest unbroken backtick run across both sides, so the delimiter can outrun it.
-	let runs = 0
-	let current = 0
-	for (const character of `${entry.input} ${entry.output}`) {
-		current = character === '`' ? current + 1 : 0
-		if (current > runs) runs = current
-	}
+	const runs = Iterator.from(`${entry.input} ${entry.output}`.matchAll(/`+/gu)).reduce(
+		(longest, match) => Math.max(longest, match[0].length),
+		0,
+	)
 	if (!LINE_BREAK_PATTERN.test(entry.input) && !LINE_BREAK_PATTERN.test(entry.output)) {
 		// The inline delimiter outruns the content too. A fixed single backtick is closed by an
 		// exemplar containing one, which puts the rest of the value outside the code span.
@@ -1075,12 +1072,18 @@ export function briefToMarkdown(input: Brief): string {
 	]
 	if (partitions.some((partition) => partition[1].length > 0)) {
 		lines.push('## Manifest', '')
-		for (const [heading, entries] of partitions) {
-			if (entries.length === 0) continue
-			lines.push(`### ${heading}`, '')
-			lines.push(...entries.map((entry) => `- ${entry.path} — ${entry.note}`))
-			lines.push('')
-		}
+		lines.push(
+			...partitions.flatMap(([heading, entries]) =>
+				entries.length === 0
+					? []
+					: [
+							`### ${heading}`,
+							'',
+							...entries.map((entry) => `- ${entry.path} — ${entry.note}`),
+							'',
+						],
+			),
+		)
 	}
 
 	if (source.outcomes.length > 0) {
@@ -1099,12 +1102,13 @@ export function briefToMarkdown(input: Brief): string {
 		['Invariants', source.invariants],
 		['Assumptions', source.assumptions],
 	]
-	for (const [heading, entries] of prose) {
-		if (entries.length === 0) continue
-		lines.push(`## ${heading}`, '')
-		lines.push(...entries.map((entry) => `- ${entry}`))
-		lines.push('')
-	}
+	lines.push(
+		...prose.flatMap(([heading, entries]) =>
+			entries.length === 0
+				? []
+				: [`## ${heading}`, '', ...entries.map((entry) => `- ${entry}`), ''],
+		),
+	)
 
 	if (source.givens.length > 0) {
 		lines.push('## Givens', '')
@@ -1116,9 +1120,7 @@ export function briefToMarkdown(input: Brief): string {
 
 	if (source.examples.length > 0) {
 		lines.push('## Examples', '')
-		for (const entry of source.examples) {
-			lines.push(...exampleToLines(entry))
-		}
+		lines.push(...source.examples.flatMap((entry) => exampleToLines(entry)))
 		lines.push('')
 	}
 
@@ -1159,10 +1161,11 @@ export function briefToMarkdown(input: Brief): string {
 		['include', source.output.include],
 		['exclude', source.output.exclude],
 	]
-	for (const [label, entries] of refinements) {
-		if (entries === undefined || entries.length === 0) continue
-		lines.push(`- ${label}: ${entries.join(', ')}`)
-	}
+	lines.push(
+		...refinements.flatMap(([label, entries]) =>
+			entries === undefined || entries.length === 0 ? [] : [`- ${label}: ${entries.join(', ')}`],
+		),
+	)
 	lines.push('')
 
 	if (source.proofs.length > 0) {

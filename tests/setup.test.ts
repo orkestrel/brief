@@ -1,4 +1,5 @@
 import type { ReasonResult } from '@orkestrel/reason'
+import { readBriefMarker } from './setup.js'
 import { BriefError, briefToSubject, buildGateDefinition } from '@src/core'
 import { describe, expect, it } from 'vitest'
 import {
@@ -126,7 +127,7 @@ describe('interpret fixtures', () => {
 	})
 
 	it('buildForeignInterpret carries the given value on a computed entity and forces a required ambiguity', () => {
-		const marker = () => 'marker'
+		const marker = readBriefMarker
 		const interpret = buildForeignInterpret(marker)
 		const result = interpret.interpret('migrate the stores')
 		expect(result.entities).toEqual([

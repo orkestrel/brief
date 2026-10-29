@@ -1,5 +1,5 @@
 import type { BriefErrorCode } from './types.js'
-import { isInstance } from '@orkestrel/contract'
+import { holds, INTRINSICS, isFunction, isInstance, isObject, literalOf } from '@orkestrel/contract'
 
 /**
  * Represents the one error class this package throws.
@@ -30,6 +30,7 @@ export class BriefError extends Error {
 
 	constructor(code: BriefErrorCode, message: string, context?: Readonly<Record<string, unknown>>) {
 		super(message)
+		Object.defineProperty(this, Symbol.for('@orkestrel/brief.BriefError'), { value: this })
 		this.name = 'BriefError'
 		this.code = code
 		if (context !== undefined) this.context = context
@@ -54,5 +55,24 @@ export class BriefError extends Error {
  * ```
  */
 export function isBriefError(value: unknown): value is BriefError {
-	return isInstance(value, BriefError)
+	return holds(() => {
+		if (!isInstance(value, Error)) return false
+		if (INTRINSICS.prototype(value) === Error.prototype) return false
+		const brand = INTRINSICS.describe(value, Symbol.for('@orkestrel/brief.BriefError'))
+		if (brand?.value !== value) return false
+		const code = INTRINSICS.reflect.read(value, 'code')
+		const context = INTRINSICS.reflect.read(value, 'context')
+		return (
+			literalOf(
+				'INTERPRET_FAILED',
+				'DRAFT_FAILED',
+				'GATE_FAILED',
+				'PIN_FAILED',
+				'BLOCKED',
+				'INVALID',
+				'DESTROYED',
+			)(code) &&
+			(context === undefined || isObject(context) || isFunction(context))
+		)
+	})
 }

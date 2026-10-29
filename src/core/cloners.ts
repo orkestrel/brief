@@ -43,36 +43,38 @@ export function captureValue(source: unknown, members: readonly string[]): unkno
 		const frame = pending.pop()
 		if (frame === undefined) continue
 		const [current, view, expected] = frame
-		const entries: Array<readonly [key: PropertyKey, value: unknown]> = []
-		const copied = new Set<PropertyKey>()
-
-		for (const key of Reflect.ownKeys(current)) {
+		const own = Reflect.ownKeys(current).flatMap<readonly [PropertyKey, unknown]>((key) => {
 			const descriptor = Reflect.getOwnPropertyDescriptor(current, key)
-			if (descriptor === undefined || !descriptor.enumerable) continue
-			copied.add(key)
-			entries.push([key, 'value' in descriptor ? descriptor.value : Reflect.get(current, key)])
-		}
-		for (const key of expected ?? []) {
-			if (!copied.has(key)) entries.push([key, Reflect.get(current, key)])
-		}
+			if (descriptor === undefined || !descriptor.enumerable) return []
+			return [[key, 'value' in descriptor ? descriptor.value : Reflect.get(current, key)]]
+		})
+		const copied = new Set(own.map(([key]) => key))
+		const entries = [
+			...own,
+			...Iterator.from(expected ?? [])
+				.filter((key) => !copied.has(key))
+				.map<readonly [PropertyKey, unknown]>((key) => [key, Reflect.get(current, key)])
+				.toArray(),
+		]
 
 		for (const [key, value] of entries) {
-			let owned = value
-			if (isObject(value)) {
-				const existing = seen.get(value)
-				if (existing !== undefined) {
-					owned = existing
-				} else {
-					const prototype = Reflect.getPrototypeOf(value)
-					if (isArray(value) || prototype === null || prototype === Object.prototype) {
-						const branch: object = isArray(value) ? [] : Object.create(null)
-						seen.set(value, branch)
-						captured.push(branch)
-						pending.push([value, branch, undefined])
-						owned = branch
-					}
-				}
+			const existing = isObject(value) ? seen.get(value) : undefined
+			const prototype =
+				isObject(value) && existing === undefined ? Reflect.getPrototypeOf(value) : undefined
+			const branch: object | undefined =
+				isObject(value) &&
+				existing === undefined &&
+				(isArray(value) || prototype === null || prototype === Object.prototype)
+					? isArray(value)
+						? []
+						: Object.create(null)
+					: undefined
+			if (branch !== undefined && isObject(value)) {
+				seen.set(value, branch)
+				captured.push(branch)
+				pending.push([value, branch, undefined])
 			}
+			const owned = existing ?? branch ?? value
 			Reflect.defineProperty(view, key, {
 				value: owned,
 				enumerable: true,

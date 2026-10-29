@@ -1,4 +1,13 @@
-import type { Brief, BriefErrorCode, BriefInput, Manifest, Task } from '@src/core'
+import type {
+	Brief,
+	BriefErrorCode,
+	BriefInput,
+	BriefManagerInterface,
+	Manifest,
+	Task,
+	Outcome,
+	Reference,
+} from '@src/core'
 import type {
 	Ambiguity,
 	Entity,
@@ -681,4 +690,118 @@ export function buildInheritedActions(): Readonly<Record<string, 'migrate'>> {
 	const parent: Record<string, 'migrate'> = { migrate: 'migrate' }
 	const child: Record<string, 'migrate'> = Object.create(parent)
 	return child
+}
+
+/** Counts reads made by one accessor fixture. */
+export class BriefReadCounter {
+	#count = 0
+
+	get count(): number {
+		return this.#count
+	}
+
+	next(): number {
+		return ++this.#count
+	}
+}
+
+/** Builds the prototype accessor captured by the ownership proof. */
+export function buildCapturePrototype(reads: BriefReadCounter): object {
+	return {
+		get answer() {
+			return reads.next() === 1 ? 'captured' : 'forged'
+		},
+	}
+}
+
+/** Builds an input whose own enumerable outcomes change after its initial read. */
+export function buildChangingInput(reads: BriefReadCounter): BriefInput {
+	return {
+		task: buildReadyTask(),
+		proofs: [buildProof('x', 'npm test')],
+		get outcomes(): readonly Outcome[] {
+			return reads.next() === 1
+				? [buildOutcome(1, 'first')]
+				: [buildOutcome(1, 'first'), buildOutcome(2, 'second')]
+		},
+	}
+}
+
+/** Builds an input whose own enumerable text accessor throws. */
+export function buildUnreadableInput(): BriefInput {
+	return {
+		task: buildReadyTask(),
+		proofs: [buildProof('x', 'npm test')],
+		outcomes: [buildOutcome(1, 'x')],
+		get text(): string {
+			throw new TypeError('hostile text getter')
+		},
+	}
+}
+
+/** Builds the reference accessor used to test snapshot refusal. */
+export function buildReferenceGetter(reads: BriefReadCounter): Reference {
+	return {
+		note: 'the leaking pipeline',
+		get path() {
+			return reads.next() === 2 ? 'safe.ts\n- forged.ts — forged' : 'safe.ts'
+		},
+	}
+}
+
+/** Builds the action mapping with an own enumerable accessor. */
+export function buildActionGetter(reads: BriefReadCounter): Readonly<Record<string, 'migrate'>> {
+	return {
+		get migrate(): 'migrate' {
+			reads.next()
+			return 'migrate'
+		},
+	}
+}
+
+/** Builds the domain mapping with an own enumerable accessor. */
+export function buildDomainGetter(reads: BriefReadCounter): Readonly<Record<string, 'code'>> {
+	return {
+		get code(): 'code' {
+			reads.next()
+			return 'code'
+		},
+	}
+}
+
+/** Builds a value that refuses string conversion. */
+export function buildThrowingConversion(): unknown {
+	return {
+		toString() {
+			throw new Error('conversion throws')
+		},
+	}
+}
+
+/** Builds a brief from the known hash-collision corpus. */
+export function buildCollisionBrief(statement: string): Brief {
+	return buildBrief(buildTask('plan', 'ops', statement), { proofs: [buildProof('x', 'npm test')] })
+}
+
+/** Collects every manager operation that teardown must refuse. */
+export function collectDestroyedCalls(
+	registry: BriefManagerInterface,
+): ReadonlyArray<() => unknown> {
+	return [
+		() => registry.has('x'),
+		() => registry.brief('x'),
+		() => registry.briefs(),
+		() => registry.add(buildReadyBrief()),
+		() => registry.remove('x'),
+	]
+}
+
+/** Returns the callable marker supplied to a foreign interpretation. */
+export function readBriefMarker(): string {
+	return 'marker'
+}
+
+/** Builds the foreign leaf values whose ownership must preserve gate decisions. */
+export function buildForeignReadings(): readonly unknown[] {
+	return [' a string ', () => 'anything']
 }

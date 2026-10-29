@@ -195,6 +195,10 @@ drift between the guard and the schema.
 `BriefError` extends `Error` with a readonly `code` on the `BriefErrorCode` vocabulary and an
 optional readonly `context` record.
 
+The guard recognizes the shared brand across package copies, accepts subclasses,
+and refuses transparent proxies and unbranded look-alikes. It accepts class and
+callable contexts that satisfy the declared context type.
+
 ```ts
 import { BriefError, isBriefError } from '@orkestrel/brief'
 

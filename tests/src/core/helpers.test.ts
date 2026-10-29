@@ -1,6 +1,13 @@
 import type { Intent } from '@orkestrel/interpret'
 import type { Brief } from '@src/core'
 import {
+	BriefReadCounter,
+	buildReferenceGetter,
+	buildActionGetter,
+	buildDomainGetter,
+	buildThrowingConversion,
+} from '../../setup.js'
+import {
 	assertBrief,
 	briefToDispatch,
 	briefToGoal,
@@ -337,6 +344,18 @@ describe('countSentences', () => {
 })
 
 describe('find leaves', () => {
+	it('orders manifest overlaps by first occurrence and counts each partition once', () => {
+		// Base 2584af5 src/core/helpers.ts:586 inserts each partition's distinct paths.
+		const source = buildReadyBrief({
+			manifest: buildManifest({
+				read: [buildReference('z', 'a'), buildReference('a', 'b'), buildReference('z', 'c')],
+				edit: [buildReference('a', 'd'), buildReference('m', 'e')],
+				locked: [buildReference('m', 'f'), buildReference('z', 'g')],
+			}),
+		})
+		expect(findManifestOverlaps(source)).toEqual(['z', 'a', 'm'])
+	})
+
 	it('finds only the blocking gaps', () => {
 		const source = buildReadyBrief({
 			gaps: [
@@ -480,6 +499,38 @@ describe('briefToSubject', () => {
 })
 
 describe('validateBrief', () => {
+	it('retains duplicate-rank warning order from first occurrences', () => {
+		// Base 2584af5 src/core/helpers.ts:714 counts ranks in insertion order.
+		const result = validateBrief(
+			buildReadyBrief({
+				outcomes: [
+					buildOutcome(3, 'a'),
+					buildOutcome(1, 'b'),
+					buildOutcome(3, 'c'),
+					buildOutcome(1, 'd'),
+					buildOutcome(3, 'e'),
+				],
+			}),
+		)
+		expect(result.warnings).toEqual([
+			'Outcome rank 3 is used 3 times',
+			'Outcome rank 1 is used 2 times',
+		])
+	})
+
+	it('reads each outcome rank once when it counts duplicates', () => {
+		// Base 2584af5 src/core/helpers.ts:715 read rank twice, so a shifting getter forged a duplicate.
+		const reads = new BriefReadCounter()
+		const outcome = buildOutcome(2, 'changing')
+		Object.defineProperty(outcome, 'rank', {
+			enumerable: true,
+			get: () => (reads.next() === 2 ? 1 : 2),
+		})
+		const result = validateBrief(buildReadyBrief({ outcomes: [buildOutcome(1, 'first'), outcome] }))
+		expect(result.warnings).toEqual([])
+		expect(reads.count).toBe(2)
+	})
+
 	it('passes a well-formed brief', () => {
 		expect(validateBrief(buildReadyBrief())).toStrictEqual({
 			valid: true,
@@ -619,6 +670,61 @@ describe('pinBrief and briefToHash', () => {
 })
 
 describe('briefToMarkdown', () => {
+	it('preserves partition prose example and refinement order with empty sections', () => {
+		// Base 2584af5 src/core/helpers.ts:1053 renders these lists in declaration order.
+		const rendered = briefToMarkdown(
+			buildBrief(buildTask('review', 'code', 'Review.'), {
+				manifest: buildManifest({
+					read: [buildReference('b', 'before'), buildReference('a', 'after')],
+					locked: [buildReference('lock', 'fixed')],
+				}),
+				rules: ['first', 'second'],
+				assumptions: ['known'],
+				examples: [buildExample('a', 'b'), buildExample('c', 'd')],
+				output: buildOutput('diff', { sections: ['x', 'y'], include: [], exclude: ['z'] }),
+			}),
+		)
+		expect(rendered).toBe(
+			[
+				'# Brief: Review.',
+				'',
+				'review · code',
+				'',
+				'## Manifest',
+				'',
+				'### Read',
+				'',
+				'- b — before',
+				'- a — after',
+				'',
+				'### Locked',
+				'',
+				'- lock — fixed',
+				'',
+				'## Rules',
+				'',
+				'- first',
+				'- second',
+				'',
+				'## Assumptions',
+				'',
+				'- known',
+				'',
+				'## Examples',
+				'',
+				'- ` a ` → ` b `',
+				'- ` c ` → ` d `',
+				'',
+				'## Output',
+				'',
+				'- format: diff',
+				'- sections: x, y',
+				'- exclude: z',
+				'',
+			].join('\n'),
+		)
+	})
+
 	it('renders the title, the task line, and nothing for empty sections', () => {
 		const lines = briefToMarkdown(
 			buildBrief(buildTask('review', 'code', 'Review the gate rules.')),
@@ -815,14 +921,8 @@ describe('briefToMarkdown', () => {
 		// A getter is free to answer differently on each read. Validating the caller's object
 		// and then rendering from it read every field twice, so a brief that passed validation
 		// rendered a manifest row it does not contain while its dispatch reported a third value.
-		let reads = 0
-		const shifting = {
-			note: 'the leaking pipeline',
-			get path() {
-				reads += 1
-				return reads === 2 ? 'safe.ts\n- forged.ts — forged' : 'safe.ts'
-			},
-		}
+		const reads = new BriefReadCounter()
+		const shifting = buildReferenceGetter(reads)
 		const source = buildBrief(buildReadyTask(), {
 			manifest: buildManifest({ edit: [shifting] }),
 			proofs: [buildProof('x', 'npm test')],
@@ -832,7 +932,7 @@ describe('briefToMarkdown', () => {
 		// outcome, since rendering safely would still have let the value differ per call.
 		expect(() => briefToDispatch(source)).toThrow('cannot be read as one value')
 		expect(() => briefToMarkdown(source)).toThrow('cannot be read as one value')
-		expect(reads).toBeLessThanOrEqual(2)
+		expect(reads.count).toBeLessThanOrEqual(2)
 
 		// The control: the same projection over plain data renders and the two halves agree.
 		const plain = briefToDispatch(buildReadyBrief())
@@ -1066,20 +1166,10 @@ describe('derivations', () => {
 	})
 
 	it('evaluates each accessor-backed own mapping once', () => {
-		let actionReads = 0
-		let domainReads = 0
-		const actions: Readonly<Record<string, 'migrate'>> = {
-			get migrate(): 'migrate' {
-				actionReads += 1
-				return 'migrate'
-			},
-		}
-		const domains: Readonly<Record<string, 'code'>> = {
-			get code(): 'code' {
-				domainReads += 1
-				return 'code'
-			},
-		}
+		const actionReads = new BriefReadCounter()
+		const domainReads = new BriefReadCounter()
+		const actions = buildActionGetter(actionReads)
+		const domains = buildDomainGetter(domainReads)
 
 		expect(
 			deriveTask(
@@ -1089,8 +1179,8 @@ describe('derivations', () => {
 				domains,
 			),
 		).toStrictEqual({ operation: 'migrate', domain: 'code', statement: 'Migrate the stores.' })
-		expect(actionReads).toBe(1)
-		expect(domainReads).toBe(1)
+		expect(actionReads.count).toBe(1)
+		expect(domainReads.count).toBe(1)
 	})
 
 	it('reads the live action mapping again for each derivation', () => {
@@ -1187,11 +1277,7 @@ describe('errorToMessage', () => {
 				},
 			},
 		})
-		const throwingConversion: unknown = {
-			toString() {
-				throw new Error('conversion throws')
-			},
-		}
+		const throwingConversion = buildThrowingConversion()
 		expect(errorToMessage(throwingMessage)).toBe('an unreadable object was thrown')
 		expect(errorToMessage(throwingConversion)).toBe('an unreadable object was thrown')
 		expect(errorToMessage(Object.create(null))).toBe('an unreadable object was thrown')

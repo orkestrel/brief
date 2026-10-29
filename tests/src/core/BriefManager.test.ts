@@ -1,3 +1,4 @@
+import { buildCollisionBrief, collectDestroyedCalls } from '../../setup.js'
 import {
 	BriefManager,
 	briefToContent,
@@ -5,7 +6,6 @@ import {
 	buildBrief,
 	buildOutcome,
 	buildProof,
-	buildTask,
 	createBriefManager,
 	isBriefError,
 	parseBrief,
@@ -104,10 +104,8 @@ describe('BriefManager accessors', () => {
 		// found at is a draw from a birthday distribution, not a safe-size threshold, so it is
 		// deliberately not recorded here. Treating a collision as unchanged content silently
 		// replaced the first record and reported version 1.
-		const collide = (statement: string) =>
-			buildBrief(buildTask('plan', 'ops', statement), { proofs: [buildProof('x', 'npm test')] })
-		const first = collide('Plan release 42vu.')
-		const second = collide('Plan release fuea.')
+		const first = buildCollisionBrief('Plan release 42vu.')
+		const second = buildCollisionBrief('Plan release fuea.')
 		expect(briefToHash(first)).toBe(briefToHash(second))
 		expect(briefToContent(first)).not.toBe(briefToContent(second))
 
@@ -364,13 +362,7 @@ describe('BriefManager teardown', () => {
 		registry.destroy()
 		expect(registry.count).toBe(0)
 		expect(registry.emitter.destroyed).toBe(true)
-		for (const call of [
-			() => registry.has('x'),
-			() => registry.brief('x'),
-			() => registry.briefs(),
-			() => registry.add(buildReadyBrief()),
-			() => registry.remove('x'),
-		]) {
+		for (const call of collectDestroyedCalls(registry)) {
 			expect(call).toThrow('BriefManager has been destroyed')
 		}
 	})

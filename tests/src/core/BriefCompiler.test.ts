@@ -1,5 +1,11 @@
-import type { BriefInput, Briefing, Gap, Outcome } from '@src/core'
+import type { Briefing, Gap } from '@src/core'
 import type { Interpretation } from '@orkestrel/interpret'
+import {
+	BriefReadCounter,
+	buildChangingInput,
+	buildUnreadableInput,
+	buildForeignReadings,
+} from '../../setup.js'
 import {
 	BriefCompiler,
 	briefToSubject,
@@ -234,21 +240,12 @@ describe('BriefCompiler fail-closed paths', () => {
 	it('reads the caller input exactly once, so the replay cannot describe another call', () => {
 		// Reading per stage let a getter answer differently each time: the draft record said it
 		// was handed one outcome while its own output carried two.
-		let reads = 0
-		const shifting: BriefInput = {
-			task: buildReadyTask(),
-			proofs: [buildProof('x', 'npm test')],
-			get outcomes(): readonly Outcome[] {
-				reads += 1
-				return reads === 1
-					? [buildOutcome(1, 'first')]
-					: [buildOutcome(1, 'first'), buildOutcome(2, 'second')]
-			},
-		}
+		const reads = new BriefReadCounter()
+		const shifting = buildChangingInput(reads)
 		const compiler = createBriefCompiler()
 		const briefing = compiler.compile(shifting)
 		const drafted = briefing.stages.find((record) => record.stage === 'draft')
-		expect(reads).toBe(1)
+		expect(reads.count).toBe(1)
 		expect(drafted?.input.outcomes).toHaveLength(1)
 		expect(drafted?.output?.outcomes).toHaveLength(1)
 		expect(briefing.brief?.outcomes).toHaveLength(1)
@@ -258,14 +255,7 @@ describe('BriefCompiler fail-closed paths', () => {
 	it('contains a throwing getter instead of letting a foreign error escape', () => {
 		// `compile` promises it never throws for a brief it cannot emit. A getter on the input
 		// used to propagate straight out as whatever it threw.
-		const hostile: BriefInput = {
-			task: buildReadyTask(),
-			proofs: [buildProof('x', 'npm test')],
-			outcomes: [buildOutcome(1, 'x')],
-			get text(): string {
-				throw new TypeError('hostile text getter')
-			},
-		}
+		const hostile = buildUnreadableInput()
 		const compiler = createBriefCompiler()
 		const briefing = compiler.compile(hostile)
 		expect(briefing.brief).toBeUndefined()
@@ -363,14 +353,13 @@ describe('BriefCompiler fail-closed paths', () => {
 		// directly and type-validly.
 		const first = createInterpret()
 		const second = createInterpret()
-		let reads = 0
+		const reads = new BriefReadCounter()
 		const compiler = new BriefCompiler({
 			get interpret() {
-				reads += 1
-				return reads === 1 ? first : second
+				return reads.next() === 1 ? first : second
 			},
 		})
-		expect(reads).toBe(1)
+		expect(reads.count).toBe(1)
 		// The stored engine IS the one ownership was decided from. Reading twice stored the
 		// second answer while deciding from the first.
 		expect(compiler.interpret).toBe(first)
@@ -380,14 +369,14 @@ describe('BriefCompiler fail-closed paths', () => {
 
 		// The control: a plainly-supplied engine is read once and borrowed.
 		const borrowed = createInterpret()
-		let plainReads = 0
+		const plainReads = new BriefReadCounter()
 		const third = new BriefCompiler({
 			get interpret() {
-				plainReads += 1
+				plainReads.next()
 				return borrowed
 			},
 		})
-		expect(plainReads).toBe(1)
+		expect(plainReads.count).toBe(1)
 		expect(third.interpret).toBe(borrowed)
 		third.destroy()
 		borrowed.destroy()
@@ -546,7 +535,7 @@ describe('BriefCompiler fail-closed paths', () => {
 		//
 		// The following runs must be INDISTINGUISHABLE. That is the property; the refusal is
 		// only how it shows.
-		const readings = [' a string ', () => 'anything'].map((value) => {
+		const readings = buildForeignReadings().map((value) => {
 			const compiler = createBriefCompiler({
 				interpret: buildForeignInterpret(value),
 				actions: { migrate: 'migrate' },
