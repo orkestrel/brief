@@ -93,7 +93,7 @@ pipeline at all.
 
 A `Shape` cell holds an interface's data members as bare names in braces, `?` marking an optional member and `plus` introducing its call-signature members, and a type alias's own type literal with a union's arms escaped as `\|`.
 
-| Type                     | Kind      | Shape                                                                                                                                                                     | Summary                                                                                             |
+| Name                     | Kind      | Shape                                                                                                                                                                     | Summary                                                                                             |
 | ------------------------ | --------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------- |
 | `TaskOperation`          | type      | `'create' \| 'refactor' \| 'debug' \| 'extract' \| 'migrate' \| 'explain' \| 'review' \| 'optimize' \| 'audit' \| 'test' \| 'document' \| 'plan'`                         | Names the closed vocabulary of what a brief asks for.                                               |
 | `TaskDomain`             | type      | `'code' \| 'writing' \| 'research' \| 'analysis' \| 'design' \| 'data' \| 'ops' \| 'other'`                                                                               | Names the closed vocabulary of the subject matter a brief operates on.                              |
@@ -141,7 +141,7 @@ check, met or missed, narrated by the reasoner.
 
 A `Shape` cell holds the constant's declared type.
 
-| API                      | Kind  | Shape                               | Summary                                                                         |
+| Name                     | Kind  | Shape                               | Summary                                                                         |
 | ------------------------ | ----- | ----------------------------------- | ------------------------------------------------------------------------------- |
 | `TASK_OPERATIONS`        | const | `readonly TaskOperation[]`          | Lists the `TaskOperation` values, frozen.                                       |
 | `TASK_DOMAINS`           | const | `readonly TaskDomain[]`             | Lists the `TaskDomain` values, frozen.                                          |
@@ -187,7 +187,7 @@ drift between the guard and the schema.
 
 ### Errors
 
-| API            | Kind     | Summary                                             |
+| Name           | Kind     | Summary                                             |
 | -------------- | -------- | --------------------------------------------------- |
 | `BriefError`   | class    | Represents the one error class this package throws. |
 | `isBriefError` | function | Narrows a caught value to a `BriefError`.           |
@@ -238,7 +238,7 @@ either door records `INTERPRET_FAILED` instead of throwing out of `compile`.
 
 In a guard table a `Shape` cell holds the type the guard narrows to.
 
-| API               | Kind  | Shape           | Summary                                                                                          |
+| Name              | Kind  | Shape           | Summary                                                                                          |
 | ----------------- | ----- | --------------- | ------------------------------------------------------------------------------------------------ |
 | `isText`          | const | `string`        | Checks whether the value is a string holding no line terminator, empty included.                 |
 | `isLine`          | const | `string`        | Checks whether the value is a non-empty string holding no line terminator.                       |
@@ -315,7 +315,7 @@ is exactly `Brief`.
 
 A `Shape` cell holds the constant's declared type.
 
-| API              | Kind  | Shape                                                                                                                                                           | Summary                                                                                            |
+| Name             | Kind  | Shape                                                                                                                                                           | Summary                                                                                            |
 | ---------------- | ----- | --------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------- |
 | `textShape`      | const | `StringShape`                                                                                                                                                   | Describes a single-line string of any length, including empty — the shape mirror of `isText`.      |
 | `lineShape`      | const | `StringShape`                                                                                                                                                   | Describes a non-empty single-line string — the shape mirror of `isLine`.                           |
@@ -382,7 +382,7 @@ at the boundaries the data actually crosses: `parseBrief` on the way in, `snapsh
 every projection, and the gate before emission. Pass on-contract arguments, or check the
 result.
 
-| API                   | Kind     | Summary                                                                                      |
+| Name                  | Kind     | Summary                                                                                      |
 | --------------------- | -------- | -------------------------------------------------------------------------------------------- |
 | `buildTask`           | function | Assembles a `Task` from an operation, a domain, and a statement.                             |
 | `buildReference`      | function | Assembles a `Reference` from a path and the note that justifies listing it.                  |
@@ -467,7 +467,7 @@ Pure, exported utility functions — the referentially-transparent leaves behind
 `BriefCompiler` and the projection surface. Projections use the `{noun}To{Noun}` idiom: each
 consumes a whole and returns a derived view of it.
 
-| API                      | Kind     | Summary                                                                                |
+| Name                     | Kind     | Summary                                                                                |
 | ------------------------ | -------- | -------------------------------------------------------------------------------------- |
 | `briefToMarkdown`        | function | Projects a brief into the copy-ready agent prompt.                                     |
 | `briefToGoal`            | function | Projects a brief into a `/goal` completion condition.                                  |
@@ -580,7 +580,7 @@ grant as the same literal path the authority carries.
 
 ### Parsers
 
-| API          | Kind     | Summary                              |
+| Name         | Kind     | Summary                              |
 | ------------ | -------- | ------------------------------------ |
 | `parseBrief` | function | Parses a JSON string into a `Brief`. |
 
@@ -603,7 +603,7 @@ already own, and cross `snapshotBrief` when you want intake to own it for you.
 
 ### Factories
 
-| API                   | Kind     | Summary                                                                               |
+| Name                  | Kind     | Summary                                                                               |
 | --------------------- | -------- | ------------------------------------------------------------------------------------- |
 | `createBriefCompiler` | function | Creates a compilation orchestrator.                                                   |
 | `createBriefManager`  | function | Creates a brief registry.                                                             |
@@ -641,7 +641,7 @@ created.
 
 ### Classes
 
-| API             | Kind  | Summary                                                                                 |
+| Name            | Kind  | Summary                                                                                 |
 | --------------- | ----- | --------------------------------------------------------------------------------------- |
 | `BriefCompiler` | class | Implements the compilation orchestrator — the `[interpret, draft, gate, pin]` pipeline. |
 | `BriefManager`  | class | Implements the self-owning, versioned and content-hashed brief registry.                |
