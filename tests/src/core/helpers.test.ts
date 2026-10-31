@@ -5,7 +5,6 @@ import {
 	buildReferenceGetter,
 	buildActionGetter,
 	buildDomainGetter,
-	buildThrowingConversion,
 } from '../../setup.js'
 import {
 	assertBrief,
@@ -32,7 +31,6 @@ import {
 	deriveGivens,
 	deriveStatement,
 	deriveTask,
-	errorToMessage,
 	exampleToLines,
 	findBlockingGaps,
 	findUngrantedAuthority,
@@ -1256,34 +1254,6 @@ describe('derivations', () => {
 			{ field: 'output', question: 'Diff or files?', blocking: true, candidates: ['diff'] },
 			{ field: 'nested.rules', question: 'Keep the wording?', blocking: false },
 		])
-	})
-})
-
-describe('errorToMessage', () => {
-	it('reads an Error message and stringifies anything else', () => {
-		expect(errorToMessage(new Error('boom'))).toBe('boom')
-		expect(errorToMessage('boom')).toBe('boom')
-		expect(errorToMessage(42)).toBe('42')
-		expect(errorToMessage(undefined)).toBe('undefined')
-	})
-
-	it('is total, because it runs inside the catch that contains a stage failure', () => {
-		// Each of these threw before. A throw here escapes `compile` uncontained, from the one
-		// function whose job is turning a thrown stage into a recorded failure.
-		const throwingMessage: unknown = Object.create(Error.prototype, {
-			message: {
-				get() {
-					throw new Error('the message getter throws')
-				},
-			},
-		})
-		const throwingConversion = buildThrowingConversion()
-		expect(errorToMessage(throwingMessage)).toBe('an unreadable object was thrown')
-		expect(errorToMessage(throwingConversion)).toBe('an unreadable object was thrown')
-		expect(errorToMessage(Object.create(null))).toBe('an unreadable object was thrown')
-		expect(errorToMessage(Symbol('s'))).toBe('Symbol(s)')
-		// The control: a readable value still reports its own message rather than the fallback.
-		expect(errorToMessage(new Error('readable'))).toBe('readable')
 	})
 })
 

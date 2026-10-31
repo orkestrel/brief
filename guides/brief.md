@@ -212,12 +212,16 @@ try {
 Throws are reserved for caller misuse: `assertBrief` and `snapshotBrief` throw `INVALID` on
 data the contract refuses, and any method after `destroy()` throws `DESTROYED`. Blocking gaps
 are not an error — the gate fails closed into an incomplete `Briefing` whose `failures` carry
-a `BLOCKED` marker, mirroring interprets `NO_TEMPLATE` visible-incomplete outcome.
+a `BLOCKED` marker, mirroring interprets `NO_RECIPE` visible-incomplete outcome.
 
 Each code carries the `context` it can actually supply, and they are not uniform: `DRAFT_FAILED`
 carries `{ stage, field }`, `GATE_FAILED` carries `{ stage, field, reasoning }`, `INVALID`
 carries `{ field }` plus the offending value where the code has one — the hash on a
 content-hash collision — and `DESTROYED` carries none.
+
+A stage failure's `message` and its stage record's `error` carry the thrown value's message as
+`errorToMessage`, from `@orkestrel/contract`, reads it: a thrown value that cannot be read, or
+that reads as empty text, records `'unknown failure'`.
 
 ### Validators
 
@@ -492,7 +496,6 @@ consumes a whole and returns a derived view of it.
 | `deriveTask`             | function | `(intent: Intent, text: string, actions: Readonly<Record<string, TaskOperation>>, domains: Readonly<Record<string, TaskDomain>>) => Task \| undefined` | Derives a `Task` from an interprets `Intent` through the caller's vocabularies.        |
 | `deriveGivens`           | function | `(entities: readonly Entity[]) => readonly Given[]`                                                                                                    | Derives `Given[]` from an interprets `Entity[]`.                                       |
 | `deriveGaps`             | function | `(ambiguities: readonly Ambiguity[]) => readonly Gap[]`                                                                                                | Derives `Gap[]` from an interprets `Ambiguity[]`.                                      |
-| `errorToMessage`         | function | `(error: unknown) => string`                                                                                                                           | Renders a value thrown by a stage into a message.                                      |
 | `freezeDeep`             | function | `<T>(value: T) => T`                                                                                                                                   | Freezes a value and everything reachable from it.                                      |
 | `freezeBranch`           | function | `<T>(value: T, seen: WeakSet<object>) => T`                                                                                                            | Freezes one branch of a value graph, skipping what the visited set already holds.      |
 
@@ -510,7 +513,6 @@ import {
 	deriveGivens,
 	deriveStatement,
 	deriveTask,
-	errorToMessage,
 	freezeDeep,
 	findBlockingGaps,
 	findUngrantedAuthority,
@@ -548,8 +550,6 @@ deriveTask(
 ) // { operation: 'migrate', domain: 'code', statement: 'Migrate the stores.' }
 deriveGivens([{ name: 'count', value: 3, provenance: { category: 'extracted' }, confidence: 1 }]) // [{ category: 'extracted', name: 'count', value: '3' }]
 deriveGaps([{ field: 'output', question: 'Diff or files?', candidates: [], required: true }])
-errorToMessage(new Error('boom')) // 'boom'
-errorToMessage(Object.create(null)) // 'an unreadable object was thrown' — never throws
 freezeDeep({ outcomes: [{ rank: 1 }] }) // nested array frozen too, unlike Object.freeze
 
 const leaf = () => 'ready'
@@ -934,7 +934,7 @@ const migrations = createBriefCompiler({
 				numbers: [3],
 			}),
 		},
-		templates: [
+		recipes: [
 			{
 				id: 'migration',
 				name: 'Migration',
@@ -973,7 +973,7 @@ migration.brief !== undefined // true
 migrations.destroy()
 ```
 
-Drop the templates and the same call blocks instead, carrying interprets own question
+Drop the recipes and the same call blocks instead, carrying interprets own question
 (`Which domain and action did you mean?`) as a blocking gap. That is the design working, not
 a defect: a contract built on a request the language pipeline could not resolve is exactly
 what the gate exists to refuse. A caller who does not want interpretation omits `text` and

@@ -4,6 +4,7 @@ import {
 	BriefReadCounter,
 	buildChangingInput,
 	buildUnreadableInput,
+	buildThrowingConversion,
 	buildForeignReadings,
 } from '../../setup.js'
 import {
@@ -262,6 +263,40 @@ describe('BriefCompiler fail-closed paths', () => {
 		expect(briefing.brief).toBeUndefined()
 		expect(briefing.failures.map((entry) => entry.code)).toStrictEqual(['DRAFT_FAILED'])
 		expect(briefing.failures[0]?.message).toContain('hostile text getter')
+		compiler.destroy()
+	})
+
+	it('records a thrown value that cannot be read as a non-empty failure message', () => {
+		const compiler = createBriefCompiler()
+		const briefing = compiler.compile({
+			task: buildReadyTask(),
+			outcomes: [buildOutcome(1, 'x')],
+			proofs: [buildProof('x', 'npm test')],
+			get text(): string {
+				throw buildThrowingConversion()
+			},
+		})
+		expect(briefing.brief).toBeUndefined()
+		expect(briefing.failures).toStrictEqual([
+			{ stage: 'draft', code: 'DRAFT_FAILED', message: 'unknown failure' },
+		])
+		expect(briefing.stages).toStrictEqual([{ stage: 'draft', input: {}, error: 'unknown failure' }])
+		compiler.destroy()
+	})
+
+	it('records a thrown error with an empty message as a non-empty failure message', () => {
+		const compiler = createBriefCompiler()
+		const briefing = compiler.compile({
+			task: buildReadyTask(),
+			outcomes: [buildOutcome(1, 'x')],
+			proofs: [buildProof('x', 'npm test')],
+			get text(): string {
+				throw new Error('')
+			},
+		})
+		expect(briefing.failures).toStrictEqual([
+			{ stage: 'draft', code: 'DRAFT_FAILED', message: 'unknown failure' },
+		])
 		compiler.destroy()
 	})
 
@@ -773,7 +808,7 @@ describe('BriefCompiler fail-closed paths', () => {
 		compiler.destroy()
 	})
 
-	it('blocks on the language pipeline own required ambiguity when no template matches', () => {
+	it('blocks on the language pipeline own required ambiguity when no recipe matches', () => {
 		const compiler = createBriefCompiler({
 			interpret: buildInterpret('migrate', 'code', false),
 			actions: { migrate: 'migrate' },

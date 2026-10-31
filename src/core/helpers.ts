@@ -19,7 +19,7 @@ import type {
 	TaskDomain,
 	TaskOperation,
 } from './types.js'
-import { attempt, isError, isObject, isString } from '@orkestrel/contract'
+import { isObject, isString } from '@orkestrel/contract'
 import { canonicalize, collapseWhitespace, digestValue } from '@orkestrel/interpret'
 import {
 	createAtom,
@@ -833,40 +833,6 @@ export function freezeBranch<T>(value: T, seen: WeakSet<object>): T {
 	Object.freeze(value)
 	for (const nested of Object.values(value)) freezeBranch(nested, seen)
 	return value
-}
-
-/**
- * Renders a value thrown by a stage into a message.
- *
- * @remarks
- * TOTAL: it never throws, for any input. That is load-bearing rather than tidy, because this
- * is the containment code itself — `compile` calls it inside the `catch` that turns a thrown
- * stage into a recorded `BriefStageFailure`. A throw here escapes `compile` uncontained and
- * falsifies the package's central promise that a failing stage yields an incomplete
- * `Briefing` rather than an exception.
- *
- * Real inputs used to throw: an `Error` subclass whose `message` getter throws, a value
- * whose string conversion throws, and a null-prototype object, which has no inherited
- * conversion for String() to reach. Each is wrapped, and an unreadable value degrades to its
- * type rather than propagating.
- *
- * @param error - The caught value, of any shape.
- * @returns The `Error` message when there is one, otherwise the value stringified; a fixed
- *   description when the value cannot be read at all.
- *
- * @example
- * ```ts
- * import { errorToMessage } from '@orkestrel/brief'
- *
- * errorToMessage(new Error('boom')) // 'boom'
- * errorToMessage('boom') // 'boom'
- * errorToMessage(Object.create(null)) // 'an unreadable object was thrown'
- * ```
- */
-export function errorToMessage(error: unknown): string {
-	const read = attempt(() => (isError(error) ? error.message : String(error)))
-	if (read.success && isString(read.value)) return read.value
-	return `an unreadable ${typeof error} was thrown`
 }
 
 /**

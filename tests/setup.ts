@@ -95,7 +95,7 @@ export function buildReadyInput(): BriefInput {
  *
  * @remarks
  * `createInterpret`'s `extractor` option is the package's own documented injection seam,
- * so nothing project-owned is replaced. Pass `matched: false` to register no template,
+ * so nothing project-owned is replaced. Pass `matched: false` to register no recipe,
  * which is how the pipeline raises its own required ambiguity.
  */
 export function buildInterpret(
@@ -107,7 +107,7 @@ export function buildInterpret(
 		extractor: {
 			extract: () => ({ intent: { action, domain, confidence: 1 }, numbers: [3] }),
 		},
-		templates: matched
+		recipes: matched
 			? [
 					{
 						id: 'migration',
@@ -147,15 +147,15 @@ export function buildFailingInterpret(): InterpretInterface {
 		interpret: () => {
 			throw new Error('the interpret engine failed')
 		},
-		add: (template) => {
-			real.add(template)
+		add: (recipe) => {
+			real.add(recipe)
 		},
 		// `remove` is an overload set, which an object literal cannot restate: an arrow
 		// delegating to all three arms returns `boolean | void` and matches no arm. A bound
 		// reference carries the whole set and keeps the real engine as its receiver.
 		remove: real.remove.bind(real),
-		template: (id) => real.template(id),
-		templates: () => real.templates(),
+		recipe: (id) => real.recipe(id),
+		recipes: () => real.recipes(),
 		describe: (definition) => real.describe(definition),
 		narrate: (result) => real.narrate(result),
 		destroy: () => {
@@ -197,12 +197,12 @@ export function buildForeignInterpret(value: unknown): InterpretInterface {
 				{ field: 'output', question: 'Diff or files?', candidates: [], required: true },
 			],
 		}),
-		add: (template) => {
-			real.add(template)
+		add: (recipe) => {
+			real.add(recipe)
 		},
 		remove: real.remove.bind(real),
-		template: (id) => real.template(id),
-		templates: () => real.templates(),
+		recipe: (id) => real.recipe(id),
+		recipes: () => real.recipes(),
 		describe: (definition) => real.describe(definition),
 		narrate: (result) => real.narrate(result),
 		destroy: () => {
@@ -404,12 +404,12 @@ export function buildShiftingInterpret(): InterpretInterface {
 			return real.emitter
 		},
 		interpret: () => new ShiftingForeignInterpretation(),
-		add: (template) => {
-			real.add(template)
+		add: (recipe) => {
+			real.add(recipe)
 		},
 		remove: real.remove.bind(real),
-		template: (id) => real.template(id),
-		templates: () => real.templates(),
+		recipe: (id) => real.recipe(id),
+		recipes: () => real.recipes(),
 		describe: (definition) => real.describe(definition),
 		narrate: (result) => real.narrate(result),
 		destroy: () => {
@@ -430,12 +430,12 @@ export function buildAccessorInterpret(): InterpretInterface {
 			return real.emitter
 		},
 		interpret: () => new AccessorInterpretation(),
-		add: (template) => {
-			real.add(template)
+		add: (recipe) => {
+			real.add(recipe)
 		},
 		remove: real.remove.bind(real),
-		template: (id) => real.template(id),
-		templates: () => real.templates(),
+		recipe: (id) => real.recipe(id),
+		recipes: () => real.recipes(),
 		describe: (definition) => real.describe(definition),
 		narrate: (result) => real.narrate(result),
 		destroy: () => {

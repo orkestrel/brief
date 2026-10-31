@@ -16,7 +16,7 @@ import type {
 } from './types.js'
 import { Emitter } from '@orkestrel/emitter'
 import { createInterpret, digestValue, isInterpretation } from '@orkestrel/interpret'
-import { attempt } from '@orkestrel/contract'
+import { attempt, errorToMessage } from '@orkestrel/contract'
 import { createLogicalReasoner, createReason, isLogicalResult } from '@orkestrel/reason'
 import { captureValue, snapshotBrief } from './cloners.js'
 import { INTERPRETATION_MEMBERS } from './constants.js'
@@ -31,7 +31,6 @@ import {
 	deriveGaps,
 	deriveGivens,
 	deriveTask,
-	errorToMessage,
 	findBlockingGaps,
 	findUnmetRules,
 	freezeDeep,

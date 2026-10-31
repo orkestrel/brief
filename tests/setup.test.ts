@@ -104,7 +104,7 @@ describe('FIRST_RULE and CAPTURED_RULE', () => {
 })
 
 describe('interpret fixtures', () => {
-	it('buildInterpret registers the matched template and completes the pipeline', () => {
+	it('buildInterpret registers the matched recipe and completes the pipeline', () => {
 		const interpret = buildInterpret('migrate', 'code', true)
 		const result = interpret.interpret('anything')
 		expect(result.intent).toEqual({ action: 'migrate', domain: 'code', confidence: 1 })
@@ -112,7 +112,7 @@ describe('interpret fixtures', () => {
 		expect(result.ambiguities).toEqual([])
 	})
 
-	it('buildInterpret with matched=false registers no template and raises an ambiguity', () => {
+	it('buildInterpret with matched=false registers no recipe and raises an ambiguity', () => {
 		const interpret = buildInterpret('migrate', 'code', false)
 		const result = interpret.interpret('anything')
 		expect(result.ambiguities.length).toBeGreaterThan(0)
@@ -121,9 +121,9 @@ describe('interpret fixtures', () => {
 	it('buildFailingInterpret throws only from interpret, and delegates every other member', () => {
 		const interpret = buildFailingInterpret()
 		expect(() => interpret.interpret('x')).toThrow('the interpret engine failed')
-		// A real, unregistered template is rejected identically to how the real engine rejects it,
-		// proving `add`/`remove`/`template` truly delegate rather than stub a fixed reply.
-		expect(interpret.template('missing')).toBeUndefined()
+		// A real, unregistered recipe is rejected identically to how the real engine rejects it,
+		// proving `add`/`remove`/`recipe` truly delegate rather than stub a fixed reply.
+		expect(interpret.recipe('missing')).toBeUndefined()
 	})
 
 	it('buildForeignInterpret carries the given value on a computed entity and forces a required ambiguity', () => {
