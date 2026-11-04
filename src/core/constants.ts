@@ -75,6 +75,10 @@ export const INTERPRETATION_MEMBERS = Object.freeze([
 	'failures',
 	'confidence',
 	'digest',
+	'repairs',
+	'defaulted',
+	'version',
+	'recipe',
 ] satisfies ReadonlyArray<keyof Interpretation>)
 
 /**

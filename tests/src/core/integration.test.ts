@@ -26,7 +26,7 @@ describe('text to brief to projections', () => {
 		})
 
 		const briefing = compiler.compile({
-			text: 'migrate the 3 legacy stores to the new driver seam',
+			text: 'migrate the 3 stores to the new driver seam',
 			manifest: buildReadyManifest(),
 			outcomes: [buildOutcome(1, 'all three stores implement the driver seam')],
 			output: buildOutput('diff', { include: ['the migrated stores'] }),
@@ -37,10 +37,10 @@ describe('text to brief to projections', () => {
 		const compiled = requireValue(briefing.brief, 'a complete briefing carries its brief')
 
 		expect(validateBrief(compiled)).toStrictEqual({ valid: true, errors: [], warnings: [] })
-		expect(compiler.gate(compiled).conclusion).toBe(true)
+		expect(compiler.gate(compiled).conclusion).toBe('met')
 
 		const prompt = briefToMarkdown(compiled)
-		expect(prompt).toContain('# Brief: Migrate the 3 legacy stores to the new driver seam.')
+		expect(prompt).toContain('# Brief: Migrate the 3 stores to the new driver seam.')
 		expect(prompt).toContain('- format: diff')
 
 		expect(briefToGoal(compiled)).toBe(

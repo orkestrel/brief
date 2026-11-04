@@ -1,6 +1,5 @@
-import type { ContractInterface } from '@orkestrel/contract'
+import type { ContractInterface, ContractShape } from '@orkestrel/contract'
 import type {
-	Brief,
 	BriefManagerInterface,
 	BriefManagerOptions,
 	BriefCompilerInterface,
@@ -103,7 +102,10 @@ export function createBriefManager(options?: BriefManagerOptions): BriefManagerI
  * bundle and the hand-composed `isBrief` are two independent mechanisms over one
  * vocabulary; `tests/src/core/shapers.test.ts` is what holds them in lockstep.
  *
- * @returns A `ContractInterface` over `Brief`.
+ * Definitions cross through `is`, never the coercing `parse`. The bundle returns unknown;
+ * narrow a value with `isBrief` when a typed `Brief` is needed.
+ *
+ * @returns A `ContractInterface<unknown>` for the published brief shape.
  *
  * @example
  * ```ts
@@ -115,6 +117,6 @@ export function createBriefManager(options?: BriefManagerOptions): BriefManagerI
  * contract.generate(seededRandom(42)) // a reproducible on-contract brief
  * ```
  */
-export function createBriefContract(): ContractInterface<Brief> {
-	return createContract(briefShape)
+export function createBriefContract(): ContractInterface<unknown> {
+	return createContract<ContractShape>(briefShape)
 }

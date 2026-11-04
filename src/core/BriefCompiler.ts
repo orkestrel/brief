@@ -45,6 +45,7 @@ import {
  * blocking gap, a refused gate, and a thrown stage all yield a visible INCOMPLETE
  * `Briefing`. It owns the engines it created and BORROWS the ones passed in, so
  * `destroy()` releases only what it made.
+ * The gate requires `conclusion: 'met'`; `unmet` and `unread` both refuse emission.
  *
  * @example
  * ```ts
@@ -158,7 +159,7 @@ export class BriefCompiler implements BriefCompilerInterface {
 		// narrates and never decides: a supplied engine can add detail to a refusal and can
 		// never turn one into a pass.
 		const unready = findUnmetRules(draft)
-		if (unready.length > 0 || verdict === undefined || !verdict.conclusion) {
+		if (unready.length > 0 || verdict === undefined || verdict.conclusion !== 'met') {
 			const refusal = this.#blockage(questions, unready, verdict)
 			if (refusal !== undefined) failures.push(Object.freeze(refusal))
 			return this.#refuse(interpretation, draft, questions, verdict, stages, failures)
@@ -206,6 +207,9 @@ export class BriefCompiler implements BriefCompilerInterface {
 				'success',
 				'trace',
 				'errors',
+				'faults',
+				'repairs',
+				'defaulted',
 			]),
 		)
 		if (!ruled.success) {
@@ -336,7 +340,7 @@ export class BriefCompiler implements BriefCompilerInterface {
 		}
 		if (verdict === undefined) return undefined
 		const refused = verdict.rules
-			.filter((entry) => !entry.applied)
+			.filter((entry) => entry.state !== 'met')
 			.map((entry) => entry.id)
 			.join(', ')
 		// A borrowed engine may refuse through `conclusion` alone and name no failing rule, which

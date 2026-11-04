@@ -59,7 +59,9 @@ await new GuideCommand({
 	reader: readInventory,
 	runner: createVitest,
 }).execute(async ({ files, report, rows }) => {
-	const { isRecord, parseJSON } = await import('@orkestrel/contract')
+	const { isRecord, parseJSON, numberShape, objectShape } = await import('@orkestrel/contract')
+	const { createInterpret } = await import('@orkestrel/interpret')
+	const { createQuantitativeDefinition } = await import('@orkestrel/reason')
 	const {
 		computeSymbolKey,
 		createSourceManager,
@@ -588,6 +590,61 @@ await new GuideCommand({
 			expect(briefToDispatch(pinned).authority).toStrictEqual(['AGENTS.md'])
 		})
 
+		it('runs the text compilation fence with an anchored store count', () => {
+			const interpret = createInterpret({
+				extractor: {
+					extract: () => ({
+						intent: { action: 'migrate', domain: 'code', confidence: 1 },
+						numbers: [3],
+					}),
+				},
+				recipes: [
+					{
+						id: 'migration',
+						name: 'Migration',
+						domain: 'code',
+						intents: ['migrate'],
+						mappings: [{ entity: 'count', aliases: ['stores'], field: 'count' }],
+						shape: objectShape({ count: numberShape() }),
+						computations: [],
+						definition: createQuantitativeDefinition('migration', 'Migration', []),
+					},
+				],
+			})
+			const migrations = createBriefCompiler({
+				interpret,
+				actions: { migrate: 'migrate' },
+				domains: { code: 'code' },
+			})
+			try {
+				const migration = migrations.compile({
+					text: 'migrate the 3 stores to the replacement driver seam',
+					outcomes: [buildOutcome(1, 'all three stores implement the driver seam')],
+					proofs: [buildProof('the core project passes', 'npm run test:src:core')],
+				})
+				expect(migration.stages.map((record) => record.stage)).toEqual([
+					'interpret',
+					'draft',
+					'gate',
+					'pin',
+				])
+				expect(migration.interpretation?.intent).toEqual({
+					action: 'migrate',
+					domain: 'code',
+					confidence: 1,
+				})
+				expect(migration.brief?.task.operation).toBe('migrate')
+				expect(migration.brief?.givens).toEqual([
+					{ category: 'extracted', name: 'count', value: '3' },
+				])
+				expect(migration.verdict?.conclusion).toBe('met')
+				expect(migration.brief).toBeDefined()
+			} finally {
+				migrations.destroy()
+				interpret.destroy()
+			}
+		})
+
 		it('runs the blocking path fence and yields the readings its comments claim', () => {
 			const blocked = createBriefCompiler()
 			const stopped = blocked.compile({
@@ -617,7 +674,9 @@ await new GuideCommand({
 			expect(stopped.failures).toEqual([
 				{ stage: 'gate', code: 'BLOCKED', message: '1 blocking gap(s)' },
 			])
-			expect(stopped.verdict?.rules.filter((entry) => !entry.applied).length).toBeGreaterThan(0)
+			expect(
+				stopped.verdict?.rules.filter((entry) => entry.state !== 'met').length,
+			).toBeGreaterThan(0)
 			blocked.destroy()
 		})
 

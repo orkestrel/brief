@@ -65,6 +65,35 @@ import {
 } from '../../setup.js'
 
 describe('builders', () => {
+	it('carries the ambiguity fault and its supplied question into a gap', () => {
+		const gaps = deriveGaps([
+			{
+				field: ['amount'],
+				question: 'What is the requested amount?',
+				candidates: [],
+				required: true,
+				fault: { reason: 'missing', path: ['amount'], expected: 'number' },
+			},
+		])
+		expect(gaps).toStrictEqual([
+			{
+				field: 'amount',
+				question: 'What is the requested amount?',
+				blocking: true,
+				fault: { reason: 'missing', path: ['amount'], expected: 'number' },
+			},
+		])
+		expect(isGap(gaps[0])).toBe(true)
+	})
+
+	it('preserves every entity provenance category in givens', () => {
+		for (const category of ['extracted', 'carried', 'default', 'computed', 'subject'] as const) {
+			expect(
+				deriveGivens([{ name: 'amount', value: 3, confidence: 1, provenance: { category } }]),
+			).toStrictEqual([{ category, name: 'amount', value: '3' }])
+		}
+	})
+
 	it('builds a task, a reference, a citation, a risk, and a proof', () => {
 		expect(buildTask('refactor', 'code', 'Refactor useForm.')).toStrictEqual({
 			operation: 'refactor',
@@ -189,7 +218,7 @@ describe('buildGateDefinition', () => {
 			assumptions: [],
 		})
 		expect(readConclusion(engine.reason(briefToSubject(unpaired), buildGateDefinition()))).toBe(
-			true,
+			'met',
 		)
 		expect(validateBrief(unpaired).valid).toBe(true)
 		expect(validateBrief(unpaired).warnings).toStrictEqual([
@@ -200,7 +229,7 @@ describe('buildGateDefinition', () => {
 			gaps: [buildGap('output', 'Diff or files?', { blocking: true })],
 		})
 		expect(readConclusion(engine.reason(briefToSubject(blocked), buildGateDefinition()))).toBe(
-			false,
+			'unmet',
 		)
 		engine.destroy()
 	})
@@ -239,7 +268,7 @@ describe('buildGateDefinition', () => {
 			const refused =
 				verdict.reasoning === 'logical'
 					? verdict.rules
-							.filter((entry) => !entry.applied && entry.id !== 'ready')
+							.filter((entry) => entry.state !== 'met' && entry.id !== 'ready')
 							.map((entry) => entry.id)
 					: []
 			expect([...findUnmetRules(source)].sort()).toStrictEqual([...refused].sort())
@@ -261,7 +290,7 @@ describe('buildGateDefinition', () => {
 	it('concludes true for a ready brief and false for each single missing measure', () => {
 		const engine = createReason({ reasoners: [createLogicalReasoner()] })
 		const ready = engine.reason(briefToSubject(buildReadyBrief()), buildGateDefinition())
-		expect(ready.reasoning === 'logical' && ready.conclusion).toBe(true)
+		expect(ready.reasoning === 'logical' && ready.conclusion).toBe('met')
 
 		const unready = [
 			buildReadyBrief({ proofs: [] }),
@@ -284,7 +313,7 @@ describe('buildGateDefinition', () => {
 		]
 		for (const source of unready) {
 			const verdict = engine.reason(briefToSubject(source), buildGateDefinition())
-			expect(verdict.reasoning === 'logical' && verdict.conclusion).toBe(false)
+			expect(verdict.reasoning === 'logical' && verdict.conclusion).toBe('unmet')
 		}
 		engine.destroy()
 	})

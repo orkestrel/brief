@@ -45,6 +45,83 @@ import {
 } from '../../setup.js'
 
 describe('BriefCompiler pipeline', () => {
+	it('names only unmet and unread rules in a borrowed refusal', () => {
+		const reason = createReason({
+			reasoners: [
+				{
+					id: 'rules',
+					reasoning: 'logical',
+					supports: () => true,
+					validate: () => ({ valid: true, errors: [], warnings: [] }),
+					reason: () => ({
+						reasoning: 'logical',
+						conclusion: 'unmet',
+						count: 1,
+						rules: (['met', 'unmet', 'unread'] as const).map((state) => ({
+							id: state,
+							state,
+							premises: [],
+							checks: [],
+						})),
+						success: true,
+						trace: [],
+						errors: [],
+						faults: [],
+						repairs: [],
+						defaulted: [],
+					}),
+				},
+			],
+		})
+		const compiler = createBriefCompiler({ reason })
+		try {
+			const briefing = compiler.compile(buildReadyInput())
+			expect(briefing.verdict?.rules).toHaveLength(3)
+			expect(briefing.brief).toBeUndefined()
+			expect(briefing.failures[0]?.message).toBe('Gate refused: unmet, unread')
+		} finally {
+			compiler.destroy()
+			reason.destroy()
+		}
+	})
+
+	it('refuses borrowed unmet and unread conclusions on a ready brief', () => {
+		for (const conclusion of ['unmet', 'unread'] as const) {
+			const reason = createReason({
+				reasoners: [
+					{
+						id: 'refusal',
+						reasoning: 'logical',
+						supports: () => true,
+						validate: () => ({ valid: true, errors: [], warnings: [] }),
+						reason: () => ({
+							reasoning: 'logical',
+							conclusion,
+							rules: [],
+							count: 0,
+							success: true,
+							trace: [],
+							errors: [],
+							faults: [],
+							repairs: [],
+							defaulted: [],
+						}),
+					},
+				],
+			})
+			const compiler = createBriefCompiler({ reason })
+			try {
+				const briefing = compiler.compile(buildReadyInput())
+				expect(briefing.verdict?.conclusion).toBe(conclusion)
+				expect(briefing.brief).toBeUndefined()
+				expect(briefing.failures[0]?.code).toBe('BLOCKED')
+			} finally {
+				compiler.destroy()
+				reason.destroy()
+			}
+		}
+	})
+
 	it('skips the interpret stage when the input carries no text', () => {
 		const compiler = createBriefCompiler()
 		const briefing = compiler.compile(buildReadyInput())
@@ -61,7 +138,7 @@ describe('BriefCompiler pipeline', () => {
 			domains: { code: 'code' },
 		})
 		const briefing = compiler.compile({
-			text: 'migrate the 3 legacy stores to the new driver seam',
+			text: 'migrate the 3 stores to the new driver seam',
 			outcomes: [buildOutcome(1, 'all three stores implement the driver seam')],
 			proofs: [buildProof('the core project passes', 'npm run test:src:core')],
 		})
@@ -73,12 +150,12 @@ describe('BriefCompiler pipeline', () => {
 		])
 		expect(briefing.stages.every((record) => record.error === undefined)).toBe(true)
 		// The text lives on the interpretation, not echoed onto the briefing.
-		expect(briefing.interpretation?.text).toBe('migrate the 3 legacy stores to the new driver seam')
+		expect(briefing.interpretation?.text).toBe('migrate the 3 stores to the new driver seam')
 		expect(briefing.interpretation?.intent.action).toBe('migrate')
 		expect(briefing.brief?.task).toEqual({
 			operation: 'migrate',
 			domain: 'code',
-			statement: 'Migrate the 3 legacy stores to the new driver seam.',
+			statement: 'Migrate the 3 stores to the new driver seam.',
 		})
 		expect(briefing.brief?.givens).toEqual([{ category: 'extracted', name: 'count', value: '3' }])
 		expect(briefing.brief).toBeDefined()
@@ -109,7 +186,7 @@ describe('BriefCompiler pipeline', () => {
 			domains: { code: 'code' },
 		})
 		const briefing = compiler.compile({
-			text: 'migrate the 3 legacy stores',
+			text: 'migrate the 3 stores',
 			task: buildTask('plan', 'ops', 'Plan the store migration.'),
 			givens: [{ category: 'convention', name: 'indentation', value: 'tabs' }],
 			gaps: [buildGap('rules', 'Keep the wording?')],
@@ -164,7 +241,7 @@ describe('BriefCompiler fail-closed paths', () => {
 		expect(briefing.failures).toStrictEqual([
 			{ stage: 'gate', code: 'BLOCKED', message: '1 blocking gap(s)' },
 		])
-		expect(briefing.verdict?.conclusion).toBe(false)
+		expect(briefing.verdict?.conclusion).toBe('unmet')
 		expect(briefing.verdict?.trace.length).toBeGreaterThan(0)
 		expect(briefing.stages.map((record) => record.stage)).toStrictEqual(['draft', 'gate'])
 		compiler.destroy()
@@ -182,7 +259,7 @@ describe('BriefCompiler fail-closed paths', () => {
 		const compiler = createBriefCompiler({ reason: permissive })
 
 		const verdict = compiler.gate(buildReadyBrief({ proofs: [] }))
-		expect(verdict.conclusion).toBe(true) // the engine really does say yes
+		expect(verdict.conclusion).toBe('met') // the engine really does say yes
 
 		for (const unready of [
 			{ ...buildReadyInput(), proofs: [] },
@@ -522,7 +599,7 @@ describe('BriefCompiler fail-closed paths', () => {
 		const compiler = createBriefCompiler({ reason: buildShiftingReason() })
 		const briefing = compiler.compile(buildReadyInput())
 		expect(briefing.brief).toBeUndefined()
-		expect(briefing.verdict?.conclusion).toBe(false)
+		expect(briefing.verdict?.conclusion).toBe('unmet')
 		expect(briefing.verdict?.rules.map((entry) => entry.id)).toStrictEqual(['captured'])
 		expect(briefing.failures[0]?.message).toBe('Gate refused: captured')
 		compiler.destroy()
@@ -691,7 +768,7 @@ describe('BriefCompiler fail-closed paths', () => {
 			statement: 'Migrate the captured stores.',
 		})
 		expect(briefing.brief?.givens).toEqual([
-			{ category: 'extracted', name: 'reading', value: 'captured' },
+			{ category: 'computed', name: 'reading', value: 'captured' },
 		])
 		compiler.destroy()
 	})
@@ -765,8 +842,7 @@ describe('BriefCompiler fail-closed paths', () => {
 		expect(briefing.questions.map((entry) => entry.field)).toStrictEqual(['gaps'])
 		expect(briefing.questions[0]?.blocking).toBe(true)
 
-		// The control: the SAME failing engine with the caller supplying their own
-		// interpretation. Nothing was lost, so nothing is added, and the compile completes.
+		// A supplied interpretation retains its own unanswered question rather than gaining a synthetic gap.
 		const carried = compiler.compile({
 			text: 'migrate the stores',
 			interpretation: buildInterpret('migrate', 'code', true).interpret('migrate the stores'),
@@ -774,8 +850,17 @@ describe('BriefCompiler fail-closed paths', () => {
 			outcomes: [buildOutcome(1, 'x')],
 			proofs: [buildProof('x', 'npm test')],
 		})
-		expect(carried.brief).toBeDefined()
-		expect(carried.brief?.task).toEqual(buildReadyTask())
+		expect(carried.brief).toBeUndefined()
+		expect(carried.interpretation?.subject).toBeUndefined()
+		expect(carried.questions).toEqual([
+			{
+				field: 'count',
+				question: 'What is your count?',
+				blocking: true,
+				fault: { reason: 'missing', path: ['count'], expected: 'number' },
+			},
+		])
+		expect(carried.verdict?.conclusion).toBe('unmet')
 		compiler.destroy()
 	})
 
@@ -815,7 +900,7 @@ describe('BriefCompiler fail-closed paths', () => {
 			domains: { code: 'code' },
 		})
 		const briefing = compiler.compile({
-			text: 'migrate the 3 legacy stores',
+			text: 'migrate the 3 stores',
 			outcomes: [buildOutcome(1, 'x')],
 			proofs: [buildProof('x', 'y')],
 		})
@@ -840,7 +925,7 @@ describe('BriefCompiler gate', () => {
 		const compiler = createBriefCompiler()
 		const verdict = compiler.gate(buildReadyBrief())
 		expect(verdict.reasoning).toBe('logical')
-		expect(verdict.conclusion).toBe(true)
+		expect(verdict.conclusion).toBe('met')
 		expect(verdict.rules.map((entry) => entry.id)).toStrictEqual(
 			buildGateDefinition().rules.map((entry) => entry.id),
 		)
@@ -850,7 +935,7 @@ describe('BriefCompiler gate', () => {
 
 	it('refuses a brief that misses one readiness rule', () => {
 		const compiler = createBriefCompiler()
-		expect(compiler.gate(buildReadyBrief({ proofs: [] })).conclusion).toBe(false)
+		expect(compiler.gate(buildReadyBrief({ proofs: [] })).conclusion).toBe('unmet')
 		compiler.destroy()
 	})
 })

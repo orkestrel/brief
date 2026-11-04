@@ -20,6 +20,7 @@ import type {
 } from '@orkestrel/interpret'
 import type {
 	Check,
+	CheckState,
 	EvaluatorInterface,
 	LogicalResult,
 	ReasonInterface,
@@ -36,20 +37,23 @@ import {
 	isBriefError,
 } from '@src/core'
 import { createInterpret } from '@orkestrel/interpret'
+import { numberShape, objectShape } from '@orkestrel/contract'
 import { createQuantitativeDefinition, createReason } from '@orkestrel/reason'
 
 /** Holds the single rule result the counting and stable engines agree on for a first read. */
 export const FIRST_RULE: RuleResult = Object.freeze({
 	id: 'ready',
-	applied: true,
-	premises: Object.freeze([true]),
+	state: 'met',
+	checks: Object.freeze([]),
+	premises: Object.freeze(['met'] as const),
 })
 
 /** Holds the refused rule a captured shifting verdict must retain. */
 export const CAPTURED_RULE: RuleResult = Object.freeze({
 	id: 'captured',
-	applied: false,
-	premises: Object.freeze([false]),
+	state: 'unmet',
+	checks: Object.freeze([]),
+	premises: Object.freeze(['unmet'] as const),
 })
 
 /** Returns the canonical valid task every fixture builds on. */
@@ -114,8 +118,8 @@ export function buildInterpret(
 						name: 'Migration',
 						domain,
 						intents: [action],
-						mappings: [{ entity: 'count', aliases: [], field: 'count' }],
-						defaults: [],
+						mappings: [{ entity: 'count', aliases: ['stores'], field: 'count' }],
+						shape: objectShape({ count: numberShape() }),
 						computations: [],
 						definition: createQuantitativeDefinition('migration', 'Migration', []),
 					},
@@ -254,6 +258,13 @@ export class AccessorInterpretation {
 		return []
 	}
 
+	get repairs(): readonly [] {
+		return []
+	}
+	get defaulted(): readonly [] {
+		return []
+	}
+
 	get confidence(): number {
 		return 1
 	}
@@ -322,6 +333,13 @@ export class ShiftingAccessorInterpretation implements Interpretation {
 		return []
 	}
 
+	get repairs(): readonly [] {
+		return []
+	}
+	get defaulted(): readonly [] {
+		return []
+	}
+
 	get confidence(): number {
 		return 1
 	}
@@ -383,6 +401,13 @@ export class ShiftingForeignInterpretation implements Interpretation {
 	}
 
 	get failures(): readonly StageFailure[] {
+		return []
+	}
+
+	get repairs(): readonly [] {
+		return []
+	}
+	get defaulted(): readonly [] {
 		return []
 	}
 
@@ -500,9 +525,9 @@ export function readBriefCode(error: unknown): BriefErrorCode | undefined {
 export function buildPermissiveEvaluator(): EvaluatorInterface {
 	return {
 		id: 'permissive',
-		evaluate: (check: Check) => ({ field: check.field, met: true, actual: true }),
+		evaluate: (check: Check) => ({ field: check.field, state: 'met', actual: true }),
 		batch: (checks: readonly Check[]) =>
-			checks.map((check) => ({ field: check.field, met: true, actual: true })),
+			checks.map((check) => ({ field: check.field, state: 'met', actual: true })),
 	}
 }
 
@@ -531,9 +556,12 @@ export function buildCountingReason(): ReasonInterface {
 				validate: () => ({ valid: true, errors: [], warnings: [] }),
 				reason: () => ({
 					reasoning: 'logical',
+					faults: [],
+					repairs: [],
+					defaulted: [],
 					get conclusion() {
 						reads.conclusion += 1
-						return reads.conclusion === 1
+						return reads.conclusion === 1 ? 'met' : 'unmet'
 					},
 					get rules() {
 						reads.rules += 1
@@ -575,7 +603,10 @@ export function buildStableReason(): ReasonInterface {
 				validate: () => ({ valid: true, errors: [], warnings: [] }),
 				reason: () => ({
 					reasoning: 'logical',
-					conclusion: true,
+					faults: [],
+					repairs: [],
+					defaulted: [],
+					conclusion: 'met',
 					rules: [FIRST_RULE],
 					count: 1,
 					success: true,
@@ -611,13 +642,23 @@ export class ShiftingLogicalResult implements LogicalResult {
 	#rules = 0
 	readonly leaf = Math.max
 
+	get faults(): readonly [] {
+		return []
+	}
+	get repairs(): readonly [] {
+		return []
+	}
+	get defaulted(): readonly [] {
+		return []
+	}
+
 	get reasoning(): 'logical' {
 		return 'logical'
 	}
 
-	get conclusion(): boolean {
+	get conclusion(): CheckState {
 		this.#conclusion += 1
-		return this.#conclusion >= 3
+		return this.#conclusion >= 3 ? 'met' : 'unmet'
 	}
 
 	get rules(): readonly RuleResult[] {
@@ -653,7 +694,10 @@ export function buildSilentReason(): ReasonInterface {
 				validate: () => ({ valid: true, errors: [], warnings: [] }),
 				reason: () => ({
 					reasoning: 'logical',
-					conclusion: false,
+					faults: [],
+					repairs: [],
+					defaulted: [],
+					conclusion: 'unmet',
 					rules: [],
 					count: 0,
 					success: true,
@@ -673,7 +717,7 @@ export function buildSilentReason(): ReasonInterface {
  * `undefined` for any other reasoning — which makes a wrong-arm result fail the assertion
  * rather than silently skip it.
  */
-export function readConclusion(result: ReasonResult): boolean | undefined {
+export function readConclusion(result: ReasonResult): CheckState | undefined {
 	return result.reasoning === 'logical' ? result.conclusion : undefined
 }
 

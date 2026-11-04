@@ -17,6 +17,7 @@ import {
 	isReference,
 	isRisk,
 	isTask,
+	parseBrief,
 	manifestShape,
 	outcomeShape,
 	outputShape,
@@ -28,6 +29,28 @@ import {
 import { createContract, seededRandom } from '@orkestrel/contract'
 import { describe, expect, it } from 'vitest'
 import { buildReadyBrief } from '../../setup.js'
+
+describe('brief boundary', () => {
+	it('validates definitions without coercion and preserves gap faults through JSON', () => {
+		const contract = createBriefContract()
+		const brief = buildReadyBrief({
+			gaps: [
+				{
+					field: 'amount',
+					question: 'What amount?',
+					blocking: true,
+					fault: { reason: 'missing', path: ['amount'], expected: 'number' },
+				},
+			],
+		})
+		expect(contract.is(brief)).toBe(true)
+		expect(contract.is({ ...brief, gaps: [{ ...brief.gaps[0], blocking: 'false' }] })).toBe(false)
+		expect(parseBrief(JSON.stringify(brief))).toEqual(brief)
+		expect(
+			contract.is({ ...brief, gaps: [{ ...brief.gaps[0], fault: { reason: 'missing' } }] }),
+		).toBe(false)
+	})
+})
 
 // Each row pairs the two independent mechanisms over one vocabulary — the hand-composed
 // guard and the compiled shape — with values chosen so a divergence in either shows up.

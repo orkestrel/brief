@@ -91,14 +91,14 @@ describe('buildReadyBrief and buildReadyInput', () => {
 describe('FIRST_RULE and CAPTURED_RULE', () => {
 	it('FIRST_RULE is a frozen, applied rule result whose premises all held', () => {
 		expect(Object.isFrozen(FIRST_RULE)).toBe(true)
-		expect(FIRST_RULE.applied).toBe(true)
-		expect(FIRST_RULE.premises).toEqual([true])
+		expect(FIRST_RULE.state).toBe('met')
+		expect(FIRST_RULE.premises).toEqual(['met'])
 	})
 
 	it('CAPTURED_RULE is a frozen, unapplied rule result distinct from FIRST_RULE', () => {
 		expect(Object.isFrozen(CAPTURED_RULE)).toBe(true)
-		expect(CAPTURED_RULE.applied).toBe(false)
-		expect(CAPTURED_RULE.premises).toEqual([false])
+		expect(CAPTURED_RULE.state).toBe('unmet')
+		expect(CAPTURED_RULE.premises).toEqual(['unmet'])
 		expect(CAPTURED_RULE.id).not.toBe(FIRST_RULE.id)
 	})
 })
@@ -106,7 +106,7 @@ describe('FIRST_RULE and CAPTURED_RULE', () => {
 describe('interpret fixtures', () => {
 	it('buildInterpret registers the matched recipe and completes the pipeline', () => {
 		const interpret = buildInterpret('migrate', 'code', true)
-		const result = interpret.interpret('anything')
+		const result = interpret.interpret('migrate 3 stores')
 		expect(result.intent).toEqual({ action: 'migrate', domain: 'code', confidence: 1 })
 		expect(result.failures).toEqual([])
 		expect(result.ambiguities).toEqual([])
@@ -238,7 +238,7 @@ describe('reason fixtures', () => {
 		const subject = briefToSubject(buildReadyBrief())
 		expect(evaluator.evaluate({ field: 'x', operator: 'any', value: undefined }, subject)).toEqual({
 			field: 'x',
-			met: true,
+			state: 'met',
 			actual: true,
 		})
 		expect(
@@ -250,8 +250,8 @@ describe('reason fixtures', () => {
 				subject,
 			),
 		).toEqual([
-			{ field: 'a', met: true, actual: true },
-			{ field: 'b', met: true, actual: true },
+			{ field: 'a', state: 'met', actual: true },
+			{ field: 'b', state: 'met', actual: true },
 		])
 	})
 
@@ -261,14 +261,14 @@ describe('reason fixtures', () => {
 		const counting = buildCountingReason()
 		const first = counting.reason(subject, definition)
 		const second = counting.reason(subject, definition)
-		expect(readConclusion(first)).toBe(true)
-		expect(readConclusion(second)).toBe(false)
+		expect(readConclusion(first)).toBe('met')
+		expect(readConclusion(second)).toBe('unmet')
 
 		const stable = buildStableReason()
 		const stableFirst = stable.reason(subject, definition)
 		const stableSecond = stable.reason(subject, definition)
-		expect(readConclusion(stableFirst)).toBe(true)
-		expect(readConclusion(stableSecond)).toBe(true)
+		expect(readConclusion(stableFirst)).toBe('met')
+		expect(readConclusion(stableSecond)).toBe('met')
 		expect(stableFirst).toEqual(stableSecond)
 	})
 
@@ -277,9 +277,9 @@ describe('reason fixtures', () => {
 		const result = reason.reason(briefToSubject(buildReadyBrief()), buildGateDefinition())
 		expect(result).toBeInstanceOf(ShiftingLogicalResult)
 		if (result.reasoning !== 'logical') throw new Error('expected a logical result')
-		expect(result.conclusion).toBe(false)
-		expect(result.conclusion).toBe(false)
-		expect(result.conclusion).toBe(true)
+		expect(result.conclusion).toBe('unmet')
+		expect(result.conclusion).toBe('unmet')
+		expect(result.conclusion).toBe('met')
 	})
 
 	it('ShiftingLogicalResult carries a fixed function-valued leaf and CAPTURED_RULE on the first rules read only', () => {
@@ -292,7 +292,7 @@ describe('reason fixtures', () => {
 	it('buildSilentReason refuses through conclusion alone, naming no failing rule', () => {
 		const reason = buildSilentReason()
 		const result = reason.reason(briefToSubject(buildReadyBrief()), buildGateDefinition())
-		expect(readConclusion(result)).toBe(false)
+		expect(readConclusion(result)).toBe('unmet')
 		if (result.reasoning !== 'logical') throw new Error('expected a logical result')
 		expect(result.rules).toEqual([])
 	})
@@ -300,6 +300,9 @@ describe('reason fixtures', () => {
 	it('readConclusion returns undefined for a non-logical reasoning result', () => {
 		const quantitative: ReasonResult = {
 			reasoning: 'quantitative',
+			faults: [],
+			repairs: [],
+			defaulted: [],
 			value: 0,
 			groups: [],
 			count: 0,

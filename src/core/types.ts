@@ -1,3 +1,4 @@
+import type { AuditFault } from '@orkestrel/contract'
 import type { EmitterErrorHandler, EmitterHooks, EmitterInterface } from '@orkestrel/emitter'
 import type { Interpretation, InterpretInterface, RecordOptions } from '@orkestrel/interpret'
 import type { LogicalResult, ReasonInterface, Subject } from '@orkestrel/reason'
@@ -181,8 +182,10 @@ export interface Citation {
  * @remarks
  * `blocking: true` means no safe default exists and the gate must fail closed. An
  * open gap proceeds on a narrow recorded assumption instead.
+ * `fault` carries the interpretation door's audit refusal when one supplied the question.
  */
 export interface Gap {
+	readonly fault?: AuditFault
 	readonly field: string
 	readonly question: string
 	readonly blocking: boolean
@@ -499,7 +502,7 @@ export interface BriefCompilerInterface {
 	 * `buildGateDefinition()`.
 	 *
 	 * @param brief - The brief to measure.
-	 * @returns The reasoner's traceable verdict, whose `conclusion` is the `ready` fact.
+	 * @returns The reasoner's traceable verdict, whose `conclusion` is the state of the `ready` fact.
 	 */
 	gate(brief: Brief): LogicalResult
 	/**

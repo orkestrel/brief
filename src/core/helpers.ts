@@ -183,8 +183,8 @@ export function buildCitation(name: string, url: string, note: string): Citation
  *
  * @param field - The brief section the unknown belongs to.
  * @param question - The question that would close it.
- * @param overrides - Optional `blocking` and `candidates`; an absent `candidates` key is
- *   OMITTED entirely. Default: `blocking: false`.
+ * @param overrides - Optional blocking status, candidates, and audit fault; absent optional
+ *   members are omitted. Default: `blocking: false`.
  * @returns A fresh `Gap`.
  *
  * @example
@@ -201,9 +201,13 @@ export function buildGap(
 	overrides?: Partial<Omit<Gap, 'field' | 'question'>>,
 ): Gap {
 	const blocking = overrides?.blocking ?? false
-	return overrides?.candidates === undefined
-		? { field, question, blocking }
-		: { field, question, blocking, candidates: overrides.candidates }
+	return {
+		field,
+		question,
+		blocking,
+		...(overrides?.candidates === undefined ? {} : { candidates: overrides.candidates }),
+		...(overrides?.fault === undefined ? {} : { fault: overrides.fault }),
+	}
 }
 
 /**
@@ -317,7 +321,7 @@ export function buildBrief(
  * @remarks
  * Each readiness rule derives one named fact from `briefToSubject`'s measures, and a final
  * `ready` rule conjoins them all. Forward chaining reports the LAST rule's conclusion, so
- * `LogicalResult.conclusion` is exactly `ready`.
+ * `LogicalResult.conclusion` is the state of `ready`.
  *
  * The gate takes NO parameters, and that is deliberate rather than unfinished. The
  * reasoner overlays every derived fact into one flat namespace, so a caller rule named
@@ -1310,7 +1314,7 @@ export function deriveTask(
  * Derives `Given[]` from an interprets `Entity[]`.
  *
  * @remarks
- * Every extracted entity becomes one `extracted` fact. A nameless entity is dropped; an
+ * Each entity keeps its provenance category. A nameless entity is dropped; an
  * object value renders through interprets `canonicalize`, so the text is key-order stable.
  *
  * @param entities - The entities an interpret pipeline extracted.
@@ -1330,7 +1334,7 @@ export function deriveGivens(entities: readonly Entity[]): readonly Given[] {
 		.filter((entity) => entity.name.length > 0)
 		.map((entity) =>
 			buildGiven(
-				'extracted',
+				entity.provenance.category,
 				entity.name,
 				isString(entity.value)
 					? entity.value
@@ -1347,7 +1351,7 @@ export function deriveGivens(entities: readonly Entity[]): readonly Given[] {
  * @remarks
  * A REQUIRED ambiguity becomes a BLOCKING gap — the gate must fail closed on it. The
  * rest stay open, to be answered with a recorded assumption. An array field path flattens
- * through reasons `formatField`.
+ * through reasons `formatField`. The gap keeps the ambiguity's fault and question text.
  *
  * @param ambiguities - The ambiguities an interpret pipeline surfaced.
  * @returns One `Gap` per ambiguity, in surfacing order.
@@ -1365,6 +1369,7 @@ export function deriveGaps(ambiguities: readonly Ambiguity[]): readonly Gap[] {
 		const candidates = ambiguity.candidates.filter((candidate) => candidate.length > 0)
 		return buildGap(formatField(ambiguity.field), ambiguity.question, {
 			blocking: ambiguity.required,
+			...(ambiguity.fault === undefined ? {} : { fault: ambiguity.fault }),
 			...(candidates.length === 0 ? {} : { candidates }),
 		})
 	})

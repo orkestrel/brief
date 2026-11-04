@@ -22,6 +22,7 @@ import {
 	arrayOf,
 	boundsOf,
 	isBoolean,
+	isAuditFault,
 	isInteger,
 	isNonEmptyString,
 	isString,
@@ -201,8 +202,9 @@ export const isGap: Guard<Gap> = recordOf(
 		question: isLine,
 		blocking: isBoolean,
 		candidates: arrayOf(isLine),
+		fault: isAuditFault,
 	},
-	['candidates'],
+	['candidates', 'fault'],
 )
 
 /**
