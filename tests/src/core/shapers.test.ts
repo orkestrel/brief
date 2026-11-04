@@ -1,34 +1,20 @@
 import {
 	briefShape,
-	citationShape,
 	createBriefContract,
 	exampleShape,
-	gapShape,
 	givenShape,
 	isBrief,
-	isCitation,
 	isExample,
-	isGap,
 	isGiven,
-	isManifest,
-	isOutcome,
-	isOutput,
-	isProof,
 	isReference,
-	isRisk,
 	isTask,
 	parseBrief,
-	manifestShape,
-	outcomeShape,
-	outputShape,
-	proofShape,
 	referenceShape,
-	riskShape,
 	taskShape,
 } from '@src/core'
 import { createContract, seededRandom } from '@orkestrel/contract'
 import { describe, expect, it } from 'vitest'
-import { buildReadyBrief } from '../../setup.js'
+import { BRIEF_SECTION_CASES, buildReadyBrief } from '../../setup.js'
 
 describe('brief boundary', () => {
 	it('validates definitions without coercion and preserves gap faults through JSON', () => {
@@ -54,85 +40,7 @@ describe('brief boundary', () => {
 
 // Each row pairs the two independent mechanisms over one vocabulary — the hand-composed
 // guard and the compiled shape — with values chosen so a divergence in either shows up.
-const PAIRS = [
-	{
-		name: 'task',
-		shape: taskShape,
-		guard: isTask,
-		accepted: { operation: 'refactor', domain: 'code', statement: 'Refactor useForm.' },
-		refused: { operation: 'improve', domain: 'code', statement: 'Refactor useForm.' },
-	},
-	{
-		name: 'reference',
-		shape: referenceShape,
-		guard: isReference,
-		accepted: { path: 'src/core/types.ts', note: 'the published contract' },
-		refused: { path: '', note: 'the published contract' },
-	},
-	{
-		name: 'manifest',
-		shape: manifestShape,
-		guard: isManifest,
-		accepted: { read: [], edit: [], locked: [], forbidden: [] },
-		refused: { read: [], edit: [], locked: [] },
-	},
-	{
-		name: 'outcome',
-		shape: outcomeShape,
-		guard: isOutcome,
-		accepted: { rank: 1, text: 'the tests pass', required: true },
-		refused: { rank: 0, text: 'the tests pass', required: true },
-	},
-	{
-		name: 'given',
-		shape: givenShape,
-		guard: isGiven,
-		accepted: { category: 'convention', name: 'indentation', value: 'tabs' },
-		refused: { category: 'convention', name: '', value: 'tabs' },
-	},
-	{
-		name: 'example',
-		shape: exampleShape,
-		guard: isExample,
-		accepted: { input: '<input required>', output: 'el.validity' },
-		refused: { input: '<input required>', output: '' },
-	},
-	{
-		name: 'citation',
-		shape: citationShape,
-		guard: isCitation,
-		accepted: { name: 'MDN', url: 'https://developer.mozilla.org/', note: 'native validity' },
-		refused: { name: 'MDN', url: 'https://developer.mozilla.org/', note: '' },
-	},
-	{
-		name: 'gap',
-		shape: gapShape,
-		guard: isGap,
-		accepted: { field: 'output', question: 'Diff or files?', blocking: true },
-		refused: { field: 'output', question: 'Diff or files?', blocking: 'yes' },
-	},
-	{
-		name: 'risk',
-		shape: riskShape,
-		guard: isRisk,
-		accepted: { severity: 'medium', text: 'subtle drift', mitigation: 'assert in tests' },
-		refused: { severity: 'critical', text: 'subtle drift', mitigation: 'assert in tests' },
-	},
-	{
-		name: 'output',
-		shape: outputShape,
-		guard: isOutput,
-		accepted: { format: 'diff' },
-		refused: { format: 'patch' },
-	},
-	{
-		name: 'proof',
-		shape: proofShape,
-		guard: isProof,
-		accepted: { text: 'tests pass', command: 'npm test' },
-		refused: { text: 'tests pass', command: '' },
-	},
-]
+const PAIRS = BRIEF_SECTION_CASES
 
 // The single-line contract is the property `LINE_BREAK_PATTERN` and `SINGLE_LINE_PATTERN` exist to hold in
 // lockstep, and no earlier row carries a line terminator — so the two derivations of that one

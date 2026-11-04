@@ -1,3 +1,34 @@
+import {
+	briefShape,
+	citationShape,
+	exampleShape,
+	gapShape,
+	givenShape,
+	isBrief,
+	isCitation,
+	isExample,
+	isGap,
+	isGiven,
+	isManifest,
+	isOutcome,
+	isOutput,
+	isProof,
+	isReference,
+	isRisk,
+	isTask,
+	manifestShape,
+	outcomeShape,
+	outputShape,
+	proofShape,
+	referenceShape,
+	riskShape,
+	taskShape,
+	textShape,
+	lineShape,
+	isText,
+	isLine,
+} from '@src/core'
+import { createContract } from '@orkestrel/contract'
 import type {
 	Brief,
 	BriefErrorCode,
@@ -849,3 +880,98 @@ export function readBriefMarker(): string {
 export function buildForeignReadings(): readonly unknown[] {
 	return [' a string ', () => 'anything']
 }
+
+/** Pairs each section shape with its structural guard and canonical controls. */
+
+export const BRIEF_SECTION_CASES = [
+	{
+		name: 'task',
+		shape: taskShape,
+		guard: isTask,
+		accepted: { operation: 'refactor', domain: 'code', statement: 'Refactor useForm.' },
+		refused: { operation: 'improve', domain: 'code', statement: 'Refactor useForm.' },
+	},
+	{
+		name: 'reference',
+		shape: referenceShape,
+		guard: isReference,
+		accepted: { path: 'src/core/types.ts', note: 'the published contract' },
+		refused: { path: '', note: 'the published contract' },
+	},
+	{
+		name: 'manifest',
+		shape: manifestShape,
+		guard: isManifest,
+		accepted: { read: [], edit: [], locked: [], forbidden: [] },
+		refused: { read: [], edit: [], locked: [] },
+	},
+	{
+		name: 'outcome',
+		shape: outcomeShape,
+		guard: isOutcome,
+		accepted: { rank: 1, text: 'the tests pass', required: true },
+		refused: { rank: 0, text: 'the tests pass', required: true },
+	},
+	{
+		name: 'given',
+		shape: givenShape,
+		guard: isGiven,
+		accepted: { category: 'convention', name: 'indentation', value: 'tabs' },
+		refused: { category: 'convention', name: '', value: 'tabs' },
+	},
+	{
+		name: 'example',
+		shape: exampleShape,
+		guard: isExample,
+		accepted: { input: '<input required>', output: 'el.validity' },
+		refused: { input: '<input required>', output: '' },
+	},
+	{
+		name: 'citation',
+		shape: citationShape,
+		guard: isCitation,
+		accepted: { name: 'MDN', url: 'https://developer.mozilla.org/', note: 'native validity' },
+		refused: { name: 'MDN', url: 'https://developer.mozilla.org/', note: '' },
+	},
+	{
+		name: 'gap',
+		shape: gapShape,
+		guard: isGap,
+		accepted: { field: 'output', question: 'Diff or files?', blocking: true },
+		refused: { field: 'output', question: 'Diff or files?', blocking: 'yes' },
+	},
+	{
+		name: 'risk',
+		shape: riskShape,
+		guard: isRisk,
+		accepted: { severity: 'medium', text: 'subtle drift', mitigation: 'assert in tests' },
+		refused: { severity: 'critical', text: 'subtle drift', mitigation: 'assert in tests' },
+	},
+	{
+		name: 'output',
+		shape: outputShape,
+		guard: isOutput,
+		accepted: { format: 'diff' },
+		refused: { format: 'patch' },
+	},
+	{
+		name: 'proof',
+		shape: proofShape,
+		guard: isProof,
+		accepted: { text: 'tests pass', command: 'npm test' },
+		refused: { text: 'tests pass', command: '' },
+	},
+]
+
+/** Declares each shape beside its structural guard and admission direction. */
+export const BRIEF_CONTRACT_CASES = [
+	...BRIEF_SECTION_CASES,
+	{ name: 'text', shape: textShape, guard: isText, accepted: '', refused: '\n' },
+	{ name: 'line', shape: lineShape, guard: isLine, accepted: 'line', refused: '' },
+	{ name: 'brief', shape: briefShape, guard: isBrief, accepted: buildReadyBrief(), refused: {} },
+].map((row) => ({
+	...row,
+	direction: 'is implies guard',
+	project: undefined,
+	wire: createContract(row.shape),
+}))

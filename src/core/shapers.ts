@@ -1,7 +1,7 @@
 import type { StringShape } from '@orkestrel/contract'
-import { faultShape } from '@orkestrel/reason'
 import {
 	arrayShape,
+	auditFaultShape,
 	booleanShape,
 	integerShape,
 	literalShape,
@@ -118,7 +118,7 @@ export const gapShape = objectShape(
 		question: lineShape,
 		blocking: booleanShape(),
 		candidates: optionalShape(arrayShape(lineShape)),
-		fault: optionalShape(faultShape),
+		fault: optionalShape(auditFaultShape()),
 	},
 	{ description: 'One unresolved decision; blocking means the gate fails closed.' },
 )
