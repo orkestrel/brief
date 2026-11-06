@@ -73,7 +73,7 @@
 	"dependencies": {
 		"@orkestrel/contract": "^0.0.22",
 		"@orkestrel/emitter": "^0.0.15",
-		"@orkestrel/interpret": "^0.0.21",
+		"@orkestrel/interpret": "^0.0.22",
 		"@orkestrel/reason": "^0.0.17"
 	},
 	"devDependencies": {
