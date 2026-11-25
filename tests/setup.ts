@@ -192,7 +192,7 @@ export function buildFailingInterpret(): InterpretInterface {
 		recipe: (id) => real.recipe(id),
 		recipes: () => real.recipes(),
 		describe: (definition) => real.describe(definition),
-		narrate: (result) => real.narrate(result),
+		narrate: real.narrate.bind(real),
 		destroy: () => {
 			real.destroy()
 		},
@@ -239,7 +239,7 @@ export function buildForeignInterpret(value: unknown): InterpretInterface {
 		recipe: (id) => real.recipe(id),
 		recipes: () => real.recipes(),
 		describe: (definition) => real.describe(definition),
-		narrate: (result) => real.narrate(result),
+		narrate: real.narrate.bind(real),
 		destroy: () => {
 			real.destroy()
 		},
@@ -467,7 +467,7 @@ export function buildShiftingInterpret(): InterpretInterface {
 		recipe: (id) => real.recipe(id),
 		recipes: () => real.recipes(),
 		describe: (definition) => real.describe(definition),
-		narrate: (result) => real.narrate(result),
+		narrate: real.narrate.bind(real),
 		destroy: () => {
 			real.destroy()
 		},
@@ -493,7 +493,7 @@ export function buildAccessorInterpret(): InterpretInterface {
 		recipe: (id) => real.recipe(id),
 		recipes: () => real.recipes(),
 		describe: (definition) => real.describe(definition),
-		narrate: (result) => real.narrate(result),
+		narrate: real.narrate.bind(real),
 		destroy: () => {
 			real.destroy()
 		},
