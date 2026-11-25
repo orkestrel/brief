@@ -1242,6 +1242,15 @@ store.destroy()
 - **Destroy when done.** `destroy()` releases the owned engines and the emitter; a destroyed
   instance throws `DESTROYED` on use — narrow with `isBriefError`.
 
+## Migration: refusals in place of errors
+
+This package follows `@orkestrel/reason` and `@orkestrel/interpret` and adds nothing of its own. Change each caller as follows:
+
+- Read `refusals` where code read `errors` on `Briefing.verdict` or on what `gate` returns. `success` is false exactly when `refusals` or `faults` holds an entry, and each refusal names its `cause`. `validateBrief` keeps `errors` and `warnings`, because they are validation text.
+- Return `refusals` where a borrowed reasoner's logical result returned `errors`. The compiler's ownership copy names `refusals` among the members it captures, and a logical result without it fails `isLogicalResult`.
+- Return each check's result with its `check` beside `state` and `actual` where a borrowed evaluator returned `field`.
+- Give a borrowed `interpret` engine an `amend` method beside `narrate`, as `InterpretInterface` now requires.
+
 ## Tests
 
 - [`tests/guides.test.ts`](../tests/guides.test.ts) — the `## Surface` to `src/core` bijection (value and type exports), the `## Methods` to interface-method bijection, link integrity, fence languages, example presence, fence-import reality, options-member liveness, TSDoc identifier resolution, and the equality gate: every `Summary` cell against its declaration's description paragraph, the titled `Compile and project a brief` fence against the `@example` of that title (pinned so the titled pair cannot be retired silently), and the README pitch against this guide's tagline. It also runs the flagship fences — the `## Surface` compile and the `### Builders` draft — and asserts the values their `// value` comments claim.

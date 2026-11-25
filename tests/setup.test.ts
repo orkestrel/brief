@@ -1,6 +1,7 @@
-import type { ReasonResult } from '@orkestrel/reason'
+import type { Check, ReasonResult } from '@orkestrel/reason'
 import { readBriefMarker } from './setup.js'
 import { BriefError, briefToSubject, buildGateDefinition } from '@src/core'
+import { createInterpret } from '@orkestrel/interpret'
 import { describe, expect, it } from 'vitest'
 import {
 	AccessorInterpretation,
@@ -126,6 +127,22 @@ describe('interpret fixtures', () => {
 		expect(interpret.recipe('missing')).toBeUndefined()
 	})
 
+	it('every foreign engine fixture delegates amend to a real engine and refuses as it does', () => {
+		const real = createInterpret()
+		const base = real.interpret('migrate the stores')
+		const amendment = { entities: [{ name: 'count', value: 5 }] }
+		const refusal = /matched no recipe/
+		expect(() => real.amend(base, amendment)).toThrow(refusal)
+		const engines = [
+			buildFailingInterpret(),
+			buildForeignInterpret(readBriefMarker),
+			buildShiftingInterpret(),
+			buildAccessorInterpret(),
+		]
+		for (const engine of engines) expect(() => engine.amend(base, amendment)).toThrow(refusal)
+		real.destroy()
+	})
+
 	it('buildForeignInterpret carries the given value on a computed entity and forces a required ambiguity', () => {
 		const marker = readBriefMarker
 		const interpret = buildForeignInterpret(marker)
@@ -236,22 +253,13 @@ describe('reason fixtures', () => {
 	it('buildPermissiveEvaluator reports every check met, singly and batched', () => {
 		const evaluator = buildPermissiveEvaluator()
 		const subject = briefToSubject(buildReadyBrief())
-		expect(evaluator.evaluate({ field: 'x', operator: 'any', value: undefined }, subject)).toEqual({
-			field: 'x',
-			state: 'met',
-			actual: true,
-		})
-		expect(
-			evaluator.batch(
-				[
-					{ field: 'a', operator: 'any', value: undefined },
-					{ field: 'b', operator: 'any', value: undefined },
-				],
-				subject,
-			),
-		).toEqual([
-			{ field: 'a', state: 'met', actual: true },
-			{ field: 'b', state: 'met', actual: true },
+		const only: Check = { field: 'x', operator: 'any', value: undefined }
+		const first: Check = { field: 'a', operator: 'any', value: undefined }
+		const second: Check = { field: 'b', operator: 'any', value: undefined }
+		expect(evaluator.evaluate(only, subject)).toEqual({ check: only, state: 'met', actual: true })
+		expect(evaluator.batch([first, second], subject)).toEqual([
+			{ check: first, state: 'met', actual: true },
+			{ check: second, state: 'met', actual: true },
 		])
 	})
 
@@ -263,6 +271,11 @@ describe('reason fixtures', () => {
 		const second = counting.reason(subject, definition)
 		expect(readConclusion(first)).toBe('met')
 		expect(readConclusion(second)).toBe('unmet')
+		if (first.reasoning !== 'logical' || second.reasoning !== 'logical') {
+			throw new Error('expected a logical result')
+		}
+		expect(first.refusals).toStrictEqual([])
+		expect(second.refusals).toStrictEqual([{ cause: 'silent' }])
 
 		const stable = buildStableReason()
 		const stableFirst = stable.reason(subject, definition)
@@ -308,7 +321,7 @@ describe('reason fixtures', () => {
 			count: 0,
 			success: true,
 			trace: [],
-			errors: [],
+			refusals: [],
 		}
 		expect(readConclusion(quantitative)).toBeUndefined()
 	})

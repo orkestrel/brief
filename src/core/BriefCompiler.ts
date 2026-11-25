@@ -206,7 +206,7 @@ export class BriefCompiler implements BriefCompilerInterface {
 				'count',
 				'success',
 				'trace',
-				'errors',
+				'refusals',
 				'faults',
 				'repairs',
 				'defaulted',

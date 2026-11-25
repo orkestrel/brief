@@ -55,6 +55,7 @@ import type {
 	EvaluatorInterface,
 	LogicalResult,
 	ReasonInterface,
+	ReasonRefusal,
 	ReasonResult,
 	RuleResult,
 } from '@orkestrel/reason'
@@ -193,6 +194,7 @@ export function buildFailingInterpret(): InterpretInterface {
 		recipes: () => real.recipes(),
 		describe: (definition) => real.describe(definition),
 		narrate: real.narrate.bind(real),
+		amend: real.amend.bind(real),
 		destroy: () => {
 			real.destroy()
 		},
@@ -240,6 +242,7 @@ export function buildForeignInterpret(value: unknown): InterpretInterface {
 		recipes: () => real.recipes(),
 		describe: (definition) => real.describe(definition),
 		narrate: real.narrate.bind(real),
+		amend: real.amend.bind(real),
 		destroy: () => {
 			real.destroy()
 		},
@@ -468,6 +471,7 @@ export function buildShiftingInterpret(): InterpretInterface {
 		recipes: () => real.recipes(),
 		describe: (definition) => real.describe(definition),
 		narrate: real.narrate.bind(real),
+		amend: real.amend.bind(real),
 		destroy: () => {
 			real.destroy()
 		},
@@ -494,6 +498,7 @@ export function buildAccessorInterpret(): InterpretInterface {
 		recipes: () => real.recipes(),
 		describe: (definition) => real.describe(definition),
 		narrate: real.narrate.bind(real),
+		amend: real.amend.bind(real),
 		destroy: () => {
 			real.destroy()
 		},
@@ -556,9 +561,9 @@ export function readBriefCode(error: unknown): BriefErrorCode | undefined {
 export function buildPermissiveEvaluator(): EvaluatorInterface {
 	return {
 		id: 'permissive',
-		evaluate: (check: Check) => ({ field: check.field, state: 'met', actual: true }),
+		evaluate: (check: Check) => ({ check, state: 'met', actual: true }),
 		batch: (checks: readonly Check[]) =>
-			checks.map((check) => ({ field: check.field, state: 'met', actual: true })),
+			checks.map((check) => ({ check, state: 'met', actual: true })),
 	}
 }
 
@@ -577,7 +582,7 @@ export function buildPermissiveEvaluator(): EvaluatorInterface {
 export function buildCountingReason(): ReasonInterface {
 	// One counter PER MEMBER. A single shared counter would only ever give the first member
 	// read its first answer, which measures read ORDER rather than read count.
-	const reads = { conclusion: 0, rules: 0, count: 0, success: 0, trace: 0, errors: 0 }
+	const reads = { conclusion: 0, rules: 0, count: 0, success: 0, trace: 0, refusals: 0 }
 	return createReason({
 		reasoners: [
 			{
@@ -610,9 +615,9 @@ export function buildCountingReason(): ReasonInterface {
 						reads.trace += 1
 						return reads.trace === 1 ? ['ready'] : []
 					},
-					get errors() {
-						reads.errors += 1
-						return reads.errors === 1 ? [] : ['forged']
+					get refusals() {
+						reads.refusals += 1
+						return reads.refusals === 1 ? [] : [{ cause: 'silent' as const }]
 					},
 				}),
 			},
@@ -642,7 +647,7 @@ export function buildStableReason(): ReasonInterface {
 					count: 1,
 					success: true,
 					trace: ['ready'],
-					errors: [],
+					refusals: [],
 				}),
 			},
 		],
@@ -709,7 +714,7 @@ export class ShiftingLogicalResult implements LogicalResult {
 		return []
 	}
 
-	get errors(): readonly string[] {
+	get refusals(): readonly ReasonRefusal[] {
 		return []
 	}
 }
@@ -733,7 +738,7 @@ export function buildSilentReason(): ReasonInterface {
 					count: 0,
 					success: true,
 					trace: [],
-					errors: [],
+					refusals: [],
 				}),
 			},
 		],
