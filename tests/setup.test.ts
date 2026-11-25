@@ -1,7 +1,9 @@
 import type { Check, ReasonResult } from '@orkestrel/reason'
 import { readBriefMarker } from './setup.js'
 import { BriefError, briefToSubject, buildGateDefinition } from '@src/core'
+import { types } from 'node:util'
 import { createInterpret } from '@orkestrel/interpret'
+import { createHostileValues } from '@orkestrel/test'
 import { describe, expect, it } from 'vitest'
 import {
 	AccessorInterpretation,
@@ -206,21 +208,46 @@ describe('ShiftingAccessorInterpretation and ShiftingForeignInterpretation', () 
 })
 
 describe('buildAdversarialValues', () => {
+	// A proxy in the corpus throws on `in`, `instanceof`, and a prototype read, so each reader
+	// below passes a value through `types.isProxy` before it touches the value's own structure.
 	it('includes a self-referential object and a null-prototype hostile record', () => {
 		const values = buildAdversarialValues()
 		const cyclic = values.find(
 			(value): value is Record<string, unknown> =>
-				typeof value === 'object' && value !== null && !Array.isArray(value) && 'self' in value,
+				typeof value === 'object' &&
+				value !== null &&
+				!types.isProxy(value) &&
+				!Array.isArray(value) &&
+				Reflect.get(value, 'self') === value,
 		)
 		expect(cyclic).toBeDefined()
-		expect(cyclic?.['self']).toBe(cyclic)
 
 		const hostile = values.find(
 			(value): value is Record<string, unknown> =>
-				typeof value === 'object' && value !== null && Object.getPrototypeOf(value) === null,
+				typeof value === 'object' &&
+				value !== null &&
+				!types.isProxy(value) &&
+				Object.getPrototypeOf(value) === null &&
+				Object.hasOwn(value, '__proto__'),
 		)
 		expect(hostile).toBeDefined()
 		expect(hostile?.['__proto__']).toEqual({ polluted: true })
+	})
+
+	it('carries the installed hostile corpus whole beside its own values', () => {
+		const values = buildAdversarialValues()
+		const corpus = createHostileValues()
+		// The control: the corpus holds proxies, so a list that dropped it would count none.
+		expect(corpus.filter((value) => types.isProxy(value)).length).toBeGreaterThan(0)
+		expect(values.filter((value) => types.isProxy(value))).toHaveLength(
+			corpus.filter((value) => types.isProxy(value)).length,
+		)
+		expect(
+			values.some(
+				(value) =>
+					!types.isProxy(value) && Array.isArray(value) && value.length === 2 && !(0 in value),
+			),
+		).toBe(true)
 	})
 
 	it('spans the primitive vocabulary a total guard must refuse: nullish, numeric edges, and collections', () => {
@@ -229,8 +256,8 @@ describe('buildAdversarialValues', () => {
 		expect(values).toContain(null)
 		expect(values.some((value) => Number.isNaN(value))).toBe(true)
 		expect(values.some((value) => Object.is(value, -0))).toBe(true)
-		expect(values.some((value) => value instanceof Map)).toBe(true)
-		expect(values.some((value) => value instanceof Set)).toBe(true)
+		expect(values.some((value) => types.isMap(value))).toBe(true)
+		expect(values.some((value) => types.isSet(value))).toBe(true)
 		expect(values.some((value) => typeof value === 'symbol')).toBe(true)
 	})
 })

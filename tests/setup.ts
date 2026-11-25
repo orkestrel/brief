@@ -71,6 +71,7 @@ import {
 import { createInterpret } from '@orkestrel/interpret'
 import { numberShape, objectShape } from '@orkestrel/contract'
 import { createQuantitativeDefinition, createReason } from '@orkestrel/reason'
+import { createHostileValues } from '@orkestrel/test'
 
 /** Holds the single rule result the counting and stable engines agree on for a first read. */
 export const FIRST_RULE: RuleResult = Object.freeze({
@@ -509,12 +510,13 @@ export function buildAccessorInterpret(): InterpretInterface {
  * Values a total guard must refuse without throwing.
  *
  * @remarks
- * Includes a self-referential object and a null-prototype record, so a guard that walks
- * structure or reads inherited keys fails here rather than in production.
+ * Spreads `@orkestrel/test`'s hostile corpus — the self-referential record, the throwing
+ * proxies and getter, the sparse array, and the rest — so a guard that walks structure or reads
+ * a key naively fails here rather than in production. The scalar refusals and the null-prototype
+ * record with an own `__proto__` key stay local: the corpus's null-prototype record is empty,
+ * so it does not carry that control.
  */
 export function buildAdversarialValues(): readonly unknown[] {
-	const cyclic: Record<string, unknown> = {}
-	cyclic['self'] = cyclic
 	const hostile: Record<string, unknown> = Object.create(null)
 	hostile['__proto__'] = { polluted: true }
 	return [
@@ -529,7 +531,7 @@ export function buildAdversarialValues(): readonly unknown[] {
 		[],
 		[1, 2],
 		{},
-		cyclic,
+		...createHostileValues(),
 		hostile,
 		new Map(),
 		new Set(),
